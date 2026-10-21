@@ -6,7 +6,7 @@ import { HODDashboard } from './components/HODDashboard';
 import { PrincipalDashboard } from './components/PrincipalDashboard';
 import { LoginModal } from './components/LoginModal';
 import { getDeviceSecurityInfo } from './utils/deviceSecurity';
-import { Clock, AlertTriangle, ShieldCheck, Calendar, LogIn } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 
 export function App() {
     const [currentUser, setCurrentUser] = useState(null);
@@ -17,13 +17,12 @@ export function App() {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [holidayStatus, setHolidayStatus] = useState(null);
 
-    // 1. Initialize Device Fingerprint & Default Demo User
+    // 1. Initialize Device & Default User
     useEffect(() => {
-        const initDevice = async () => {
-            const fp = await getDeviceSecurityInfo();
-            setDeviceInfo(fp);
+        const init = async () => {
+            const dev = await getDeviceSecurityInfo();
+            setDeviceInfo(dev);
 
-            // Default login as Student (Daniel A) if not logged in
             const savedToken = localStorage.getItem('fxec_token');
             const savedUser = localStorage.getItem('fxec_user');
 
@@ -31,19 +30,18 @@ export function App() {
                 try {
                     setCurrentUser(JSON.parse(savedUser));
                 } catch (e) {
-                    console.error('Error parsing stored user:', e);
+                    console.error('Error parsing user:', e);
                 }
             } else {
-                // Auto login as Student (Daniel A) for instant preview
                 handleQuickRoleSwitch({
                     id: 'student',
                     email: 'daniela.ug.24.it@francisxavier.ac.in',
                     name: 'Daniel A'
-                }, fp);
+                }, dev);
             }
         };
 
-        initDevice();
+        init();
     }, []);
 
     // 2. Fetch Location Hierarchy
@@ -62,7 +60,7 @@ export function App() {
         loadHierarchy();
     }, []);
 
-    // 3. Fetch Current Period Info & Holidays (re-runs when simulatedTime changes)
+    // 3. Fetch Period Info & Holidays
     useEffect(() => {
         const fetchPeriodInfo = async () => {
             try {
@@ -112,103 +110,31 @@ export function App() {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%' }}>
-            {/* Header with Branding, Simulator & Role Switcher */}
+        <div className="app-container">
+            {/* Top Navigation */}
             <Header 
                 currentUser={currentUser} 
                 onRoleChange={handleQuickRoleSwitch}
                 simulatedTime={simulatedTime}
                 setSimulatedTime={setSimulatedTime}
                 activePeriod={currentPeriodInfo?.activePeriod}
-                isMorningWindow={currentPeriodInfo?.isMorningWindow}
-                isBreak={currentPeriodInfo?.isBreak}
             />
 
-            {/* Main Application Full-Screen Workspace */}
+            {/* Main Content Workspace */}
             <main className="app-workspace">
                 
-                {/* Holiday Alert Banner (if declared) */}
+                {/* Holiday Banner (Only if declared) */}
                 {holidayStatus?.isHoliday && (
-                    <div style={{
-                        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(185, 28, 28, 0.25) 100%)',
-                        border: '2px solid var(--fxec-rose)',
-                        borderRadius: '14px',
-                        padding: '16px 24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        boxShadow: '0 0 25px rgba(239, 68, 68, 0.3)'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                            <Calendar size={28} color="var(--fxec-rose)" />
-                            <div>
-                                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFF' }}>
-                                    HOLIDAY DECLARED: {holidayStatus.title}
-                                </div>
-                                <div style={{ fontSize: '0.8rem', color: '#FCA5A5', marginTop: '2px' }}>
-                                    Scope: {holidayStatus.scope === 'college' ? 'Institution-Wide (All Departments)' : `${holidayStatus.department} Department Only`} • {holidayStatus.reason}
-                                </div>
-                            </div>
+                    <div className="alert-box-error" style={{ marginBottom: '16px' }}>
+                        <Calendar size={18} />
+                        <div>
+                            <strong>Holiday Declared: {holidayStatus.title}</strong>
+                            <span style={{ marginLeft: '8px', opacity: 0.85 }}>({holidayStatus.scope === 'college' ? 'College-wide' : `${holidayStatus.department} Department`})</span>
                         </div>
-                        <span className="badge-locked" style={{ fontSize: '0.82rem' }}>
-                            ATTENDANCE SUSPENDED
-                        </span>
                     </div>
                 )}
 
-                {/* College Live Schedule & Clock Status Banner */}
-                <div className="college-clock-banner">
-                    <div className="clock-info-col">
-                        <div className="live-time-display">
-                            {currentPeriodInfo?.currentTime || '09:00:00 AM'}
-                        </div>
-                        
-                        <div className="period-badge-live">
-                            <span className="pulse-dot"></span>
-                            {currentPeriodInfo?.activePeriod ? (
-                                <span>{currentPeriodInfo.activePeriod.name} ({currentPeriodInfo.activePeriod.start_time.slice(0, 5)} - {currentPeriodInfo.activePeriod.end_time.slice(0, 5)})</span>
-                            ) : currentPeriodInfo?.isBeforeCollege ? (
-                                <span>College Pre-Hours (Classes start 9:00 AM)</span>
-                            ) : currentPeriodInfo?.isAfterCollege ? (
-                                <span>College Dismissed for the Day (Buses Depart 4:40 PM)</span>
-                            ) : (
-                                <span>College Schedule Active</span>
-                            )}
-                        </div>
-
-                        {currentPeriodInfo?.isMorningWindow && (
-                            <span className="morning-warning-pill">
-                                ⚠️ Morning 9:00 - 9:05 AM Day-Start Window Active
-                            </span>
-                        )}
-
-                        {currentPeriodInfo?.isBreak && (
-                            <span style={{ background: 'rgba(255,255,255,0.08)', color: '#CBD5E1', padding: '4px 10px', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: 700 }}>
-                                Break / Lunch Interval (Movement Tracking Paused)
-                            </span>
-                        )}
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFF' }}>
-                                Francis Xavier Engineering College
-                            </div>
-                            <div style={{ fontSize: '0.72rem', color: '#93C5FD' }}>
-                                Academic Session 2026-27 • 9:00 AM to 4:05 PM
-                            </div>
-                        </div>
-                        <button 
-                            className="fx-btn-outline" 
-                            style={{ padding: '6px 14px', fontSize: '0.8rem' }}
-                            onClick={() => setIsLoginOpen(true)}
-                        >
-                            <LogIn size={14} /> Account Portal
-                        </button>
-                    </div>
-                </div>
-
-                {/* Role-Specific Dashboard Rendering */}
+                {/* Active Dashboard View */}
                 {currentUser?.role === 'student' && (
                     <StudentDashboard 
                         currentUser={currentUser}
@@ -224,7 +150,6 @@ export function App() {
                         currentUser={currentUser}
                         hierarchy={hierarchy}
                         currentPeriodInfo={currentPeriodInfo}
-                        simulatedTime={simulatedTime}
                     />
                 )}
 
@@ -243,7 +168,7 @@ export function App() {
 
             </main>
 
-            {/* Login / Authentication Modal */}
+            {/* Login Modal */}
             <LoginModal 
                 isOpen={isLoginOpen}
                 onClose={() => setIsLoginOpen(false)}

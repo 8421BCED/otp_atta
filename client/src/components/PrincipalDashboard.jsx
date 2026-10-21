@@ -1,20 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    Building, School, Users, CheckCircle2, PlusCircle, 
-    Calendar, Layers, MapPin, Sparkles, AlertCircle 
-} from 'lucide-react';
+import { Building, Users, PlusCircle, Calendar, CheckCircle2 } from 'lucide-react';
 
 export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
     const [overviewData, setOverviewData] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
 
-    // Add Building Modal / Form State
-    const [bName, setBName] = useState('');
-    const [bCode, setBCode] = useState('');
-    const [bDesc, setBDesc] = useState('');
-    const [bNotice, setBNotice] = useState(null);
-
-    // Add Room Form State
+    // Room form state
     const [rBuildingId, setRBuildingId] = useState(1);
     const [rFloorId, setRFloorId] = useState(1);
     const [rNumber, setRNumber] = useState('');
@@ -22,15 +12,12 @@ export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
     const [rDept, setRDept] = useState('IT');
     const [rNotice, setRNotice] = useState(null);
 
-    // College-Wide Holiday State
+    // Holiday state
     const [cHolTitle, setCHolTitle] = useState('');
     const [cHolDate, setCHolDate] = useState('');
-    const [cHolReason, setCHolReason] = useState('Declared by Principal (College-Wide)');
     const [cHolNotice, setCHolNotice] = useState(null);
 
-    // Load Principal Overview
     const loadPrincipalData = async () => {
-        setIsLoading(true);
         try {
             const token = localStorage.getItem('fxec_token');
             const res = await fetch('http://localhost:5000/api/principal/overview', {
@@ -40,8 +27,6 @@ export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
             setOverviewData(data);
         } catch (e) {
             console.error('Failed to load Principal data:', e);
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -49,31 +34,6 @@ export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
         loadPrincipalData();
     }, []);
 
-    // Handle Add Building
-    const handleAddBuilding = async (e) => {
-        e.preventDefault();
-        if (!bName || !bCode) return;
-        try {
-            const token = localStorage.getItem('fxec_token');
-            const res = await fetch('http://localhost:5000/api/locations/buildings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ name: bName, code: bCode, description: bDesc })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                setBNotice(`✓ Building "${bName}" added successfully!`);
-                setBName('');
-                setBCode('');
-                setBDesc('');
-                setTimeout(() => setBNotice(null), 5000);
-            }
-        } catch (e) {
-            console.error('Error adding building:', e);
-        }
-    };
-
-    // Handle Add Room
     const handleAddRoom = async (e) => {
         e.preventDefault();
         if (!rNumber || !rName) return;
@@ -90,9 +50,8 @@ export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
                     department: rDept
                 })
             });
-            const data = await res.json();
             if (res.ok) {
-                setRNotice(`✓ Room "${rNumber}" created successfully!`);
+                setRNotice(`Room "${rNumber}" added successfully.`);
                 setRNumber('');
                 setRName('');
                 loadPrincipalData();
@@ -103,7 +62,6 @@ export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
         }
     };
 
-    // Handle Declare College-Wide Holiday
     const handleDeclareCollegeHoliday = async (e) => {
         e.preventDefault();
         if (!cHolTitle || !cHolDate) return;
@@ -115,16 +73,15 @@ export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
                 body: JSON.stringify({
                     title: cHolTitle,
                     holiday_date: cHolDate,
-                    scope: 'college',
-                    reason: cHolReason
+                    scope: 'college'
                 })
             });
             const data = await res.json();
             if (res.ok) {
-                setCHolNotice(`✓ College-wide holiday declared. All department calendars harmonized without conflict.`);
+                setCHolNotice(`College holiday saved.`);
                 setCHolTitle('');
                 setCHolDate('');
-                setTimeout(() => setCHolNotice(null), 6000);
+                setTimeout(() => setCHolNotice(null), 5000);
             }
         } catch (e) {
             console.error('Error declaring holiday:', e);
@@ -132,64 +89,42 @@ export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
             
-            {/* Campus KPI Metrics Banner */}
+            {/* Top Stats */}
             <div className="dashboard-grid-tri">
-                <div className="fx-card fx-card-gold-accent">
-                    <div className="fx-card-subtitle">Executive Command Center</div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
-                            <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#FFF' }}>
-                                {overviewData?.summary?.totalStudents || 0}
-                            </div>
-                            <div style={{ fontSize: '0.8rem', color: '#93C5FD' }}>Total Enrolled Students Across Campus</div>
-                        </div>
-                        <School size={36} color="var(--fxec-gold)" />
+                <div className="fx-card">
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Total Enrolled Students</div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#FFF' }}>
+                        {overviewData?.summary?.totalStudents || 0}
                     </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Across All Departments</div>
                 </div>
 
-                <div className="fx-card" style={{ borderTop: '3px solid var(--fxec-emerald)' }}>
-                    <div className="fx-card-subtitle">Present Across All Blocks Today</div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
-                            <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#34D399' }}>
-                                {overviewData?.summary?.totalPresent || 0}
-                            </div>
-                            <div style={{ fontSize: '0.8rem', color: '#A7F3D0' }}>Campus-Wide Attendance ({overviewData?.summary?.overallAttendanceRate || 0}%)</div>
-                        </div>
-                        <CheckCircle2 size={36} color="var(--fxec-emerald)" />
+                <div className="fx-card">
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Present Today</div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#10B981' }}>
+                        {overviewData?.summary?.totalPresent || 0}
                     </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Overall Rate: {overviewData?.summary?.overallAttendanceRate || 0}%</div>
                 </div>
 
-                <div className="fx-card" style={{ borderTop: '3px solid var(--fxec-cyan)' }}>
-                    <div className="fx-card-subtitle">Infrastructure Footprint</div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
-                            <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--fxec-cyan)' }}>
-                                {overviewData?.summary?.totalRooms || 0} Rooms
-                            </div>
-                            <div style={{ fontSize: '0.8rem', color: '#BAE6FD' }}>4 Academic Blocks • Applied Labs</div>
-                        </div>
-                        <Building size={36} color="var(--fxec-cyan)" />
+                <div className="fx-card">
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Total Rooms</div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#3B82F6' }}>
+                        {overviewData?.summary?.totalRooms || 0}
                     </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Classrooms & Labs</div>
                 </div>
             </div>
 
-            {/* Department-wise Comparison Grid & Building Occupancy */}
+            {/* Department Breakdown & Building Occupancy */}
             <div className="dashboard-grid-main">
-                
-                {/* Department Wise Attendance Breakdown */}
                 <div className="fx-card">
                     <div className="fx-card-header">
-                        <div>
-                            <div className="fx-card-title">
-                                <Users color="var(--fxec-gold)" size={22} />
-                                Department-Wise Attendance Matrix
-                            </div>
-                            <div className="fx-card-subtitle">
-                                Real-time verification counts grouped by academic department
-                            </div>
+                        <div className="fx-card-title">
+                            <Users size={20} color="#3B82F6" />
+                            Department Breakdown
                         </div>
                     </div>
 
@@ -198,9 +133,9 @@ export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
                             <thead>
                                 <tr>
                                     <th>Department</th>
-                                    <th>Total Students</th>
-                                    <th>Present Today</th>
-                                    <th>Attendance %</th>
+                                    <th>Total</th>
+                                    <th>Present</th>
+                                    <th>Rate</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -208,19 +143,10 @@ export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
                                     const rate = d.total_students > 0 ? Math.round((d.present_today / d.total_students) * 100) : 0;
                                     return (
                                         <tr key={i}>
-                                            <td style={{ fontWeight: 800, color: '#FFF' }}>
-                                                {d.department}
-                                            </td>
+                                            <td style={{ fontWeight: 600, color: '#FFF' }}>{d.department}</td>
                                             <td>{d.total_students}</td>
-                                            <td style={{ color: '#34D399', fontWeight: 700 }}>{d.present_today}</td>
-                                            <td>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                                                        <div style={{ width: `${rate}%`, height: '100%', background: 'var(--fxec-gold)' }}></div>
-                                                    </div>
-                                                    <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>{rate}%</span>
-                                                </div>
-                                            </td>
+                                            <td style={{ color: '#10B981', fontWeight: 600 }}>{d.present_today}</td>
+                                            <td>{rate}%</td>
                                         </tr>
                                     );
                                 })}
@@ -229,91 +155,56 @@ export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
                     </div>
                 </div>
 
-                {/* Building Occupancy Summary */}
                 <div className="fx-card">
                     <div className="fx-card-header">
-                        <div>
-                            <div className="fx-card-title">
-                                <Building color="var(--fxec-cyan)" size={22} />
-                                Campus Building Real-Time Distribution
-                            </div>
-                            <div className="fx-card-subtitle">
-                                Total student density across engineering complexes
-                            </div>
+                        <div className="fx-card-title">
+                            <Building size={20} color="#3B82F6" />
+                            Building Distribution
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {overviewData?.buildingOccupancy?.map((b, i) => (
-                            <div 
-                                key={i}
-                                style={{
-                                    background: 'rgba(7, 23, 47, 0.75)',
-                                    border: '1px solid rgba(255,255,255,0.08)',
-                                    borderRadius: '12px',
-                                    padding: '14px 18px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between'
-                                }}
-                            >
+                            <div key={i} className="list-row-item">
                                 <div>
-                                    <div style={{ fontWeight: 800, color: '#FFF', fontSize: '0.98rem' }}>
-                                        {b.building_name} ({b.code})
-                                    </div>
-                                    <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                                        {b.room_count} Active Classrooms & Labs
-                                    </div>
+                                    <div style={{ fontWeight: 600, color: '#FFF' }}>{b.building_name}</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{b.room_count} rooms</div>
                                 </div>
-                                <div>
-                                    <span className="badge-present" style={{ fontSize: '0.9rem' }}>
-                                        {b.students_present} Students Checked-In
-                                    </span>
-                                </div>
+                                <span className="status-tag present">
+                                    {b.students_present} Present
+                                </span>
                             </div>
                         ))}
                     </div>
                 </div>
-
             </div>
 
-            {/* Infrastructure & Holiday Management Sections */}
+            {/* Infrastructure Addition & College Holiday */}
             <div className="dashboard-grid-main">
-                
-                {/* 1. Master Infrastructure Addition (Add Room / Building) */}
-                <div className="fx-card fx-card-gold-accent">
+                <div className="fx-card">
                     <div className="fx-card-header">
-                        <div>
-                            <div className="fx-card-title">
-                                <PlusCircle color="var(--fxec-gold)" size={22} />
-                                Master Infrastructure Management
-                            </div>
-                            <div className="fx-card-subtitle">
-                                Add classrooms, specialized laboratories, and buildings
-                            </div>
+                        <div className="fx-card-title">
+                            <PlusCircle size={20} color="#3B82F6" />
+                            Add Classroom / Lab
                         </div>
                     </div>
 
-                    {rNotice && (
-                        <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid var(--fxec-emerald)', borderRadius: '10px', padding: '10px', color: '#34D399', fontSize: '0.85rem' }}>
-                            {rNotice}
-                        </div>
-                    )}
+                    {rNotice && <div className="alert-box-success">{rNotice}</div>}
 
                     <form onSubmit={handleAddRoom} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                             <div>
-                                <label className="picker-label">Target Building</label>
+                                <label className="picker-label">Building</label>
                                 <select 
                                     className="fx-select" 
                                     style={{ width: '100%', marginTop: '4px' }}
                                     value={rBuildingId}
                                     onChange={(e) => setRBuildingId(Number(e.target.value))}
                                 >
-                                    <option value={1}>Main Engineering Block (MEB)</option>
-                                    <option value={2}>Mechanical Block (MCB)</option>
-                                    <option value={3}>Science Block (SHB)</option>
-                                    <option value={4}>Applied Labs & Innovation Centre (ALB)</option>
+                                    <option value={1}>Main Engineering Block</option>
+                                    <option value={2}>Mechanical Block</option>
+                                    <option value={3}>Science Block</option>
+                                    <option value={4}>Applied Labs</option>
                                 </select>
                             </div>
                             <div>
@@ -332,14 +223,14 @@ export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                             <div>
                                 <label className="picker-label">Room Number</label>
                                 <input 
                                     type="text" 
                                     className="fx-select" 
                                     style={{ width: '100%', marginTop: '4px' }}
-                                    placeholder="e.g. 209, LAB-03" 
+                                    placeholder="e.g. 209" 
                                     value={rNumber}
                                     onChange={(e) => setRNumber(e.target.value)}
                                 />
@@ -352,110 +243,72 @@ export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
                                     value={rDept}
                                     onChange={(e) => setRDept(e.target.value)}
                                 >
-                                    <option value="IT">Information Technology</option>
-                                    <option value="CSE">Computer Science</option>
-                                    <option value="ECE">Electronics & Communication</option>
-                                    <option value="EEE">Electrical & Electronics</option>
-                                    <option value="MECH">Mechanical Engineering</option>
+                                    <option value="IT">IT</option>
+                                    <option value="CSE">CSE</option>
+                                    <option value="ECE">ECE</option>
+                                    <option value="EEE">EEE</option>
+                                    <option value="MECH">MECH</option>
                                 </select>
                             </div>
                         </div>
 
                         <div>
-                            <label className="picker-label">Room Title</label>
+                            <label className="picker-label">Room Name</label>
                             <input 
                                 type="text" 
                                 className="fx-select" 
                                 style={{ width: '100%', marginTop: '4px' }}
-                                placeholder="e.g. Advanced Cybersecurity Lab / IT Seminar Hall"
+                                placeholder="e.g. Computer Lab 3"
                                 value={rName}
                                 onChange={(e) => setRName(e.target.value)}
                             />
                         </div>
 
-                        <button type="submit" className="fx-btn-primary" style={{ marginTop: '4px' }}>
-                            Create New Room / Lab
+                        <button type="submit" className="fx-btn-primary">
+                            Add Room
                         </button>
                     </form>
                 </div>
 
-                {/* 2. College-Wide Holiday Management with Conflict Resolution */}
-                <div className="fx-card fx-card-gold-accent">
+                <div className="fx-card">
                     <div className="fx-card-header">
-                        <div>
-                            <div className="fx-card-title">
-                                <Calendar color="var(--fxec-gold)" size={22} />
-                                College-Wide Holiday Declaration
-                            </div>
-                            <div className="fx-card-subtitle">
-                                Principal executive holiday authority with automated conflict resolution
-                            </div>
+                        <div className="fx-card-title">
+                            <Calendar size={20} color="#3B82F6" />
+                            Declare College Holiday
                         </div>
                     </div>
 
-                    {cHolNotice && (
-                        <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid var(--fxec-emerald)', borderRadius: '10px', padding: '10px', color: '#34D399', fontSize: '0.85rem' }}>
-                            {cHolNotice}
-                        </div>
-                    )}
+                    {cHolNotice && <div className="alert-box-success">{cHolNotice}</div>}
 
                     <form onSubmit={handleDeclareCollegeHoliday} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div>
-                            <label className="picker-label">Holiday Name</label>
+                            <label className="picker-label">Holiday Title</label>
                             <input 
                                 type="text"
                                 className="fx-select"
                                 style={{ width: '100%', marginTop: '4px' }}
-                                placeholder="e.g. Pongal Festival / Autonomous Institutional Day"
+                                placeholder="e.g. Pongal Festival"
                                 value={cHolTitle}
                                 onChange={(e) => setCHolTitle(e.target.value)}
                             />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                            <div>
-                                <label className="picker-label">Date</label>
-                                <input 
-                                    type="date"
-                                    className="fx-select"
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    value={cHolDate}
-                                    onChange={(e) => setCHolDate(e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="picker-label">Authority Level</label>
-                                <input 
-                                    type="text"
-                                    className="fx-select"
-                                    style={{ width: '100%', marginTop: '4px', opacity: 0.8 }}
-                                    value="College-Wide (All Depts)"
-                                    disabled
-                                />
-                            </div>
-                        </div>
-
                         <div>
-                            <label className="picker-label">Executive Reason</label>
+                            <label className="picker-label">Date</label>
                             <input 
-                                type="text"
+                                type="date"
                                 className="fx-select"
                                 style={{ width: '100%', marginTop: '4px' }}
-                                value={cHolReason}
-                                onChange={(e) => setCHolReason(e.target.value)}
+                                value={cHolDate}
+                                onChange={(e) => setCHolDate(e.target.value)}
                             />
                         </div>
 
-                        <div style={{ fontSize: '0.74rem', color: '#93C5FD' }}>
-                            *When declared by the Principal, any department-level declarations for this date will be automatically harmonized without conflicts.
-                        </div>
-
                         <button type="submit" className="fx-btn-primary">
-                            Declare College-Wide Holiday
+                            Declare College Holiday
                         </button>
                     </form>
                 </div>
-
             </div>
 
         </div>

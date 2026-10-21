@@ -1,31 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    Users, ShieldCheck, RotateCcw, Calendar, AlertTriangle, 
-    CheckCircle2, Search, Building2, MapPin, Sparkles 
-} from 'lucide-react';
+import { Users, RotateCcw, Calendar, CheckCircle2, Search, Building2 } from 'lucide-react';
 
 export const HODDashboard = ({ currentUser }) => {
     const department = currentUser?.department || 'IT';
 
-    // Overview state
     const [overview, setOverview] = useState(null);
     const [students, setStudents] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-
-    // Reset device lock state
     const [resetNotice, setResetNotice] = useState(null);
 
     // Holiday declaration state
     const [holidayTitle, setHolidayTitle] = useState('');
     const [holidayDate, setHolidayDate] = useState('');
-    const [holidayReason, setHolidayReason] = useState('1st & 3rd Saturday Institutional Leave');
+    const [holidayReason, setHolidayReason] = useState('Department Institutional Leave');
     const [holidayNotice, setHolidayNotice] = useState(null);
-    const [holidayError, setHolidayError] = useState(null);
 
-    // Load department data
     const loadHODData = async () => {
-        setIsLoading(true);
         try {
             const token = localStorage.getItem('fxec_token');
             const [resOverview, resStudents] = await Promise.all([
@@ -40,8 +30,6 @@ export const HODDashboard = ({ currentUser }) => {
             setStudents(dataStudents.students || []);
         } catch (e) {
             console.error('Failed to load HOD data:', e);
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -49,9 +37,8 @@ export const HODDashboard = ({ currentUser }) => {
         loadHODData();
     }, [searchQuery]);
 
-    // Handle Reset Device Lock
     const handleResetDevice = async (studentId, studentName) => {
-        if (!window.confirm(`Are you sure you want to reset the device lock for ${studentName}? This will unbind their current phone and allow them to register their new phone on next login.`)) {
+        if (!window.confirm(`Reset device lock for ${studentName}? This allows them to login with a new phone.`)) {
             return;
         }
 
@@ -67,25 +54,20 @@ export const HODDashboard = ({ currentUser }) => {
             });
             const data = await res.json();
             if (data.success) {
-                setResetNotice(`✓ Device lock reset for ${studentName}. New phone authorization enabled.`);
+                setResetNotice(`Device reset for ${studentName}. New device can be registered on next login.`);
                 loadHODData();
-                setTimeout(() => setResetNotice(null), 6000);
+                setTimeout(() => setResetNotice(null), 5000);
             }
         } catch (e) {
             console.error('Failed to reset device:', e);
         }
     };
 
-    // Handle Declare Department Holiday
     const handleDeclareHoliday = async (e) => {
         e.preventDefault();
         setHolidayNotice(null);
-        setHolidayError(null);
 
-        if (!holidayTitle || !holidayDate) {
-            setHolidayError('Please specify holiday title and date');
-            return;
-        }
+        if (!holidayTitle || !holidayDate) return;
 
         try {
             const token = localStorage.getItem('fxec_token');
@@ -105,149 +87,97 @@ export const HODDashboard = ({ currentUser }) => {
             });
 
             const data = await res.json();
-
-            if (!res.ok) {
-                setHolidayError(data.message || data.error || 'Failed to declare holiday');
-            } else {
-                setHolidayNotice(`✓ ${data.message}`);
+            if (res.ok) {
+                setHolidayNotice(data.message);
                 setHolidayTitle('');
                 setHolidayDate('');
-                setTimeout(() => setHolidayNotice(null), 6000);
+                setTimeout(() => setHolidayNotice(null), 5000);
             }
         } catch (err) {
-            setHolidayError('Network error connecting to holiday service.');
+            console.error('Holiday declaration error:', err);
         }
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
             
-            {/* Top KPI Summary Cards */}
+            {/* KPI Cards */}
             <div className="dashboard-grid-tri">
-                <div className="fx-card fx-card-gold-accent">
-                    <div className="fx-card-subtitle">Information Technology Department</div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
-                            <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#FFF' }}>
-                                {overview?.totalStudents || 0}
-                            </div>
-                            <div style={{ fontSize: '0.8rem', color: '#93C5FD' }}>Total Enrolled IT Students</div>
-                        </div>
-                        <Users size={36} color="var(--fxec-gold)" />
+                <div className="fx-card">
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Department of {department}</div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#FFF' }}>
+                        {overview?.totalStudents || 0}
                     </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Total Enrolled Students</div>
                 </div>
 
-                <div className="fx-card" style={{ borderTop: '3px solid var(--fxec-emerald)' }}>
-                    <div className="fx-card-subtitle">Real-Time Daily Attendance</div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
-                            <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#34D399' }}>
-                                {overview?.presentToday || 0}
-                            </div>
-                            <div style={{ fontSize: '0.8rem', color: '#A7F3D0' }}>Students Present in Classes Now</div>
-                        </div>
-                        <CheckCircle2 size={36} color="var(--fxec-emerald)" />
+                <div className="fx-card">
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Present Today</div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#10B981' }}>
+                        {overview?.presentToday || 0}
                     </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>In Attendance ({overview?.attendanceRate || 0}%)</div>
                 </div>
 
-                <div className="fx-card" style={{ borderTop: '3px solid var(--fxec-cyan)' }}>
-                    <div className="fx-card-subtitle">Department Attendance Rate</div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
-                            <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--fxec-cyan)' }}>
-                                {overview?.attendanceRate || 0}%
-                            </div>
-                            <div style={{ fontSize: '0.8rem', color: '#BAE6FD' }}>Overall Campus Compliance</div>
-                        </div>
-                        <Sparkles size={36} color="var(--fxec-cyan)" />
+                <div className="fx-card">
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Active Rooms</div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#3B82F6' }}>
+                        {overview?.roomDistribution?.length || 0}
                     </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Classrooms / Labs in Session</div>
                 </div>
             </div>
 
-            {/* Middle Section: Classroom Live Distribution & Holiday Declarations */}
+            {/* Room Distribution & Holiday */}
             <div className="dashboard-grid-main">
-                
-                {/* 1. Real-Time Classroom Distribution */}
+                {/* Rooms */}
                 <div className="fx-card">
                     <div className="fx-card-header">
-                        <div>
-                            <div className="fx-card-title">
-                                <Building2 color="var(--fxec-gold)" size={22} />
-                                Live Student Distribution Across Campus
-                            </div>
-                            <div className="fx-card-subtitle">
-                                Current room occupancy of IT department students
-                            </div>
+                        <div className="fx-card-title">
+                            <Building2 size={20} color="#3B82F6" />
+                            Active Room Locations
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {overview?.roomDistribution?.length > 0 ? (
                             overview.roomDistribution.map((r, i) => (
-                                <div 
-                                    key={i}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        background: 'rgba(7, 23, 47, 0.75)',
-                                        border: '1px solid rgba(255,255,255,0.08)',
-                                        padding: '12px 16px',
-                                        borderRadius: '10px'
-                                    }}
-                                >
+                                <div key={i} className="list-row-item">
                                     <div>
-                                        <div style={{ fontWeight: 800, color: '#FFF', fontSize: '0.95rem' }}>
-                                            Room {r.room_number} • {r.room_name}
+                                        <div style={{ fontWeight: 700, color: '#FFF', fontSize: '0.9rem' }}>
+                                            Room {r.room_number} – {r.room_name}
                                         </div>
-                                        <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                                            {r.building_name}
-                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{r.building_name}</div>
                                     </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <span className="badge-present" style={{ fontSize: '0.85rem' }}>
-                                            {r.student_count} Students Present
-                                        </span>
-                                    </div>
+                                    <span className="status-tag present">
+                                        {r.student_count} Present
+                                    </span>
                                 </div>
                             ))
                         ) : (
-                            <div style={{ textAlign: 'center', padding: '30px', color: '#64748B' }}>
-                                No active students currently checked into rooms today.
+                            <div style={{ padding: '24px', textAlign: 'center', color: '#64748B' }}>
+                                No rooms currently active for {department}.
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* 2. Department Holiday Declaration with Conflict Resolution */}
-                <div className="fx-card fx-card-gold-accent">
+                {/* Holiday Management */}
+                <div className="fx-card">
                     <div className="fx-card-header">
-                        <div>
-                            <div className="fx-card-title">
-                                <Calendar color="var(--fxec-gold)" size={22} />
-                                Department Holiday Management
-                            </div>
-                            <div className="fx-card-subtitle">
-                                Declare IT department leave (1st/3rd Saturday, weather emergency)
-                            </div>
+                        <div className="fx-card-title">
+                            <Calendar size={20} color="#3B82F6" />
+                            Declare Department Holiday
                         </div>
                     </div>
 
                     {holidayNotice && (
-                        <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid var(--fxec-emerald)', borderRadius: '10px', padding: '12px', color: '#34D399', fontSize: '0.85rem' }}>
-                            {holidayNotice}
-                        </div>
+                        <div className="alert-box-success">{holidayNotice}</div>
                     )}
 
-                    {holidayError && (
-                        <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid var(--fxec-rose)', borderRadius: '10px', padding: '12px', color: '#F87171', fontSize: '0.85rem' }}>
-                            {holidayError}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleDeclareHoliday} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <form onSubmit={handleDeclareHoliday} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div>
-                            <label className="picker-label">Holiday Title</label>
+                            <label className="picker-label">Holiday Name</label>
                             <input 
                                 type="text"
                                 className="fx-select"
@@ -258,131 +188,84 @@ export const HODDashboard = ({ currentUser }) => {
                             />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                            <div>
-                                <label className="picker-label">Holiday Date</label>
-                                <input 
-                                    type="date"
-                                    className="fx-select"
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    value={holidayDate}
-                                    onChange={(e) => setHolidayDate(e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="picker-label">Scope</label>
-                                <input 
-                                    type="text"
-                                    className="fx-select"
-                                    style={{ width: '100%', marginTop: '4px', opacity: 0.8 }}
-                                    value="IT Department Only"
-                                    disabled
-                                />
-                            </div>
-                        </div>
-
                         <div>
-                            <label className="picker-label">Reason / Notes</label>
+                            <label className="picker-label">Date</label>
                             <input 
-                                type="text"
+                                type="date"
                                 className="fx-select"
                                 style={{ width: '100%', marginTop: '4px' }}
-                                value={holidayReason}
-                                onChange={(e) => setHolidayReason(e.target.value)}
+                                value={holidayDate}
+                                onChange={(e) => setHolidayDate(e.target.value)}
                             />
                         </div>
 
-                        <button type="submit" className="fx-btn-primary" style={{ marginTop: '6px' }}>
-                            Declare Department Holiday
+                        <button type="submit" className="fx-btn-primary">
+                            Save Department Holiday
                         </button>
                     </form>
                 </div>
-
             </div>
 
-            {/* Bottom Section: Anti-Proxy Device Security Center & Device Lock Reset */}
+            {/* Device Lock Management Table */}
             <div className="fx-card">
                 <div className="fx-card-header">
-                    <div>
-                        <div className="fx-card-title">
-                            <ShieldCheck color="var(--fxec-emerald)" size={22} />
-                            Anti-Proxy Device Security Management
-                        </div>
-                        <div className="fx-card-subtitle">
-                            Every student is bound to exactly one physical phone. Click "Reset Device" if a student legitimately changed smartphones.
-                        </div>
+                    <div className="fx-card-title">
+                        <Users size={20} color="#3B82F6" />
+                        Student Device Management
                     </div>
+                    <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
+                        Authorized devices bound to each student
+                    </span>
                 </div>
 
                 {resetNotice && (
-                    <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid var(--fxec-emerald)', borderRadius: '10px', padding: '12px', color: '#34D399', fontSize: '0.88rem' }}>
-                        {resetNotice}
-                    </div>
+                    <div className="alert-box-success">{resetNotice}</div>
                 )}
 
-                {/* Search Bar */}
-                <div style={{ maxWidth: '480px' }}>
+                <div style={{ maxWidth: '380px' }}>
                     <input 
                         type="text"
                         className="fx-select"
                         style={{ width: '100%' }}
-                        placeholder="Search student by name (e.g. Daniel A) or Roll No..."
+                        placeholder="Search student (Daniel A, Kavitha)..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
 
-                {/* Student Device Table */}
                 <div className="fx-table-container">
                     <table className="fx-table">
                         <thead>
                             <tr>
                                 <th>Roll Number</th>
-                                <th>Student Name</th>
-                                <th>College Email</th>
-                                <th>Bound Device Model</th>
-                                <th>Lock Status</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Registered Device</th>
                                 <th>Current Location</th>
-                                <th style={{ textAlign: 'center' }}>HOD Action</th>
+                                <th style={{ textAlign: 'center' }}>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {students.map((st, i) => (
                                 <tr key={i}>
-                                    <td style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--fxec-gold)' }}>
-                                        {st.roll_number}
-                                    </td>
-                                    <td style={{ fontWeight: 700, color: '#FFF' }}>{st.name}</td>
-                                    <td style={{ fontSize: '0.8rem', color: '#94A3B8' }}>{st.email}</td>
-                                    <td>
-                                        <strong style={{ color: '#E2E8F0' }}>
-                                            {st.device_name || 'Personal Phone'}
-                                        </strong>
-                                    </td>
-                                    <td>
-                                        {st.is_locked ? (
-                                            <span className="badge-locked">🔒 Device Bound</span>
-                                        ) : (
-                                            <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Unbound</span>
-                                        )}
-                                    </td>
+                                    <td style={{ fontFamily: 'monospace', color: '#93C5FD' }}>{st.roll_number}</td>
+                                    <td style={{ fontWeight: 600, color: '#FFF' }}>{st.name}</td>
+                                    <td style={{ fontSize: '0.78rem', color: '#94A3B8' }}>{st.email}</td>
+                                    <td>{st.device_name || 'Primary Mobile'}</td>
                                     <td>
                                         {st.current_room ? (
-                                            <span className="badge-present">
-                                                Room {st.current_room} ({st.current_building || 'MEB'})
-                                            </span>
+                                            <span className="status-tag present">Room {st.current_room}</span>
                                         ) : (
-                                            <span style={{ fontSize: '0.75rem', color: '#64748B' }}>Not marked yet</span>
+                                            <span style={{ color: '#64748B', fontSize: '0.75rem' }}>Not checked-in</span>
                                         )}
                                     </td>
                                     <td style={{ textAlign: 'center' }}>
                                         <button 
                                             className="fx-btn-danger"
                                             onClick={() => handleResetDevice(st.id, st.name)}
-                                            title="Unbind this device so the student can register their new phone"
                                         >
                                             <RotateCcw size={13} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-                                            Reset Device Lock
+                                            Reset Device
                                         </button>
                                     </td>
                                 </tr>

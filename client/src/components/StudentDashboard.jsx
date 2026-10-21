@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    MapPin, KeyRound, ShieldAlert, ShieldCheck, CheckCircle2, 
-    ArrowRightLeft, Clock, History, AlertCircle, Sparkles 
-} from 'lucide-react';
+import { MapPin, KeyRound, CheckCircle2, ArrowRightLeft, Clock, AlertCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const StudentDashboard = ({ 
@@ -12,7 +9,7 @@ export const StudentDashboard = ({
     deviceInfo, 
     simulatedTime 
 }) => {
-    // Location selection state
+    // Location selection
     const [selectedBuilding, setSelectedBuilding] = useState(1);
     const [selectedFloor, setSelectedFloor] = useState(3); // 2nd Floor
     const [selectedRoom, setSelectedRoom] = useState(3);   // Room 207
@@ -23,12 +20,10 @@ export const StudentDashboard = ({
     const [statusMessage, setStatusMessage] = useState(null);
     const [errorMessage, setErrorMessage] = useState(null);
 
-    // Timeline and movements
+    // Timeline data
     const [timeline, setTimeline] = useState([]);
-    const [movements, setMovements] = useState([]);
     const [totalPresent, setTotalPresent] = useState(0);
 
-    // Fetch timeline
     const loadTimeline = async () => {
         try {
             const token = localStorage.getItem('fxec_token');
@@ -38,7 +33,6 @@ export const StudentDashboard = ({
             const data = await res.json();
             if (data.timeline) {
                 setTimeline(data.timeline);
-                setMovements(data.movements || []);
                 setTotalPresent(data.totalPresent || 0);
             }
         } catch (e) {
@@ -48,25 +42,23 @@ export const StudentDashboard = ({
 
     useEffect(() => {
         loadTimeline();
-        const interval = setInterval(loadTimeline, 5000);
+        const interval = setInterval(loadTimeline, 4000);
         return () => clearInterval(interval);
     }, [currentUser.id]);
 
-    // Handle Building change
     const activeBuildingObj = hierarchy?.find(b => b.id === Number(selectedBuilding));
     const availableFloors = activeBuildingObj?.floors || [];
     const activeFloorObj = availableFloors.find(f => f.id === Number(selectedFloor));
     const availableRooms = activeFloorObj?.rooms || [];
     const activeRoomObj = availableRooms.find(r => r.id === Number(selectedRoom));
 
-    // Handle OTP Submission
     const handleSubmitOtp = async (e) => {
         e.preventDefault();
         setErrorMessage(null);
         setStatusMessage(null);
 
         if (!otpInput || otpInput.trim().length !== 6) {
-            setErrorMessage('Please enter a valid 6-digit OTP code.');
+            setErrorMessage('Enter the 6-digit OTP given by your staff.');
             return;
         }
 
@@ -93,11 +85,11 @@ export const StudentDashboard = ({
             if (!res.ok) {
                 setErrorMessage(data.message || data.error || 'Failed to submit OTP');
             } else {
-                setStatusMessage('🎉 Attendance marked successfully for this period!');
+                setStatusMessage('Attendance marked successfully!');
                 setOtpInput('');
                 confetti({
-                    particleCount: 80,
-                    spread: 70,
+                    particleCount: 70,
+                    spread: 60,
                     origin: { y: 0.6 }
                 });
                 loadTimeline();
@@ -109,83 +101,37 @@ export const StudentDashboard = ({
         }
     };
 
-    // Handle Lab / Class Relocation
-    const handleRoomRelocate = async (targetRoomId) => {
-        setSelectedRoom(targetRoomId);
-        try {
-            const token = localStorage.getItem('fxec_token');
-            await fetch('http://localhost:5000/api/attendance/move-room', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    toRoomId: targetRoomId,
-                    periodId: currentPeriodInfo?.activePeriod?.id || 1,
-                    note: 'Relocated to practical lab / class'
-                })
-            });
-            setStatusMessage(`Relocated to room. Please enter the fresh OTP from the staff in that room.`);
-            loadTimeline();
-        } catch (e) {
-            console.error('Error relocating:', e);
-        }
-    };
-
     return (
         <div className="dashboard-grid-wide">
-            {/* Left Column: Attendance Action Center */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Left: Location & OTP Verification */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 
-                {/* 1. Morning 9:00 - 9:05 AM Day-Start Warning Banner */}
+                {/* Morning Window Alert */}
                 {currentPeriodInfo?.isMorningWindow && (
-                    <div style={{
-                        background: 'linear-gradient(135deg, rgba(255, 184, 0, 0.2) 0%, rgba(217, 119, 6, 0.2) 100%)',
-                        border: '2px solid var(--fxec-gold)',
-                        borderRadius: '14px',
-                        padding: '16px 20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '14px',
-                        boxShadow: '0 0 20px rgba(255, 184, 0, 0.3)'
-                    }}>
-                        <Sparkles size={28} color="var(--fxec-gold)" />
+                    <div className="alert-box-warning">
+                        <Clock size={20} color="#F59E0B" />
                         <div>
-                            <div style={{ fontWeight: 800, color: '#FFF', fontSize: '1rem' }}>
-                                🔔 9:00 AM – 9:05 AM DAY-START VERIFICATION ACTIVE
-                            </div>
-                            <div style={{ fontSize: '0.82rem', color: '#FEF3C7', marginTop: '2px' }}>
-                                You must submit your 1st period OTP within this 5-minute window to initialize today's college attendance.
-                            </div>
+                            <strong>9:00 AM – 9:05 AM Day-Start Verification</strong>
+                            <p>Enter the 1st period OTP now to initialize your day.</p>
                         </div>
                     </div>
                 )}
 
-                {/* 2. Step 1: Location Hierarchy Picker */}
-                <div className="fx-card fx-card-gold-accent">
+                {/* 1. Classroom Selection */}
+                <div className="fx-card">
                     <div className="fx-card-header">
-                        <div>
-                            <div className="fx-card-title">
-                                <MapPin color="var(--fxec-gold)" size={22} />
-                                Step 1: Select Your Current Location
-                            </div>
-                            <div className="fx-card-subtitle">
-                                Confirm the Building, Floor, and Classroom/Lab you have arrived at
-                            </div>
+                        <div className="fx-card-title">
+                            <MapPin size={20} color="#3B82F6" />
+                            Select Classroom / Lab
                         </div>
-                        <span className="current-location-chip" style={{ padding: '6px 14px' }}>
-                            <span style={{ fontSize: '0.78rem', color: '#93C5FD', fontWeight: 600 }}>Active Room:</span>
-                            <strong style={{ marginLeft: '6px', color: 'var(--fxec-gold)', fontSize: '1.05rem' }}>
-                                {activeRoomObj ? `Room ${activeRoomObj.room_number}` : 'Select Room'}
-                            </strong>
+                        <span className="room-indicator-pill">
+                            Current: <strong>{activeRoomObj ? `Room ${activeRoomObj.room_number}` : 'Not Selected'}</strong>
                         </span>
                     </div>
 
                     <div className="location-picker-group">
-                        {/* Building */}
                         <div className="picker-col">
-                            <label className="picker-label">1. Building</label>
+                            <label className="picker-label">Building</label>
                             <select 
                                 className="fx-select"
                                 value={selectedBuilding}
@@ -202,14 +148,13 @@ export const StudentDashboard = ({
                                 }}
                             >
                                 {hierarchy?.map(b => (
-                                    <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+                                    <option key={b.id} value={b.id}>{b.name}</option>
                                 ))}
                             </select>
                         </div>
 
-                        {/* Floor */}
                         <div className="picker-col">
-                            <label className="picker-label">2. Floor</label>
+                            <label className="picker-label">Floor</label>
                             <select 
                                 className="fx-select"
                                 value={selectedFloor}
@@ -228,9 +173,8 @@ export const StudentDashboard = ({
                             </select>
                         </div>
 
-                        {/* Classroom / Room */}
                         <div className="picker-col">
-                            <label className="picker-label">3. Classroom / Lab Number</label>
+                            <label className="picker-label">Room Number</label>
                             <select 
                                 className="fx-select"
                                 value={selectedRoom}
@@ -238,246 +182,140 @@ export const StudentDashboard = ({
                             >
                                 {availableRooms.map(r => (
                                     <option key={r.id} value={r.id}>
-                                        Room {r.room_number} - {r.name}
+                                        Room {r.room_number} ({r.name})
                                     </option>
                                 ))}
                             </select>
                         </div>
                     </div>
 
-                    {/* Quick Classroom / Lab Switchers */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '6px' }}>
-                        <span style={{ fontSize: '0.78rem', color: '#93C5FD', fontWeight: 600 }}>Quick Switch:</span>
+                    {/* Quick Room Shortcuts */}
+                    <div className="quick-room-strip">
+                        <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>Common Rooms:</span>
                         <button 
                             type="button"
-                            className="role-btn" 
-                            style={{ background: selectedRoom === 3 ? 'var(--fxec-gold)' : 'rgba(255,255,255,0.06)', color: selectedRoom === 3 ? '#07172F' : '#FFF' }}
+                            className={`room-chip-btn ${selectedRoom === 3 ? 'active' : ''}`}
                             onClick={() => { setSelectedBuilding(1); setSelectedFloor(3); setSelectedRoom(3); }}
                         >
-                            Room 207 (IT Lecture Hall)
+                            Room 207 (IT Hall)
                         </button>
                         <button 
                             type="button"
-                            className="role-btn" 
-                            style={{ background: selectedRoom === 6 ? 'var(--fxec-gold)' : 'rgba(255,255,255,0.06)', color: selectedRoom === 6 ? '#07172F' : '#FFF' }}
+                            className={`room-chip-btn ${selectedRoom === 6 ? 'active' : ''}`}
                             onClick={() => { setSelectedBuilding(4); setSelectedFloor(5); setSelectedRoom(6); }}
                         >
-                            Applied AI & ML Lab (AL-01)
+                            AI & ML Lab
                         </button>
                         <button 
                             type="button"
-                            className="role-btn" 
-                            style={{ background: selectedRoom === 7 ? 'var(--fxec-gold)' : 'rgba(255,255,255,0.06)', color: selectedRoom === 7 ? '#07172F' : '#FFF' }}
+                            className={`room-chip-btn ${selectedRoom === 7 ? 'active' : ''}`}
                             onClick={() => { setSelectedBuilding(4); setSelectedFloor(6); setSelectedRoom(7); }}
                         >
-                            Cloud Computing Lab (AL-02)
+                            Cloud Lab
                         </button>
                     </div>
                 </div>
 
-                {/* 3. Step 2: 10-Second OTP Verification Form */}
-                <div className="fx-card fx-card-gold-accent">
+                {/* 2. Enter OTP */}
+                <div className="fx-card">
                     <div className="fx-card-header">
-                        <div>
-                            <div className="fx-card-title">
-                                <KeyRound color="var(--fxec-gold)" size={22} />
-                                Step 2: Enter Classroom OTP
-                            </div>
-                            <div className="fx-card-subtitle">
-                                The faculty in {activeRoomObj ? `Room ${activeRoomObj.room_number}` : 'your class'} displays a 10-second rolling code
-                            </div>
+                        <div className="fx-card-title">
+                            <KeyRound size={20} color="#3B82F6" />
+                            Enter Attendance OTP
                         </div>
+                        <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
+                            Valid for Room {activeRoomObj ? activeRoomObj.room_number : '207'}
+                        </span>
                     </div>
 
-                    <form onSubmit={handleSubmitOtp} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-                        <div style={{ textAlign: 'center' }}>
-                            <input
-                                type="text"
-                                maxLength="6"
-                                placeholder="000000"
-                                className="otp-input-field"
-                                value={otpInput}
-                                onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
-                                autoFocus
-                            />
-                            <div style={{ fontSize: '0.8rem', color: varCssMuted(), marginTop: '8px' }}>
-                                OTP regenerates every 10 seconds on the faculty screen
-                            </div>
-                        </div>
+                    <form onSubmit={handleSubmitOtp} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px', padding: '12px 0' }}>
+                        <input
+                            type="text"
+                            maxLength="6"
+                            placeholder="------"
+                            className="otp-input-field"
+                            value={otpInput}
+                            onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                            autoFocus
+                        />
 
-                        {/* Status / Error Alerts */}
                         {statusMessage && (
-                            <div style={{
-                                width: '100%',
-                                background: 'rgba(16, 185, 129, 0.15)',
-                                border: '1px solid var(--fxec-emerald)',
-                                borderRadius: '10px',
-                                padding: '12px 16px',
-                                color: '#34D399',
-                                fontSize: '0.9rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px'
-                            }}>
-                                <CheckCircle2 size={20} />
-                                {statusMessage}
+                            <div className="alert-box-success">
+                                <CheckCircle2 size={18} />
+                                <span>{statusMessage}</span>
                             </div>
                         )}
 
                         {errorMessage && (
-                            <div style={{
-                                width: '100%',
-                                background: 'rgba(239, 68, 68, 0.15)',
-                                border: '1px solid var(--fxec-rose)',
-                                borderRadius: '10px',
-                                padding: '12px 16px',
-                                color: '#F87171',
-                                fontSize: '0.9rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px'
-                            }}>
-                                <AlertCircle size={20} />
-                                {errorMessage}
+                            <div className="alert-box-error">
+                                <AlertCircle size={18} />
+                                <span>{errorMessage}</span>
                             </div>
                         )}
 
                         <button 
                             type="submit" 
                             className="fx-btn-primary" 
-                            style={{ width: '100%', maxWidth: '380px' }}
+                            style={{ width: '100%', maxWidth: '340px' }}
                             disabled={isSubmitting || otpInput.length !== 6}
                         >
-                            {isSubmitting ? 'Verifying...' : 'Verify OTP & Check-in'}
+                            {isSubmitting ? 'Verifying...' : 'Mark Present'}
                         </button>
                     </form>
                 </div>
 
-                {/* 4. Lab / Room Movement Timeline Notice */}
-                <div style={{
-                    background: 'rgba(17, 34, 64, 0.6)',
-                    border: '1px dashed rgba(255,255,255,0.15)',
-                    borderRadius: '12px',
-                    padding: '14px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    fontSize: '0.82rem',
-                    color: '#94A3B8'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <ArrowRightLeft size={18} color="var(--fxec-cyan)" />
-                        <span>Need to change classes or shift to a computer lab? Select the new room above and enter the new faculty's OTP.</span>
-                    </div>
-                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                        *Movement is unrecorded during 10:40 AM & 12:40 PM breaks
-                    </span>
+                {/* Movement note */}
+                <div className="movement-info-bar">
+                    <ArrowRightLeft size={16} color="#60A5FA" />
+                    <span>Moving to another lab or class? Change your room above and enter the OTP from the staff in that room.</span>
                 </div>
             </div>
 
-            {/* Right Column: Today's Period Schedule & Device Anti-Proxy Security */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                
-                {/* Anti-Proxy Device Locking Card */}
+            {/* Right: Today's Schedule */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div className="fx-card">
                     <div className="fx-card-header">
                         <div className="fx-card-title">
-                            <ShieldCheck color="var(--fxec-emerald)" size={22} />
-                            Device Anti-Proxy Security
+                            <Clock size={20} color="#3B82F6" />
+                            Today's Schedule
                         </div>
-                        <span className="badge-present">LOCKED & BOUND</span>
+                        <span className="count-pill">
+                            {totalPresent} / 7 Marked
+                        </span>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
-                            <span style={{ color: '#94A3B8' }}>Registered Device:</span>
-                            <strong style={{ color: '#FFF' }}>{deviceInfo?.deviceName || 'Samsung Galaxy A35'}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
-                            <span style={{ color: '#94A3B8' }}>Platform:</span>
-                            <span style={{ color: '#FFF' }}>{deviceInfo?.platform || 'Android Mobile'}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
-                            <span style={{ color: '#94A3B8' }}>Screen / Hardware Hash:</span>
-                            <span style={{ color: 'var(--fxec-gold)', fontFamily: 'monospace' }}>
-                                {deviceInfo?.fingerprint ? deviceInfo.fingerprint.slice(0, 16) + '...' : 'SEC_HASH_VALID'}
-                            </span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: '#94A3B8' }}>Proxy Prevention:</span>
-                            <span style={{ color: '#34D399', fontWeight: 700 }}>Active (Strict 1-Device Lock)</span>
-                        </div>
-                    </div>
-
-                    <div style={{ fontSize: '0.75rem', color: '#64748B', lineHeight: 1.4 }}>
-                        If you change smartphones or lose your phone, visit the HOD office to request an authorized device lock reset.
-                    </div>
-                </div>
-
-                {/* Today's Schedule & Attendance Timeline */}
-                <div className="fx-card">
-                    <div className="fx-card-header">
-                        <div>
-                            <div className="fx-card-title">
-                                <Clock color="var(--fxec-gold)" size={22} />
-                                Today's Period Schedule (Dismissal 4:05 PM)
-                            </div>
-                            <div className="fx-card-subtitle">
-                                {totalPresent} of 7 Periods Attended Today
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '440px', overflowY: 'auto' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {timeline.map((item, idx) => (
                             <div 
                                 key={idx}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: '10px 14px',
-                                    borderRadius: '10px',
-                                    background: item.is_break 
-                                        ? 'rgba(255,255,255,0.02)' 
-                                        : (item.isMarked ? 'rgba(16, 185, 129, 0.12)' : 'rgba(7, 23, 47, 0.6)'),
-                                    border: item.isMarked 
-                                        ? '1px solid rgba(16, 185, 129, 0.3)' 
-                                        : '1px solid rgba(255,255,255,0.06)'
-                                }}
+                                className={`period-schedule-row ${item.is_break ? 'is-break' : ''} ${item.isMarked ? 'is-marked' : ''}`}
                             >
                                 <div>
-                                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: item.is_break ? '#94A3B8' : '#FFF' }}>
-                                        {item.name}
-                                    </div>
-                                    <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                                        {item.start_time.slice(0, 5)} - {item.end_time.slice(0, 5)}
-                                    </div>
+                                    <div className="p-title">{item.name}</div>
+                                    <div className="p-sub">{item.start_time.slice(0, 5)} – {item.end_time.slice(0, 5)}</div>
                                 </div>
 
                                 <div>
                                     {item.is_break ? (
-                                        <span style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 600 }}>Break / Lunch</span>
+                                        <span className="status-tag break">Interval</span>
                                     ) : item.isMarked ? (
-                                        <span className="badge-present">
+                                        <span className="status-tag present">
                                             ✓ Present ({item.attendance?.room_number ? `Rm ${item.attendance.room_number}` : 'Room 207'})
                                         </span>
                                     ) : (
-                                        <span style={{ fontSize: '0.75rem', color: '#F87171', fontWeight: 600 }}>
-                                            Pending OTP
-                                        </span>
+                                        <span className="status-tag pending">Pending</span>
                                     )}
                                 </div>
                             </div>
                         ))}
                     </div>
-                </div>
 
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', fontSize: '0.78rem', color: '#64748B', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>📱 Device: {deviceInfo?.deviceName || 'Authorized Phone'}</span>
+                        <span>Lock: Active</span>
+                    </div>
+                </div>
             </div>
         </div>
     );
 };
-
-function varCssMuted() {
-    return '#94A3B8';
-}

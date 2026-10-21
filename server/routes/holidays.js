@@ -19,28 +19,48 @@ router.get('/', async (req, res) => {
     }
 });
 
-// 2. Check if a specific date (or today) is a holiday
+// 2. Check if a specific date (or today) is a holiday or timed exemption event
 router.get('/check', async (req, res) => {
     try {
         const date = req.query.date || new Date().toISOString().slice(0, 10);
         const department = req.query.department || 'IT';
+        const currentTime = req.query.currentTime || null;
 
         const [results] = await pool.query(
             `SELECT * FROM holidays 
-             WHERE holiday_date = ? AND (scope = 'college' OR (scope = 'department' AND department = ?))
+             WHERE holiday_date = ? AND (scope = 'college' OR (scope = 'department' AND (department = ? OR department = 'ALL')))
              ORDER BY scope ASC`,
             [date, department]
         );
 
         if (results.length > 0) {
-            const h = results[0];
-            return res.json({
-                isHoliday: true,
-                title: h.title,
-                scope: h.scope,
-                department: h.department,
-                reason: h.reason
-            });
+            for (const h of results) {
+                if (h.is_timed && h.start_time && h.end_time) {
+                    if (currentTime) {
+                        if (currentTime >= h.start_time && currentTime <= h.end_time) {
+                            return res.json({
+                                isHoliday: true,
+                                isTimed: true,
+                                title: h.title,
+                                scope: h.scope,
+                                department: h.department,
+                                reason: h.reason,
+                                startTime: h.start_time,
+                                endTime: h.end_time
+                            });
+                        }
+                    }
+                } else {
+                    return res.json({
+                        isHoliday: true,
+                        isTimed: false,
+                        title: h.title,
+                        scope: h.scope,
+                        department: h.department,
+                        reason: h.reason
+                    });
+                }
+            }
         }
 
         return res.json({ isHoliday: false });
@@ -50,10 +70,10 @@ router.get('/check', async (req, res) => {
     }
 });
 
-// 3. Declare Holiday (HOD: Department Only; Principal: College-Wide with Conflict Resolution)
+// 3. Declare Holiday (HOD: Department Only; Principal: College-Wide with Conflict Resolution & Time Exemption)
 router.post('/declare', authenticate, authorizeRoles('hod', 'principal'), async (req, res) => {
     try {
-        const { title, holiday_date, scope, department, reason } = req.body;
+        const { title, holiday_date, scope, department, reason, is_timed, start_time, end_time } = req.body;
         const userId = req.user.id;
         const userRole = req.user.role;
 
@@ -71,10 +91,14 @@ router.post('/declare', authenticate, authorizeRoles('hod', 'principal'), async 
             effectiveDept = req.user.department;
         }
 
+        const isTimedEvent = is_timed ? 1 : 0;
+        const sTime = isTimedEvent ? (start_time || '09:00:00') : null;
+        const eTime = isTimedEvent ? (end_time || '12:30:00') : null;
+
         // --- CONFLICT RESOLUTION ---
-        // A. Check if a college-wide holiday already exists for this date
+        // A. Check if a full-day college-wide holiday already exists for this date
         const [collegeHolidays] = await pool.query(
-            'SELECT * FROM holidays WHERE holiday_date = ? AND scope = "college"',
+            'SELECT * FROM holidays WHERE holiday_date = ? AND scope = "college" AND is_timed = 0',
             [holiday_date]
         );
 
@@ -85,30 +109,20 @@ router.post('/declare', authenticate, authorizeRoles('hod', 'principal'), async 
             });
         }
 
-        // B. If Principal declares a College-wide holiday, clean up existing department-level duplicates for this date
-        if (effectiveScope === 'college') {
+        // B. If Principal declares a full-day College-wide holiday, clean up existing department-level duplicates for this date
+        if (effectiveScope === 'college' && !isTimedEvent) {
             await pool.query('DELETE FROM holidays WHERE holiday_date = ? AND scope = "department"', [holiday_date]);
         }
 
-        // C. Check if same department holiday already exists
-        const [existing] = await pool.query(
-            'SELECT * FROM holidays WHERE holiday_date = ? AND scope = ? AND department = ?',
-            [holiday_date, effectiveScope, effectiveDept]
-        );
-
-        if (existing.length > 0) {
-            return res.status(409).json({ error: 'A holiday for this date and department/college already exists.' });
-        }
-
         await pool.query(
-            `INSERT INTO holidays (title, holiday_date, scope, department, declared_by, reason)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [title, holiday_date, effectiveScope, effectiveDept, userId, reason || 'Declared by Academic Authority']
+            `INSERT INTO holidays (title, holiday_date, scope, department, declared_by, reason, is_timed, start_time, end_time)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [title, holiday_date, effectiveScope, effectiveDept, userId, reason || 'Declared by Academic Authority', isTimedEvent, sTime, eTime]
         );
 
         return res.status(201).json({
             success: true,
-            message: `Holiday declared successfully (${effectiveScope === 'college' ? 'College-Wide' : effectiveDept + ' Department'})`,
+            message: `${isTimedEvent ? 'Timed Exemption Event' : 'Holiday'} declared successfully (${effectiveScope === 'college' ? 'College-Wide' : effectiveDept + ' Department'}${isTimedEvent ? ` from ${sTime.slice(0,5)} to ${eTime.slice(0,5)}` : ''})`,
             conflictResolved: collegeHolidays.length > 0 || (effectiveScope === 'college')
         });
     } catch (err) {

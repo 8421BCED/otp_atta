@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, KeyRound, CheckCircle2, AlertCircle, Navigation } from 'lucide-react';
+import { MapPin, KeyRound, CheckCircle2, AlertCircle, Navigation, DoorOpen, Lock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { PeriodCountdownWheel } from './PeriodCountdownWheel';
 import { RoomSelectionModal } from './RoomSelectionModal';
@@ -11,10 +11,10 @@ export const StudentDashboard = ({
     deviceInfo, 
     simulatedTime 
 }) => {
-    // Location selection defaults to APJ Block (5) -> 2nd Floor -> Room 207, or Main Block (1)
-    const [selectedBuilding, setSelectedBuilding] = useState(5); // Dr. APJ Abdul Kalam Block
-    const [selectedFloor, setSelectedFloor] = useState(3);
-    const [selectedRoom, setSelectedRoom] = useState(3); // Room 207
+    // Dynamic classroom selection: initially null (no hardcoded defaults)
+    const [selectedBuilding, setSelectedBuilding] = useState(null);
+    const [selectedFloor, setSelectedFloor] = useState(null);
+    const [selectedRoom, setSelectedRoom] = useState(null);
 
     // Modals
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
@@ -51,18 +51,31 @@ export const StudentDashboard = ({
         return () => clearInterval(interval);
     }, [currentUser.id]);
 
-    // Lookup current building, floor, room from hierarchy
-    const activeBuildingObj = hierarchy?.find(b => b.id === Number(selectedBuilding)) || hierarchy?.[0];
+    // Lookup current building, floor, room from hierarchy if selected
+    const activeBuildingObj = selectedBuilding ? hierarchy?.find(b => b.id === Number(selectedBuilding)) : null;
     const availableFloors = activeBuildingObj?.floors || [];
-    const activeFloorObj = availableFloors.find(f => f.id === Number(selectedFloor)) || availableFloors[0];
+    const activeFloorObj = selectedFloor ? availableFloors.find(f => f.id === Number(selectedFloor)) : null;
     const availableRooms = activeFloorObj?.rooms || [];
-    const activeRoomObj = availableRooms.find(r => r.id === Number(selectedRoom)) || availableRooms[0];
+    const activeRoomObj = selectedRoom ? availableRooms.find(r => r.id === Number(selectedRoom)) : null;
+
+    // Check morning day-start cutoff (9:00 AM - 9:05 AM)
+    const period1Item = timeline?.find(p => p.id === 1);
+    const isPeriod1Marked = !!period1Item?.isMarked;
+    const isPastCutoff = !!currentPeriodInfo?.isPastMorningCutoff;
+    const isCurrentPeriod1 = currentPeriodInfo?.activePeriod?.period_number === 1;
+    const isDayStartLocked = isCurrentPeriod1 && isPastCutoff && !isPeriod1Marked;
 
     const handleRoomModalSelect = (bId, fId, rId) => {
         setSelectedBuilding(bId);
         setSelectedFloor(fId);
         setSelectedRoom(rId);
-        setStatusMessage(`Classroom updated to Room ${rId}. Please enter the OTP from your teacher.`);
+
+        // Find room name for clean feedback
+        const b = hierarchy?.find(x => x.id === Number(bId));
+        const f = b?.floors?.find(x => x.id === Number(fId));
+        const r = f?.rooms?.find(x => x.id === Number(rId));
+
+        setStatusMessage(`Classroom set to Room ${r ? r.room_number : rId}. Ready for OTP verification.`);
         setTimeout(() => setStatusMessage(null), 4000);
     };
 
@@ -70,6 +83,17 @@ export const StudentDashboard = ({
         e.preventDefault();
         setErrorMessage(null);
         setStatusMessage(null);
+
+        if (!selectedRoom) {
+            setErrorMessage('Please select your classroom first before entering OTP.');
+            setIsRoomModalOpen(true);
+            return;
+        }
+
+        if (isDayStartLocked) {
+            setErrorMessage('The 9:00 – 9:05 AM Day-Start Window has closed. Period 1 is marked Absent.');
+            return;
+        }
 
         if (!otpInput || otpInput.trim().length !== 6) {
             setErrorMessage('Enter the 6-digit rolling OTP displayed by your staff.');
@@ -128,7 +152,7 @@ export const StudentDashboard = ({
     return (
         <div className="aero-student-grid">
             
-            {/* Top Student Banner: No sparkles, no semester text */}
+            {/* Top Student Banner */}
             <div className="aero-action-banner fa-glass-card" style={{ gridColumn: '1 / -1' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div className="aero-badge-circle" style={{ fontWeight: 800, color: 'var(--blue)', fontSize: '0.92rem' }}>
@@ -136,10 +160,10 @@ export const StudentDashboard = ({
                     </div>
                     <div>
                         <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--dark-blue)' }}>
-                            {currentUser?.name || 'Daniel A'} • Roll No: {currentUser?.roll_number || '24IT021'}
+                            {currentUser?.name || 'Student'} • Roll No: {currentUser?.roll_number || '24IT021'}
                         </div>
                         <div style={{ fontSize: '0.76rem', color: 'var(--text-sub)' }}>
-                            Department of Information Technology • 2nd Year
+                            Department of {currentUser?.department || 'Information Technology'} • 2nd Year
                         </div>
                     </div>
                 </div>
@@ -151,50 +175,38 @@ export const StudentDashboard = ({
                     {/* Classroom Location & Move Classroom Button */}
                     <div className="student-classroom-header-bar">
                         <div className="location-info-block">
-                            <div className="building-title-row">
-                                <MapPin size={17} color="var(--blue)" className="pin-icon" />
-                                <span className="building-name">{activeBuildingObj?.name || 'Dr. APJ Abdul Kalam Block'}</span>
-                                <span className="room-badge">Room {activeRoomObj?.room_number || '207'}</span>
-                            </div>
-                            <div className="floor-room-sub">
-                                {activeFloorObj?.name || '2nd Floor'} • {activeRoomObj?.name || 'IT 2nd Year Lecture Hall'}
-                            </div>
+                            {activeRoomObj ? (
+                                <>
+                                    <div className="building-title-row">
+                                        <MapPin size={17} color="var(--blue)" className="pin-icon" />
+                                        <span className="building-name">{activeBuildingObj?.name}</span>
+                                        <span className="room-badge">Room {activeRoomObj?.room_number}</span>
+                                    </div>
+                                    <div className="floor-room-sub">
+                                        {activeFloorObj?.name} • {activeRoomObj?.name}
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="building-title-row">
+                                        <MapPin size={17} color="var(--text-sub)" className="pin-icon" />
+                                        <span className="building-name" style={{ color: 'var(--text-sub)' }}>No Classroom Selected</span>
+                                    </div>
+                                    <div className="floor-room-sub">
+                                        Select your campus building, floor and room to submit OTP
+                                    </div>
+                                </>
+                            )}
                         </div>
 
-                        {/* Move / Change Classroom right near the timer circle */}
+                        {/* Move / Change Classroom button */}
                         <button 
                             type="button" 
                             className="aero-glass-btn primary move-classroom-btn"
                             onClick={() => setIsRoomModalOpen(true)}
                         >
                             <Navigation size={14} />
-                            <span>Move / Change Classroom</span>
-                        </button>
-                    </div>
-
-                    {/* Quick Lab Jump Strip */}
-                    <div className="aero-quick-chips">
-                        <span style={{ fontSize: '0.74rem', color: 'var(--text-sub)', fontWeight: 600 }}>Quick Labs:</span>
-                        <button 
-                            type="button" 
-                            className={`aero-chip ${selectedRoom === 3 ? 'active' : ''}`}
-                            onClick={() => { setSelectedBuilding(1); setSelectedFloor(3); setSelectedRoom(3); }}
-                        >
-                            Room 207 (IT Hall)
-                        </button>
-                        <button 
-                            type="button" 
-                            className={`aero-chip ${selectedRoom === 6 ? 'active' : ''}`}
-                            onClick={() => { setSelectedBuilding(4); setSelectedFloor(5); setSelectedRoom(6); }}
-                        >
-                            AI & ML Lab
-                        </button>
-                        <button 
-                            type="button" 
-                            className={`aero-chip ${selectedRoom === 7 ? 'active' : ''}`}
-                            onClick={() => { setSelectedBuilding(4); setSelectedFloor(6); setSelectedRoom(7); }}
-                        >
-                            Cloud Lab
+                            <span>{activeRoomObj ? 'Move / Change Classroom' : 'Select Classroom'}</span>
                         </button>
                     </div>
 
@@ -206,46 +218,75 @@ export const StudentDashboard = ({
                         />
                     </div>
 
-                    {/* OTP Entry Form: Directly under the timer circle */}
-                    <form onSubmit={handleSubmitOtp} className="student-otp-form">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-sub)', fontSize: '0.82rem' }}>
-                            <KeyRound size={15} color="var(--blue)" />
-                            <span>Enter the 6-digit rolling OTP displayed by your staff:</span>
+                    {/* OTP Entry Form OR Selection Prompt */}
+                    {!selectedRoom ? (
+                        <div className="no-room-prompt-box">
+                            <DoorOpen size={28} color="var(--blue)" />
+                            <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.96rem' }}>
+                                Classroom Selection Required
+                            </div>
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-sub)', maxWidth: '340px', margin: 0, textAlign: 'center' }}>
+                                You must select your Building, Floor, and Classroom before you can enter the 6-digit OTP from your teacher.
+                            </p>
+                            <button
+                                type="button"
+                                className="aero-gloss-btn"
+                                style={{ width: 'auto', padding: '10px 22px', marginTop: '6px' }}
+                                onClick={() => setIsRoomModalOpen(true)}
+                            >
+                                <Navigation size={14} style={{ marginRight: '6px' }} />
+                                <span>Choose Classroom Location</span>
+                            </button>
                         </div>
-
-                        <input
-                            type="text"
-                            maxLength="6"
-                            placeholder="------"
-                            className="aero-otp-input"
-                            value={otpInput}
-                            onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
-                            autoFocus
-                        />
-
-                        {statusMessage && (
-                            <div className="aero-alert-success" style={{ width: '100%', maxWidth: '340px' }}>
-                                <CheckCircle2 size={16} />
-                                <span>{statusMessage}</span>
+                    ) : isDayStartLocked ? (
+                        <div className="aero-alert-error" style={{ width: '100%', maxWidth: '380px', margin: '0 auto', padding: '16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                            <Lock size={26} color="#DC2626" />
+                            <strong style={{ fontSize: '0.92rem', color: '#DC2626' }}>Morning Cutoff Window (9:05 AM) Closed</strong>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--dark-blue)', lineHeight: '1.4' }}>
+                                College rules require students to check in between 9:00 AM – 9:05 AM. Because this window has passed, you are marked <strong>Absent for Period 1</strong> and OTP submission is locked for this period.
+                            </span>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleSubmitOtp} className="student-otp-form">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-sub)', fontSize: '0.82rem' }}>
+                                <KeyRound size={15} color="var(--blue)" />
+                                <span>Enter the 6-digit rolling OTP displayed by your staff in Room {activeRoomObj.room_number}:</span>
                             </div>
-                        )}
 
-                        {errorMessage && (
-                            <div className="aero-alert-error" style={{ width: '100%', maxWidth: '340px' }}>
-                                <AlertCircle size={16} />
-                                <span>{errorMessage}</span>
-                            </div>
-                        )}
+                            <input
+                                type="text"
+                                maxLength="6"
+                                placeholder="------"
+                                className="aero-otp-input"
+                                value={otpInput}
+                                onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                                autoFocus
+                            />
 
-                        <button 
-                            type="submit" 
-                            className="aero-gloss-btn" 
-                            style={{ width: '100%', maxWidth: '340px', padding: '11px 24px' }}
-                            disabled={isSubmitting || otpInput.length !== 6}
-                        >
-                            <span>{isSubmitting ? 'Verifying OTP...' : 'Verify & Mark Present'}</span>
-                        </button>
-                    </form>
+                            {statusMessage && (
+                                <div className="aero-alert-success" style={{ width: '100%', maxWidth: '340px' }}>
+                                    <CheckCircle2 size={16} />
+                                    <span>{statusMessage}</span>
+                                </div>
+                            )}
+
+                            {errorMessage && (
+                                <div className="aero-alert-error" style={{ width: '100%', maxWidth: '340px' }}>
+                                    <AlertCircle size={16} />
+                                    <span>{errorMessage}</span>
+                                </div>
+                            )}
+
+                            <button 
+                                type="submit" 
+                                className="aero-gloss-btn" 
+                                style={{ width: '100%', maxWidth: '340px', padding: '11px 24px' }}
+                                disabled={isSubmitting || otpInput.length !== 6}
+                            >
+                                <span>{isSubmitting ? 'Verifying OTP...' : 'Verify & Mark Present'}</span>
+                            </button>
+                        </form>
+                    )}
                 </div>
             </div>
 
@@ -262,29 +303,36 @@ export const StudentDashboard = ({
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {timeline.map((item, idx) => (
-                            <div 
-                                key={idx}
-                                className={`aero-schedule-row ${item.is_break ? 'is-break' : ''} ${item.isMarked ? 'is-marked' : ''}`}
-                            >
-                                <div>
-                                    <div className="row-p-title">{item.name}</div>
-                                    <div className="row-p-time">{item.start_time.slice(0, 5)} – {item.end_time.slice(0, 5)}</div>
-                                </div>
+                        {timeline.map((item, idx) => {
+                            const isP1CutoffAbsent = item.id === 1 && !item.isMarked && isPastCutoff;
+                            return (
+                                <div 
+                                    key={idx}
+                                    className={`aero-schedule-row ${item.is_break ? 'is-break' : ''} ${item.isMarked ? 'is-marked' : ''} ${isP1CutoffAbsent ? 'is-absent' : ''}`}
+                                >
+                                    <div>
+                                        <div className="row-p-title">{item.name}</div>
+                                        <div className="row-p-time">{item.start_time.slice(0, 5)} – {item.end_time.slice(0, 5)}</div>
+                                    </div>
 
-                                <div>
-                                    {item.is_break ? (
-                                        <span className="aero-status-tag break">Interval</span>
-                                    ) : item.isMarked ? (
-                                        <span className="aero-status-tag present">
-                                            ✓ Present ({item.attendance?.room_number ? `Rm ${item.attendance.room_number}` : 'Room 207'})
-                                        </span>
-                                    ) : (
-                                        <span className="aero-status-tag pending">Pending</span>
-                                    )}
+                                    <div>
+                                        {item.is_break ? (
+                                            <span className="aero-status-tag break">Interval</span>
+                                        ) : item.isMarked ? (
+                                            <span className="aero-status-tag present">
+                                                ✓ Present ({item.attendance?.room_number ? `Rm ${item.attendance.room_number}` : 'Verified'})
+                                            </span>
+                                        ) : isP1CutoffAbsent ? (
+                                            <span className="aero-status-tag absent" style={{ background: '#FEE2E2', color: '#DC2626', border: '1px solid #EF4444' }}>
+                                                ✗ Absent (Cutoff 9:05)
+                                            </span>
+                                        ) : (
+                                            <span className="aero-status-tag pending">Pending</span>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             </div>

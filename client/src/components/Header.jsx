@@ -45,13 +45,6 @@ export const Header = ({
         };
     }, []);
 
-    const roles = [
-        { id: 'student', label: 'Student', email: 'daniela.ug.24.it@francisxavier.ac.in', name: 'Daniel A', path: '/students' },
-        { id: 'staff', label: 'Staff', email: 'staff.it@francisxavier.ac.in', name: 'Prof. R. David', path: '/staffs' },
-        { id: 'hod', label: 'HOD', email: 'hod.it@francisxavier.ac.in', name: 'Dr. J. B. Shajilin Labbai', path: '/hod' },
-        { id: 'principal', label: 'Principal', email: 'principal@francisxavier.ac.in', name: 'Dr. V. Velmurugan', path: '/principal' }
-    ];
-
     const userInitial = currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U';
 
     return (
@@ -119,19 +112,6 @@ export const Header = ({
                         <option value="15:45:00">03:45 PM (Period 7)</option>
                     </select>
                 )}
-
-                {/* Role Switcher Tabs */}
-                <div className="role-switcher-container">
-                    {roles.map(r => (
-                        <button
-                            key={r.id}
-                            className={`role-btn ${currentUser?.role === r.id ? 'active' : ''}`}
-                            onClick={() => onRoleChange(r)}
-                        >
-                            {r.label}
-                        </button>
-                    ))}
-                </div>
 
                 {/* Top-Right Profile Icon & Dropdown Menu */}
                 <div className="profile-menu-container" ref={dropdownRef}>

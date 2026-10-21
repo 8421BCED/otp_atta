@@ -68,4 +68,46 @@ router.post('/rooms', authenticate, authorizeRoles('principal'), async (req, res
     }
 });
 
+// 4. Add Floor to Building (Principal only)
+router.post('/floors', authenticate, authorizeRoles('principal'), async (req, res) => {
+    try {
+        const { building_id, floor_number, name } = req.body;
+        if (!building_id || floor_number === undefined || !name) {
+            return res.status(400).json({ error: 'Building ID, floor number, and name are required' });
+        }
+        const [result] = await pool.query(
+            'INSERT INTO floors (building_id, floor_number, name) VALUES (?, ?, ?)',
+            [building_id, floor_number, name]
+        );
+        return res.status(201).json({ message: 'Floor added successfully', floorId: result.insertId });
+    } catch (err) {
+        console.error('Error creating floor:', err);
+        return res.status(500).json({ error: 'Failed to create floor' });
+    }
+});
+
+// 5. Delete Room (Principal only)
+router.delete('/rooms/:id', authenticate, authorizeRoles('principal'), async (req, res) => {
+    try {
+        await pool.query('DELETE FROM rooms WHERE id = ?', [req.params.id]);
+        return res.json({ success: true, message: 'Room deleted successfully' });
+    } catch (err) {
+        console.error('Error deleting room:', err);
+        return res.status(500).json({ error: 'Failed to delete room' });
+    }
+});
+
+// 6. Delete Building (Principal only)
+router.delete('/buildings/:id', authenticate, authorizeRoles('principal'), async (req, res) => {
+    try {
+        await pool.query('DELETE FROM rooms WHERE building_id = ?', [req.params.id]);
+        await pool.query('DELETE FROM floors WHERE building_id = ?', [req.params.id]);
+        await pool.query('DELETE FROM buildings WHERE id = ?', [req.params.id]);
+        return res.json({ success: true, message: 'Building and associated rooms deleted' });
+    } catch (err) {
+        console.error('Error deleting building:', err);
+        return res.status(500).json({ error: 'Failed to delete building' });
+    }
+});
+
 module.exports = router;

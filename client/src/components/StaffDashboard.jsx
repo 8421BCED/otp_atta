@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Users, RefreshCw, QrCode, Search, Radio, CheckCircle2, DoorOpen, MapPin } from 'lucide-react';
+import { Users, RefreshCw, QrCode, Search, Radio, CheckCircle2, DoorOpen, MapPin, Eye } from 'lucide-react';
 import { RoomSelectionModal } from './RoomSelectionModal';
+import { StudentDetailsModal } from './StudentDetailsModal';
 
 export const StaffDashboard = ({ 
     currentUser, 
@@ -9,6 +10,7 @@ export const StaffDashboard = ({
 }) => {
     const [selectedRoomId, setSelectedRoomId] = useState(3); // Room 207
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
+    const [inspectedStudentId, setInspectedStudentId] = useState(null);
 
     // 10s OTP State
     const [currentOtp, setCurrentOtp] = useState('------');
@@ -313,17 +315,42 @@ export const StaffDashboard = ({
                                     <th>Current Room</th>
                                     <th>Building</th>
                                     <th>Periods Marked</th>
+                                    <th style={{ textAlign: 'center' }}>Details & Calendar</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {searchResults.map((st, i) => (
-                                    <tr key={i}>
-                                        <td style={{ fontFamily: 'monospace', color: 'var(--blue)' }}>{st.roll_number}</td>
-                                        <td style={{ fontWeight: 700, color: 'var(--dark-blue)' }}>{st.name}</td>
+                                    <tr 
+                                        key={i}
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => setInspectedStudentId(st.id)}
+                                        title="Click to view full calendar & history"
+                                    >
+                                        <td style={{ fontFamily: 'monospace', color: 'var(--blue)', fontWeight: 700 }}>
+                                            {st.roll_number}
+                                        </td>
+                                        <td style={{ fontWeight: 800, color: 'var(--dark-blue)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span>{st.name}</span>
+                                            <span style={{ fontSize: '0.68rem', color: 'var(--blue)', textDecoration: 'underline' }}>View Profile</span>
+                                        </td>
                                         <td><strong>{st.current_room ? `Room ${st.current_room}` : 'Not checked-in'}</strong></td>
                                         <td>{st.current_building || 'Campus'}</td>
                                         <td>
                                             <span className="aero-status-tag present">{st.periods_attended} / 7</span>
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <button 
+                                                type="button" 
+                                                className="fx-btn-outline" 
+                                                style={{ padding: '5px 12px', fontSize: '0.74rem' }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setInspectedStudentId(st.id);
+                                                }}
+                                            >
+                                                <Eye size={13} style={{ marginRight: '4px', verticalAlign: '-1px' }} />
+                                                View History
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
@@ -342,6 +369,13 @@ export const StaffDashboard = ({
                     setSelectedRoomId(rId);
                 }}
                 currentRoomId={selectedRoomId}
+            />
+
+            {/* Student Full Profile & Attendance History Modal */}
+            <StudentDetailsModal 
+                isOpen={!!inspectedStudentId}
+                onClose={() => setInspectedStudentId(null)}
+                studentId={inspectedStudentId}
             />
 
         </div>

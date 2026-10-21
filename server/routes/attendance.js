@@ -399,4 +399,107 @@ router.get('/student-timeline/:studentId', authenticate, async (req, res) => {
     }
 });
 
+// 9. Full Student Profile, Location, Yesterday & Calendar History (Staff / HOD inspection)
+router.get('/student-details/:studentId', authenticate, async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const [users] = await pool.query(
+            'SELECT id, name, email, roll_number, department, year_of_study FROM users WHERE id = ? AND role = "student"',
+            [studentId]
+        );
+        if (users.length === 0) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+        const student = users[0];
+
+        // Device lock info
+        const [locks] = await pool.query('SELECT * FROM device_locks WHERE user_id = ?', [studentId]);
+        const deviceLock = locks.length > 0 ? locks[0] : null;
+
+        const today = new Date().toISOString().slice(0, 10);
+        const yDate = new Date();
+        yDate.setDate(yDate.getDate() - 1);
+        const yesterday = yDate.toISOString().slice(0, 10);
+
+        // Current location from latest student movement
+        const [latestMove] = await pool.query(
+            `SELECT sm.*, r.room_number, r.name as room_name, b.name as building_name, f.name as floor_name
+             FROM student_movements sm
+             JOIN rooms r ON sm.to_room_id = r.id
+             JOIN buildings b ON r.building_id = b.id
+             JOIN floors f ON r.floor_id = f.id
+             WHERE sm.student_id = ?
+             ORDER BY sm.timestamp DESC LIMIT 1`,
+            [studentId]
+        );
+
+        // Today's attendance records with room & period
+        const [todayRecords] = await pool.query(
+            `SELECT ar.*, p.name as period_name, p.start_time, p.end_time, r.room_number, r.name as room_name, b.name as building_name
+             FROM attendance_records ar
+             JOIN periods p ON ar.period_id = p.id
+             LEFT JOIN rooms r ON ar.room_id = r.id
+             LEFT JOIN buildings b ON r.building_id = b.id
+             WHERE ar.student_id = ? AND ar.date = ?
+             ORDER BY p.id ASC`,
+            [studentId, today]
+        );
+
+        // Yesterday's attendance records (Where was the student yesterday at this time?)
+        const [yesterdayRecords] = await pool.query(
+            `SELECT ar.*, p.name as period_name, p.start_time, p.end_time, r.room_number, r.name as room_name, b.name as building_name
+             FROM attendance_records ar
+             JOIN periods p ON ar.period_id = p.id
+             LEFT JOIN rooms r ON ar.room_id = r.id
+             LEFT JOIN buildings b ON r.building_id = b.id
+             WHERE ar.student_id = ? AND ar.date = ?
+             ORDER BY p.id ASC`,
+            [studentId, yesterday]
+        );
+
+        // Stats summary
+        const [stats] = await pool.query(
+            `SELECT COUNT(*) as total_periods, 
+                    SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_periods
+             FROM attendance_records
+             WHERE student_id = ?`,
+            [studentId]
+        );
+
+        // Past 14 days history breakdown
+        const [pastDates] = await pool.query(
+            `SELECT ar.date, 
+                    COUNT(DISTINCT ar.period_id) as periods_marked,
+                    MAX(r.room_number) as last_room,
+                    MAX(b.name) as last_building
+             FROM attendance_records ar
+             LEFT JOIN rooms r ON ar.room_id = r.id
+             LEFT JOIN buildings b ON r.building_id = b.id
+             WHERE ar.student_id = ? AND ar.status = 'present'
+             GROUP BY ar.date
+             ORDER BY ar.date DESC LIMIT 14`,
+            [studentId]
+        );
+
+        return res.json({
+            student,
+            currentLocation: latestMove.length > 0 ? latestMove[0] : null,
+            deviceLock,
+            todayRecords,
+            yesterdayRecords,
+            stats: {
+                totalPeriods: stats[0].total_periods || 0,
+                presentPeriods: stats[0].present_periods || 0,
+                percentage: stats[0].total_periods > 0 
+                    ? Math.round((stats[0].present_periods / stats[0].total_periods) * 100) 
+                    : 100
+            },
+            pastDates
+        });
+    } catch (err) {
+        console.error('Error fetching student details:', err);
+        return res.status(500).json({ error: 'Failed to fetch student details' });
+    }
+});
+
 module.exports = router;

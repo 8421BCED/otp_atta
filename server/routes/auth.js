@@ -162,6 +162,104 @@ router.post('/demo-login', async (req, res) => {
     }
 });
 
+// Google OAuth verification endpoint
+router.post('/google', async (req, res) => {
+    try {
+        const { credential, email: providedEmail, name: providedName, deviceInfo } = req.body;
+        let email = providedEmail;
+        let name = providedName;
+
+        if (credential) {
+            try {
+                const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+                if (googleRes.ok) {
+                    const googleData = await googleRes.json();
+                    email = googleData.email;
+                    name = googleData.name || name;
+                }
+            } catch (fetchErr) {
+                console.error('Google tokeninfo fetch error:', fetchErr);
+            }
+        }
+
+        if (!email) {
+            return res.status(400).json({ error: 'Google email could not be verified' });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        if (!normalizedEmail.endsWith(COLLEGE_DOMAIN)) {
+            return res.status(403).json({
+                error: `Access denied. Only official @francisxavier.ac.in accounts are authorized.`
+            });
+        }
+
+        let [users] = await pool.query('SELECT * FROM users WHERE email = ?', [normalizedEmail]);
+        let user;
+
+        if (users.length === 0) {
+            let role = 'student';
+            if (normalizedEmail.includes('staff') || normalizedEmail.includes('faculty')) role = 'staff';
+            else if (normalizedEmail.includes('hod')) role = 'hod';
+            else if (normalizedEmail.includes('principal')) role = 'principal';
+
+            const [insertResult] = await pool.query(
+                `INSERT INTO users (name, email, password_hash, role, department) 
+                 VALUES (?, ?, 'GOOGLE_SSO', ?, 'IT')`,
+                [name || normalizedEmail.split('@')[0], normalizedEmail, role]
+            );
+            user = {
+                id: insertResult.insertId,
+                name: name || normalizedEmail.split('@')[0],
+                email: normalizedEmail,
+                role,
+                department: 'IT'
+            };
+        } else {
+            user = users[0];
+        }
+
+        const deviceId = deviceInfo ? deviceInfo.deviceId : null;
+        if (user.role === 'student' && deviceId) {
+            const [locks] = await pool.query('SELECT * FROM device_locks WHERE user_id = ?', [user.id]);
+            if (locks.length === 0) {
+                await pool.query(
+                    `INSERT INTO device_locks 
+                     (user_id, device_id, device_fingerprint, device_name, platform, user_agent, is_locked)
+                     VALUES (?, ?, ?, ?, ?, ?, 1)`,
+                    [
+                        user.id,
+                        deviceId,
+                        deviceInfo.fingerprint || deviceId,
+                        deviceInfo.deviceName || 'Authorized Mobile Device',
+                        deviceInfo.platform || 'Browser',
+                        req.headers['user-agent'] || ''
+                    ]
+                );
+            } else {
+                const currentLock = locks[0];
+                if (currentLock.is_locked && currentLock.device_id !== deviceId) {
+                    return res.status(403).json({
+                        error: 'Proxy Prevention Alert: This account is locked to a different device. Visit HOD office to reset device lock.',
+                        lockedDevice: currentLock.device_name
+                    });
+                }
+            }
+        }
+
+        const token = generateToken(user, deviceId);
+        delete user.password_hash;
+
+        return res.json({
+            message: 'Google Sign-In successful',
+            token,
+            user
+        });
+    } catch (err) {
+        console.error('Google SSO error:', err);
+        return res.status(500).json({ error: 'Internal server error during Google sign in' });
+    }
+});
+
 // 3. User Registration
 router.post('/register', async (req, res) => {
     try {

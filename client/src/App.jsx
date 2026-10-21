@@ -4,7 +4,7 @@ import { StudentDashboard } from './components/StudentDashboard';
 import { StaffDashboard } from './components/StaffDashboard';
 import { HODDashboard } from './components/HODDashboard';
 import { PrincipalDashboard } from './components/PrincipalDashboard';
-import { LoginModal } from './components/LoginModal';
+import { LoginPage } from './components/LoginPage';
 import { getDeviceSecurityInfo } from './utils/deviceSecurity';
 import { Calendar } from 'lucide-react';
 
@@ -16,10 +16,9 @@ export function App() {
     const [simulatedTime, setSimulatedTime] = useState(() => {
         return localStorage.getItem('fxec_simulated_time') || null;
     });
-    const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [holidayStatus, setHolidayStatus] = useState(null);
 
-    // 1. Initialize Device & Default User
+    // 1. Initialize Device & Saved User
     useEffect(() => {
         const init = async () => {
             const dev = await getDeviceSecurityInfo();
@@ -34,12 +33,6 @@ export function App() {
                 } catch (e) {
                     console.error('Error parsing user:', e);
                 }
-            } else {
-                handleQuickRoleSwitch({
-                    id: 'student',
-                    email: 'daniela.ug.24.it@francisxavier.ac.in',
-                    name: 'Daniel A'
-                }, dev);
             }
         };
 
@@ -111,12 +104,28 @@ export function App() {
         }
     };
 
+    const handleLogout = () => {
+        localStorage.removeItem('fxec_token');
+        localStorage.removeItem('fxec_user');
+        setCurrentUser(null);
+    };
+
+    // If no user is logged in, show dedicated Google Login Page
+    if (!currentUser) {
+        return (
+            <LoginPage 
+                onLoginSuccess={(user) => setCurrentUser(user)}
+            />
+        );
+    }
+
     return (
         <div className="app-container">
             {/* Top Navigation */}
             <Header 
                 currentUser={currentUser} 
                 onRoleChange={handleQuickRoleSwitch}
+                onLogout={handleLogout}
                 simulatedTime={simulatedTime}
                 setSimulatedTime={setSimulatedTime}
                 activePeriod={currentPeriodInfo?.activePeriod}
@@ -127,7 +136,7 @@ export function App() {
                 
                 {/* Holiday Banner (Only if declared) */}
                 {holidayStatus?.isHoliday && (
-                    <div className="alert-box-error" style={{ marginBottom: '16px' }}>
+                    <div className="aero-alert-error" style={{ marginBottom: '16px' }}>
                         <Calendar size={18} />
                         <div>
                             <strong>Holiday Declared: {holidayStatus.title}</strong>
@@ -171,14 +180,6 @@ export function App() {
                 )}
 
             </main>
-
-            {/* Login Modal */}
-            <LoginModal 
-                isOpen={isLoginOpen}
-                onClose={() => setIsLoginOpen(false)}
-                onLoginSuccess={(user) => setCurrentUser(user)}
-                deviceInfo={deviceInfo}
-            />
         </div>
     );
 }

@@ -4,6 +4,7 @@ import { Clock, User } from 'lucide-react';
 export const Header = ({ 
     currentUser, 
     onRoleChange, 
+    onLogout,
     simulatedTime, 
     setSimulatedTime, 
     activePeriod 
@@ -93,7 +94,7 @@ export const Header = ({
                     ))}
                 </div>
 
-                {/* User Pill */}
+                {/* User Pill & Sign Out */}
                 <div className="user-profile-badge">
                     <div className="user-avatar">
                         {currentUser?.name ? currentUser.name.charAt(0) : 'U'}
@@ -102,6 +103,14 @@ export const Header = ({
                         <div className="name">{currentUser?.name || 'User'}</div>
                         <div className="meta">{currentUser?.role?.toUpperCase()} • {currentUser?.department || 'IT'}</div>
                     </div>
+                    <button
+                        type="button"
+                        className="aero-logout-btn"
+                        onClick={onLogout}
+                        title="Sign out and return to Google Login page"
+                    >
+                        Sign Out
+                    </button>
                 </div>
             </div>
         </header>

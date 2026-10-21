@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Users, RefreshCw, QrCode, Search, Radio, CheckCircle2, DoorOpen, MapPin, Eye } from 'lucide-react';
+import { Users, RefreshCw, QrCode, Search, Radio, CheckCircle2, DoorOpen, MapPin, Eye, Building2, Calendar } from 'lucide-react';
 import { RoomSelectionModal } from './RoomSelectionModal';
+import { RoomStudentsModal } from './RoomStudentsModal';
+import { AttendanceCalendarModal } from './AttendanceCalendarModal';
 import { StudentDetailsModal } from './StudentDetailsModal';
 
 export const StaffDashboard = ({ 
@@ -11,6 +13,13 @@ export const StaffDashboard = ({
     const [selectedRoomId, setSelectedRoomId] = useState(3); // Room 207
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
     const [inspectedStudentId, setInspectedStudentId] = useState(null);
+
+    // Active Room Locations State
+    const [activeRooms, setActiveRooms] = useState([]);
+    const [selectedActiveRoom, setSelectedActiveRoom] = useState(null);
+
+    // Student Calendar Modal State
+    const [selectedStudentForCalendar, setSelectedStudentForCalendar] = useState(null);
 
     // 10s OTP State
     const [currentOtp, setCurrentOtp] = useState('------');
@@ -99,6 +108,28 @@ export const StaffDashboard = ({
         return () => clearInterval(poll);
     }, [selectedRoomId]);
 
+    // Fetch Active Room Locations in Department
+    const fetchActiveRooms = async () => {
+        try {
+            const token = localStorage.getItem('fxec_token');
+            const res = await fetch('http://localhost:5000/api/hod/overview', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.roomDistribution) {
+                setActiveRooms(data.roomDistribution);
+            }
+        } catch (e) {
+            console.error('Failed to fetch active rooms for staff:', e);
+        }
+    };
+
+    useEffect(() => {
+        fetchActiveRooms();
+        const pollRooms = setInterval(fetchActiveRooms, 3000);
+        return () => clearInterval(pollRooms);
+    }, []);
+
     const handleSearchStudents = async (query) => {
         setSearchQuery(query);
         try {
@@ -145,6 +176,51 @@ export const StaffDashboard = ({
                         <DoorOpen size={16} />
                         <span>Select Classroom (Building & Floor)</span>
                     </button>
+                </div>
+            </div>
+
+            {/* Active Room Locations (Tap to Inspect) */}
+            <div className="fx-card">
+                <div className="fx-card-header">
+                    <div className="fx-card-title">
+                        <Building2 size={20} color="var(--blue)" />
+                        Active Room Locations (Tap to Inspect)
+                    </div>
+                    <span className="count-pill green" style={{ fontSize: '0.72rem' }}>
+                        Interactive Rooms
+                    </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
+                    {activeRooms?.length > 0 ? (
+                        activeRooms.map((r, i) => (
+                            <button
+                                key={i}
+                                type="button"
+                                className="list-row-item active-room-click-card"
+                                onClick={() => setSelectedActiveRoom(r)}
+                                title={`Click to view live roster for Room ${r.room_number}`}
+                                style={{ border: '1px solid rgba(19, 108, 252, 0.15)', background: '#F8FAFC', padding: '12px 14px' }}
+                            >
+                                <div style={{ textAlign: 'left' }}>
+                                    <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.92rem' }}>
+                                        Room {r.room_number} – {r.room_name}
+                                    </div>
+                                    <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)', marginTop: '2px' }}>
+                                        {r.building_name} • Click to view live roster
+                                    </div>
+                                </div>
+                                <span className="aero-status-tag present" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <Eye size={13} />
+                                    <span>{r.student_count} Present</span>
+                                </span>
+                            </button>
+                        ))
+                    ) : (
+                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.82rem', gridColumn: '1 / -1' }}>
+                            No active classrooms with students currently checked-in for {currentUser?.department || 'IT'}.
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -323,15 +399,15 @@ export const StaffDashboard = ({
                                     <tr 
                                         key={i}
                                         style={{ cursor: 'pointer' }}
-                                        onClick={() => setInspectedStudentId(st.id)}
-                                        title="Click to view full calendar & history"
+                                        onClick={() => setSelectedStudentForCalendar(st)}
+                                        title="Click to view student attendance calendar"
                                     >
                                         <td style={{ fontFamily: 'monospace', color: 'var(--blue)', fontWeight: 700 }}>
                                             {st.roll_number}
                                         </td>
                                         <td style={{ fontWeight: 800, color: 'var(--dark-blue)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <span>{st.name}</span>
-                                            <span style={{ fontSize: '0.68rem', color: 'var(--blue)', textDecoration: 'underline' }}>View Profile</span>
+                                            <span style={{ fontSize: '0.68rem', color: 'var(--blue)', textDecoration: 'underline' }}>View Calendar</span>
                                         </td>
                                         <td><strong>{st.current_room ? `Room ${st.current_room}` : 'Not checked-in'}</strong></td>
                                         <td>{st.current_building || 'Campus'}</td>
@@ -345,11 +421,11 @@ export const StaffDashboard = ({
                                                 style={{ padding: '5px 12px', fontSize: '0.74rem' }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setInspectedStudentId(st.id);
+                                                    setSelectedStudentForCalendar(st);
                                                 }}
                                             >
-                                                <Eye size={13} style={{ marginRight: '4px', verticalAlign: '-1px' }} />
-                                                View History
+                                                <Calendar size={13} style={{ marginRight: '4px', verticalAlign: '-1px' }} />
+                                                View Calendar
                                             </button>
                                         </td>
                                     </tr>
@@ -371,7 +447,23 @@ export const StaffDashboard = ({
                 currentRoomId={selectedRoomId}
             />
 
-            {/* Student Full Profile & Attendance History Modal */}
+            {/* Modal: Live Students in Clicked Active Room */}
+            <RoomStudentsModal 
+                isOpen={!!selectedActiveRoom}
+                onClose={() => setSelectedActiveRoom(null)}
+                roomId={selectedActiveRoom?.room_id}
+                roomName={selectedActiveRoom?.room_name}
+                buildingName={selectedActiveRoom?.building_name}
+            />
+
+            {/* Modal: Student Month Calendar View (Matching HOD & Student views) */}
+            <AttendanceCalendarModal 
+                isOpen={!!selectedStudentForCalendar}
+                onClose={() => setSelectedStudentForCalendar(null)}
+                student={selectedStudentForCalendar}
+            />
+
+            {/* Student Full Profile & History Modal */}
             <StudentDetailsModal 
                 isOpen={!!inspectedStudentId}
                 onClose={() => setInspectedStudentId(null)}

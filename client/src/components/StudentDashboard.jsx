@@ -65,6 +65,11 @@ export const StudentDashboard = ({
     const isCurrentPeriod1 = currentPeriodInfo?.activePeriod?.period_number === 1;
     const isDayStartLocked = isCurrentPeriod1 && isPastCutoff && !isPeriod1Marked;
 
+    // Check if current active period is already marked present
+    const activePeriodNumber = currentPeriodInfo?.activePeriod?.period_number;
+    const currentPeriodItem = activePeriodNumber ? timeline?.find(p => p.id === activePeriodNumber) : null;
+    const isCurrentPeriodMarked = !!currentPeriodItem?.isMarked;
+
     const handleRoomModalSelect = (bId, fId, rId) => {
         setSelectedBuilding(bId);
         setSelectedFloor(fId);
@@ -218,8 +223,18 @@ export const StudentDashboard = ({
                         />
                     </div>
 
-                    {/* OTP Entry Form OR Selection Prompt */}
-                    {!selectedRoom ? (
+                    {/* Attendance Form / Prompt / Confirmation */}
+                    {isCurrentPeriodMarked ? (
+                        <div className="aero-alert-success" style={{ width: '100%', maxWidth: '380px', margin: '0 auto', padding: '16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                            <CheckCircle2 size={28} color="#16A34A" />
+                            <strong style={{ fontSize: '0.98rem', color: '#15803D' }}>
+                                Period {activePeriodNumber} Attendance Recorded
+                            </strong>
+                            <span style={{ fontSize: '0.80rem', color: 'var(--dark-blue)', lineHeight: '1.4' }}>
+                                You are recorded <strong>Present {currentPeriodItem?.attendance?.room_number ? `in Room ${currentPeriodItem.attendance.room_number}` : ''}</strong> for this period. OTP verification complete. Next period unlocks when it begins.
+                            </span>
+                        </div>
+                    ) : !selectedRoom ? (
                         <div className="no-room-prompt-box">
                             <DoorOpen size={28} color="var(--blue)" />
                             <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.96rem' }}>

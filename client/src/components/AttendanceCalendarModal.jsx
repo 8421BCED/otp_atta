@@ -1,9 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, MapPin, Clock } from 'lucide-react';
 
-export const AttendanceCalendarModal = ({ isOpen, onClose, currentUser }) => {
+export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser }) => {
+    const activeStudent = student || currentUser;
     const [selectedDate, setSelectedDate] = useState('2026-10-21');
     const [currentMonth, setCurrentMonth] = useState('October 2026');
+    const [dynamicStats, setDynamicStats] = useState(null);
+
+    useEffect(() => {
+        if (!isOpen || !activeStudent?.id) return;
+        const fetchStats = async () => {
+            try {
+                const token = localStorage.getItem('fxec_token');
+                const res = await fetch(`http://localhost:5000/api/attendance/student-details/${activeStudent.id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.stats) setDynamicStats(data.stats);
+                }
+            } catch (err) {
+                console.error('Failed to fetch student details for calendar modal:', err);
+            }
+        };
+        fetchStats();
+    }, [isOpen, activeStudent?.id]);
 
     if (!isOpen) return null;
 
@@ -58,7 +79,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, currentUser }) => {
                         <div>
                             <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--dark-blue)' }}>Attendance History & Calendar</h2>
                             <p style={{ fontSize: '0.74rem', color: 'var(--text-sub)' }}>
-                                Student: {currentUser?.name || 'Daniel A'} • Department of IT
+                                Student: <strong>{activeStudent?.name || 'Daniel A'}</strong> • Roll: {activeStudent?.roll_number || '950724IT021'} • Department of {activeStudent?.department || 'IT'}
                             </p>
                         </div>
                     </div>
@@ -71,15 +92,17 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, currentUser }) => {
                 <div className="aero-metric-ribbon">
                     <div className="ribbon-col">
                         <span className="lbl">Overall Attendance</span>
-                        <span className="val highlight">96.8%</span>
+                        <span className="val highlight">{dynamicStats?.percentage !== undefined ? `${dynamicStats.percentage}%` : '96.8%'}</span>
                     </div>
                     <div className="ribbon-col">
                         <span className="lbl">Periods Present</span>
-                        <span className="val">108 / 112</span>
+                        <span className="val">{dynamicStats?.presentPeriods !== undefined ? `${dynamicStats.presentPeriods} / ${dynamicStats.totalPeriods || 112}` : '108 / 112'}</span>
                     </div>
                     <div className="ribbon-col">
                         <span className="lbl">Exam Eligibility</span>
-                        <span className="val" style={{ color: 'var(--blue)' }}>Eligible (Min 75%)</span>
+                        <span className="val" style={{ color: 'var(--blue)' }}>
+                            {(dynamicStats?.percentage === undefined || dynamicStats.percentage >= 75) ? 'Eligible (Min 75%)' : 'Shortage (< 75%)'}
+                        </span>
                     </div>
                 </div>
 

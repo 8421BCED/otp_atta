@@ -4,7 +4,7 @@ const pool = require('../db');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
 
 // 1. Department Live Overview (Students present, room distribution)
-router.get('/overview', authenticate, authorizeRoles('hod', 'principal'), async (req, res) => {
+router.get('/overview', authenticate, authorizeRoles('hod', 'staff', 'principal'), async (req, res) => {
     try {
         const department = req.user.role === 'principal' ? (req.query.department || 'IT') : req.user.department;
         const today = new Date().toISOString().slice(0, 10);

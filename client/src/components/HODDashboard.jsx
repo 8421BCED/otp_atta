@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, RotateCcw, Calendar, CheckCircle2, Search, Building2, Clock, Lock, Unlock, Eye, Sparkles } from 'lucide-react';
 import { RoomStudentsModal } from './RoomStudentsModal';
+import { AttendanceCalendarModal } from './AttendanceCalendarModal';
 import { StudentDetailsModal } from './StudentDetailsModal';
 
 export const HODDashboard = ({ currentUser, hierarchy }) => {
@@ -14,6 +15,9 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
 
     // Active room popup state
     const [selectedActiveRoom, setSelectedActiveRoom] = useState(null);
+
+    // Student Calendar Modal state
+    const [selectedStudentForCalendar, setSelectedStudentForCalendar] = useState(null);
 
     // Inspected student modal state
     const [inspectedStudentId, setInspectedStudentId] = useState(null);
@@ -360,7 +364,7 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                                     <tr 
                                         key={i}
                                         style={{ cursor: 'pointer' }}
-                                        onClick={() => setInspectedStudentId(st.id)}
+                                        onClick={() => setSelectedStudentForCalendar(st)}
                                         title="Click to view full calendar & history"
                                     >
                                         <td style={{ fontFamily: 'monospace', color: 'var(--blue)', fontWeight: 700 }}>
@@ -397,7 +401,7 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                                                 style={{ padding: '4px 10px', fontSize: '0.72rem' }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setInspectedStudentId(st.id);
+                                                    setSelectedStudentForCalendar(st);
                                                 }}
                                             >
                                                 <Eye size={12} style={{ marginRight: '4px' }} />
@@ -442,7 +446,14 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                 buildingName={selectedActiveRoom?.building_name}
             />
 
-            {/* Modal: Full Student Calendar, Timeline & Location History */}
+            {/* Modal: Student Month Calendar View (Image 2 Match) */}
+            <AttendanceCalendarModal 
+                isOpen={!!selectedStudentForCalendar}
+                onClose={() => setSelectedStudentForCalendar(null)}
+                student={selectedStudentForCalendar}
+            />
+
+            {/* Modal: Full Student Timeline & Location History */}
             <StudentDetailsModal 
                 isOpen={!!inspectedStudentId}
                 onClose={() => setInspectedStudentId(null)}

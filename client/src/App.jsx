@@ -5,6 +5,7 @@ import { StaffDashboard } from './components/StaffDashboard';
 import { HODDashboard } from './components/HODDashboard';
 import { PrincipalDashboard } from './components/PrincipalDashboard';
 import { LoginPage } from './components/LoginPage';
+import { AttendanceCalendarModal } from './components/AttendanceCalendarModal';
 import { getDeviceSecurityInfo } from './utils/deviceSecurity';
 import { Calendar } from 'lucide-react';
 
@@ -17,6 +18,7 @@ export function App() {
         return localStorage.getItem('fxec_simulated_time') || null;
     });
     const [holidayStatus, setHolidayStatus] = useState(null);
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
     // 1. Initialize Device & Saved User
     useEffect(() => {
@@ -129,6 +131,14 @@ export function App() {
                 simulatedTime={simulatedTime}
                 setSimulatedTime={setSimulatedTime}
                 activePeriod={currentPeriodInfo?.activePeriod}
+                onOpenCalendar={() => setIsCalendarOpen(true)}
+            />
+
+            {/* Attendance Calendar Modal (Accessible from top navbar) */}
+            <AttendanceCalendarModal 
+                isOpen={isCalendarOpen}
+                onClose={() => setIsCalendarOpen(false)}
+                currentUser={currentUser}
             />
 
             {/* Main Content Workspace */}

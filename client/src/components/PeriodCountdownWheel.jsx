@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 const timeToSeconds = (timeStr) => {
     if (!timeStr) return 0;
@@ -8,7 +8,7 @@ const timeToSeconds = (timeStr) => {
 };
 
 export const PeriodCountdownWheel = ({ currentPeriodInfo, timeline }) => {
-    const [secondsTick, setSecondsTick] = useState(0);
+    const [, setSecondsTick] = useState(0);
 
     // Live 1-second interval to keep the timer smoothly counting down
     useEffect(() => {
@@ -29,38 +29,15 @@ export const PeriodCountdownWheel = ({ currentPeriodInfo, timeline }) => {
     const markedPeriod = activePeriod ? timeline?.find(t => t.id === activePeriod.id && t.isMarked) : null;
     const isCurrentMarked = !!markedPeriod;
 
-    // Calculate countdown metrics
+    // Calculate period timer and progress
     let displayTime = '--:--';
     let progressPct = 0;
-    let labelSub = 'PERIOD TIME';
-    let periodTitle = 'No Active Period';
-    let periodTiming = 'College Hours: 09:00 AM – 04:05 PM';
-    let nextEvent = 'Next: Period';
-    let elapsedMinutes = 0;
-    let totalMinutes = 0;
+    let labelSub = 'PERIOD DURATION';
 
     if (currentTimeStr) {
         const nowSec = timeToSeconds(currentTimeStr);
 
-        if (isBeforeCollege) {
-            const startSec = timeToSeconds('09:00:00');
-            const diffSec = Math.max(0, startSec - nowSec);
-            const m = Math.floor(diffSec / 60);
-            const s = diffSec % 60;
-            displayTime = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-            labelSub = 'UNTIL COLLEGE STARTS';
-            periodTitle = 'Before College Hours';
-            periodTiming = '1st Period begins at 09:00 AM';
-            nextEvent = 'Dismissal: 04:05 PM';
-            progressPct = 0;
-        } else if (isAfterCollege) {
-            displayTime = '00:00';
-            labelSub = 'COLLEGE DISMISSED';
-            periodTitle = 'College Day Concluded';
-            periodTiming = 'Official Dismissal at 04:05 PM';
-            nextEvent = 'See you tomorrow at 09:00 AM';
-            progressPct = 100;
-        } else if (activePeriod) {
+        if (activePeriod) {
             const startSec = timeToSeconds(activePeriod.start_time);
             const endSec = timeToSeconds(activePeriod.end_time);
             const durationSec = Math.max(1, endSec - startSec);
@@ -72,106 +49,88 @@ export const PeriodCountdownWheel = ({ currentPeriodInfo, timeline }) => {
             displayTime = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
             progressPct = Math.min(100, Math.round((elapsedSec / durationSec) * 100));
 
-            elapsedMinutes = Math.floor(elapsedSec / 60);
-            totalMinutes = Math.round(durationSec / 60);
-
             if (isBreak) {
-                labelSub = 'BREAK REMAINING';
-                periodTitle = activePeriod.name;
-                periodTiming = `${activePeriod.start_time.slice(0, 5)} – ${activePeriod.end_time.slice(0, 5)} (Interval)`;
-                nextEvent = 'Classes resume after interval';
+                labelSub = `${activePeriod.name.toUpperCase()} INTERVAL`;
             } else {
-                labelSub = 'TIME REMAINING';
-                periodTitle = activePeriod.name;
-                periodTiming = `${activePeriod.start_time.slice(0, 5)} – ${activePeriod.end_time.slice(0, 5)}`;
-                nextEvent = `Dismissal: 04:05 PM`;
+                labelSub = `${activePeriod.name.toUpperCase()} DURATION`;
             }
+        } else if (isBeforeCollege) {
+            // Before college hours (9:00 AM) - format cleanly as HH:MM:SS or opening time
+            const startSec = timeToSeconds('09:00:00');
+            const diffSec = Math.max(0, startSec - nowSec);
+            const h = Math.floor(diffSec / 3600);
+            const m = Math.floor((diffSec % 3600) / 60);
+            const s = diffSec % 60;
+
+            if (h > 0) {
+                displayTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            } else {
+                displayTime = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+            labelSub = 'COLLEGE OPENS AT 9:00 AM';
+            progressPct = 0;
+        } else if (isAfterCollege) {
+            displayTime = '00:00';
+            labelSub = 'COLLEGE DISMISSED (4:05 PM)';
+            progressPct = 100;
         }
     }
 
-    // SVG Circular Arc Geometry
-    const radius = 74;
-    const strokeWidth = 8;
-    const circumference = 2 * Math.PI * radius; // ≈ 464.95
+    // SVG Circular Geometry with thicker green progress stroke
+    const radius = 72;
+    const strokeWidth = 11;
+    const circumference = 2 * Math.PI * radius; // ≈ 452.39
     const strokeDashoffset = circumference - (circumference * progressPct) / 100;
 
     return (
-        <div className="countdown-hero-card">
-            <div className="fx-card-header">
-                <div className="fx-card-title">
-                    <Clock size={18} />
-                    <span>Period Countdown & Status</span>
-                </div>
-                {isCurrentMarked ? (
-                    <span className="count-pill green">
-                        ✓ Present (Rm {markedPeriod.attendance?.room_number || '207'})
-                    </span>
-                ) : isBreak ? (
-                    <span className="count-pill">
-                        Official Interval
-                    </span>
-                ) : activePeriod ? (
-                    <span className="count-pill">
-                        Attendance Pending
-                    </span>
-                ) : (
-                    <span className="count-pill">
-                        Dismissal 4:05 PM
-                    </span>
-                )}
-            </div>
-
+        <div className="period-wheel-pure">
             {/* Circular Progress Wheel */}
             <div className="countdown-wheel-container">
                 <div className="countdown-svg-wrap">
                     <svg className="countdown-svg" viewBox="0 0 190 190">
-                        {/* Track */}
+                        {/* Background Track Circle */}
                         <circle
                             className="countdown-circle-track"
                             cx="95"
                             cy="95"
                             r={radius}
+                            stroke="#E8F4FC"
+                            strokeWidth={strokeWidth}
+                            fill="none"
                         />
-                        {/* Animated Progress Arc */}
+                        {/* Thick Green Period Duration Arc */}
                         <circle
                             className="countdown-circle-progress"
                             cx="95"
                             cy="95"
                             r={radius}
+                            stroke="#C3F84A"
+                            strokeWidth={strokeWidth}
+                            strokeLinecap="round"
+                            fill="none"
                             strokeDasharray={circumference}
                             strokeDashoffset={strokeDashoffset}
                         />
                     </svg>
 
-                    {/* Inside Center Info */}
+                    {/* Centered Timer Inside Circle */}
                     <div className="countdown-inner-content">
                         <div className="countdown-time-digits">{displayTime}</div>
                         <div className="countdown-label-sub">{labelSub}</div>
+                        {isCurrentMarked && (
+                            <span className="count-pill green" style={{ marginTop: '6px', fontSize: '0.7rem' }}>
+                                ✓ Marked Present
+                            </span>
+                        )}
                     </div>
-                </div>
-            </div>
-
-            {/* Metrics Bar */}
-            <div className="countdown-metrics-bar">
-                <div className="countdown-metric-col">
-                    <span className="countdown-metric-label">Current Period</span>
-                    <span className="countdown-metric-val highlight">{periodTitle}</span>
-                </div>
-                <div className="countdown-metric-col">
-                    <span className="countdown-metric-label">Timing</span>
-                    <span className="countdown-metric-val">{periodTiming}</span>
-                </div>
-                <div className="countdown-metric-col">
-                    <span className="countdown-metric-label">Completion</span>
-                    <span className="countdown-metric-val">{progressPct}% Elapsed</span>
                 </div>
             </div>
 
             {/* Morning 9:00 - 9:05 Window Notification */}
             {isMorningWindow && (
-                <div className="alert-box-warning" style={{ marginTop: '4px' }}>
-                    <AlertCircle size={17} />
-                    <span><strong>9:00 – 9:05 AM Day-Start Window:</strong> Submit 1st period OTP now to initialize your day.</span>
+                <div className="alert-box-warning" style={{ marginTop: '8px', maxWidth: '360px', margin: '8px auto 0' }}>
+                    <AlertCircle size={16} />
+                    <span><strong>9:00 – 9:05 AM Day-Start Window:</strong> Submit 1st period OTP now.</span>
                 </div>
             )}
         </div>

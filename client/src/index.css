@@ -117,6 +117,27 @@ html, body {
   gap: 12px;
 }
 
+.header-history-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--light-blue);
+  border: 1px solid var(--border-card);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-family: var(--font-main);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--dark-blue);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.header-history-btn:hover {
+  background: #DCECF8;
+  border-color: var(--blue);
+}
+
 .header-time-pill {
   display: flex;
   align-items: center;
@@ -632,13 +653,13 @@ html, body {
 .countdown-circle-track {
   fill: none;
   stroke: var(--light-blue);
-  stroke-width: 9;
+  stroke-width: 11;
 }
 
 .countdown-circle-progress {
   fill: none;
-  stroke: var(--blue);
-  stroke-width: 9;
+  stroke: var(--green);
+  stroke-width: 11;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.6s ease-in-out;
 }
@@ -651,10 +672,11 @@ html, body {
   align-items: center;
   justify-content: center;
   text-align: center;
+  padding: 10px;
 }
 
 .countdown-time-digits {
-  font-size: 2.4rem;
+  font-size: 2.2rem;
   font-weight: 800;
   color: var(--dark-blue);
   font-family: var(--font-mono);
@@ -663,12 +685,33 @@ html, body {
 }
 
 .countdown-label-sub {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 800;
   color: var(--blue);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-top: 4px;
+  margin-top: 3px;
+}
+
+.period-wheel-pure {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.attendance-hub-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.student-otp-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
 }
 
 .countdown-metrics-bar {
@@ -1420,5 +1463,73 @@ html, body {
   }
   .app-workspace {
     padding: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .fxec-header-main {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .fxec-brand-text h1 {
+    font-size: 0.95rem;
+  }
+
+  .fxec-nav-controls {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .header-history-btn {
+    padding: 5px 10px;
+    font-size: 0.76rem;
+  }
+
+  .header-time-pill {
+    padding: 5px 10px;
+    font-size: 0.76rem;
+  }
+
+  .role-switcher-container {
+    overflow-x: auto;
+  }
+
+  .aero-otp-input {
+    max-width: 270px;
+    font-size: 1.85rem;
+    letter-spacing: 0.25em;
+    padding: 8px;
+  }
+
+  .countdown-svg-wrap {
+    width: 170px;
+    height: 170px;
+  }
+
+  .countdown-svg {
+    width: 170px;
+    height: 170px;
+  }
+
+  .countdown-time-digits {
+    font-size: 1.9rem;
+  }
+
+  .aero-student-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .student-main-col {
+    order: 1;
+  }
+
+  .student-schedule-col {
+    order: 2;
   }
 }

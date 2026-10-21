@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, User } from 'lucide-react';
+import { Clock, User, Calendar } from 'lucide-react';
 
 export const Header = ({ 
     currentUser, 
@@ -7,7 +7,8 @@ export const Header = ({
     onLogout,
     simulatedTime, 
     setSimulatedTime, 
-    activePeriod 
+    activePeriod,
+    onOpenCalendar
 }) => {
     const [realTime, setRealTime] = useState('');
 
@@ -41,6 +42,19 @@ export const Header = ({
 
             {/* Navigation & Controls */}
             <div className="fxec-nav-controls">
+                {/* Attendance History (Positioned to the left of the time pill) */}
+                {currentUser?.role === 'student' && onOpenCalendar && (
+                    <button
+                        type="button"
+                        className="header-history-btn"
+                        onClick={onOpenCalendar}
+                        title="View Full Attendance History"
+                    >
+                        <Calendar size={15} color="var(--blue)" />
+                        <span>Attendance History</span>
+                    </button>
+                )}
+
                 {/* Time / Period Pill */}
                 <div className="header-time-pill">
                     <Clock size={15} color="var(--blue)" />

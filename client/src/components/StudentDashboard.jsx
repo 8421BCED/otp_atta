@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, KeyRound, CheckCircle2, AlertCircle, Calendar, ArrowRightLeft, Sparkles, Navigation } from 'lucide-react';
+import { MapPin, KeyRound, CheckCircle2, AlertCircle, Navigation } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { PeriodCountdownWheel } from './PeriodCountdownWheel';
 import { RoomSelectionModal } from './RoomSelectionModal';
-import { AttendanceCalendarModal } from './AttendanceCalendarModal';
 
 export const StudentDashboard = ({ 
     currentUser, 
@@ -19,7 +18,6 @@ export const StudentDashboard = ({
 
     // Modals
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
-    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
     // OTP Input State
     const [otpInput, setOtpInput] = useState('');
@@ -98,20 +96,30 @@ export const StudentDashboard = ({
 
             const data = await res.json();
 
-            if (!res.ok) {
-                setErrorMessage(data.message || data.error || 'Failed to submit OTP');
-            } else {
-                setStatusMessage('Attendance marked successfully! Marked present.');
+            if (res.ok && data.success) {
+                setStatusMessage(data.message || 'Attendance verified successfully!');
                 setOtpInput('');
-                confetti({
-                    particleCount: 75,
-                    spread: 60,
-                    origin: { y: 0.6 }
-                });
                 loadTimeline();
+
+                // Trigger celebratory confetti
+                try {
+                    confetti({
+                        particleCount: 65,
+                        spread: 60,
+                        origin: { y: 0.75 },
+                        colors: ['#136CFC', '#C3F84A', '#152641']
+                    });
+                } catch (confettiErr) {
+                    console.log('Confetti effect skipped:', confettiErr);
+                }
+
+                setTimeout(() => setStatusMessage(null), 4000);
+            } else {
+                setErrorMessage(data.error || 'Invalid OTP code. Please check staff screen.');
             }
         } catch (err) {
-            setErrorMessage('Network error connecting to college attendance server.');
+            console.error('OTP Submit error:', err);
+            setErrorMessage('Failed to connect to attendance server. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
@@ -120,84 +128,54 @@ export const StudentDashboard = ({
     return (
         <div className="aero-student-grid">
             
-            {/* Top Student Navigation / Quick Actions Bar */}
+            {/* Top Student Banner: No sparkles, no semester text */}
             <div className="aero-action-banner fa-glass-card" style={{ gridColumn: '1 / -1' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div className="aero-badge-circle">
-                        <Sparkles size={18} color="#136CFC" />
+                    <div className="aero-badge-circle" style={{ fontWeight: 800, color: 'var(--blue)', fontSize: '0.92rem' }}>
+                        FX
                     </div>
                     <div>
-                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--dark-blue)' }}>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--dark-blue)' }}>
                             {currentUser?.name || 'Daniel A'} • Roll No: {currentUser?.roll_number || '24IT021'}
                         </div>
-                        <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)' }}>
-                            Department of Information Technology • 2nd Year (Semester 4)
+                        <div style={{ fontSize: '0.76rem', color: 'var(--text-sub)' }}>
+                            Department of Information Technology • 2nd Year
                         </div>
                     </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {/* Attendance Calendar Button */}
-                    <button 
-                        type="button" 
-                        className="aero-glass-btn"
-                        onClick={() => setIsCalendarOpen(true)}
-                    >
-                        <Calendar size={16} color="#136CFC" />
-                        <span>Attendance History</span>
-                    </button>
-
-                    {/* Change Classroom Modal Button */}
-                    <button 
-                        type="button" 
-                        className="aero-glass-btn primary"
-                        onClick={() => setIsRoomModalOpen(true)}
-                    >
-                        <Navigation size={16} />
-                        <span>Move / Change Classroom</span>
-                    </button>
                 </div>
             </div>
 
-            {/* Left Column: Period Countdown Wheel & OTP Entry */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                
-                {/* 1. Frutiger Aero Period Countdown Wheel */}
-                <PeriodCountdownWheel 
-                    currentPeriodInfo={currentPeriodInfo} 
-                    timeline={timeline}
-                />
-
-                {/* 2. Current Classroom & OTP Entry Card */}
-                <div className="fa-glass-card">
-                    <div className="aero-card-header">
-                        <div className="aero-card-title">
-                            <MapPin size={18} color="#136CFC" />
-                            <span>Classroom & OTP Verification</span>
+            {/* Left Column (Primary Attendance Hub): Room Header + Timer Circle + OTP Input under it */}
+            <div className="student-main-col">
+                <div className="fa-glass-card attendance-hub-card">
+                    {/* Classroom Location & Move Classroom Button */}
+                    <div className="aero-card-header" style={{ paddingBottom: '10px' }}>
+                        <div>
+                            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--dark-blue)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <MapPin size={16} color="var(--blue)" />
+                                <span>{activeBuildingObj?.name || 'Dr. APJ Abdul Kalam Block'}</span>
+                                <span className="room-num" style={{ marginLeft: '6px' }}>Room {activeRoomObj?.room_number || '207'}</span>
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-sub)', marginTop: '2px' }}>
+                                {activeFloorObj?.name || '2nd Floor'} • {activeRoomObj?.name || 'IT 2nd Year Lecture Hall'}
+                            </div>
                         </div>
+
+                        {/* Move / Change Classroom right near the timer circle */}
                         <button 
-                            type="button"
-                            className="aero-mini-pill-btn"
+                            type="button" 
+                            className="aero-glass-btn primary"
+                            style={{ padding: '6px 14px', fontSize: '0.78rem' }}
                             onClick={() => setIsRoomModalOpen(true)}
                         >
-                            Change Room
+                            <Navigation size={14} />
+                            <span>Move / Change Classroom</span>
                         </button>
                     </div>
 
-                    {/* Active Room Indicator */}
-                    <div className="aero-location-display">
-                        <div className="loc-main">
-                            <span className="bld-name">{activeBuildingObj?.name || 'Dr. APJ Abdul Kalam Block'}</span>
-                            <span className="room-num">Room {activeRoomObj?.room_number || '207'}</span>
-                        </div>
-                        <div className="loc-sub">
-                            {activeFloorObj?.name || '2nd Floor'} • {activeRoomObj?.name || 'IT 2nd Year Lecture Hall'}
-                        </div>
-                    </div>
-
-                    {/* Quick Room Jump Strip */}
+                    {/* Quick Lab Jump Strip */}
                     <div className="aero-quick-chips">
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-sub)', fontWeight: 600 }}>Quick Labs:</span>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--text-sub)', fontWeight: 600 }}>Quick Labs:</span>
                         <button 
                             type="button" 
                             className={`aero-chip ${selectedRoom === 3 ? 'active' : ''}`}
@@ -221,10 +199,18 @@ export const StudentDashboard = ({
                         </button>
                     </div>
 
-                    {/* OTP Entry Form */}
-                    <form onSubmit={handleSubmitOtp} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', paddingTop: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-sub)', fontSize: '0.82rem' }}>
-                            <KeyRound size={16} color="var(--blue)" />
+                    {/* Timer Inside Green Circle (Denoting Period Duration) */}
+                    <div style={{ padding: '8px 0', display: 'flex', justifyContent: 'center' }}>
+                        <PeriodCountdownWheel 
+                            currentPeriodInfo={currentPeriodInfo} 
+                            timeline={timeline}
+                        />
+                    </div>
+
+                    {/* OTP Entry Form: Directly under the timer circle */}
+                    <form onSubmit={handleSubmitOtp} className="student-otp-form">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-sub)', fontSize: '0.82rem' }}>
+                            <KeyRound size={15} color="var(--blue)" />
                             <span>Enter the 6-digit rolling OTP displayed by your staff:</span>
                         </div>
 
@@ -240,14 +226,14 @@ export const StudentDashboard = ({
 
                         {statusMessage && (
                             <div className="aero-alert-success" style={{ width: '100%', maxWidth: '340px' }}>
-                                <CheckCircle2 size={18} />
+                                <CheckCircle2 size={16} />
                                 <span>{statusMessage}</span>
                             </div>
                         )}
 
                         {errorMessage && (
                             <div className="aero-alert-error" style={{ width: '100%', maxWidth: '340px' }}>
-                                <AlertCircle size={18} />
+                                <AlertCircle size={16} />
                                 <span>{errorMessage}</span>
                             </div>
                         )}
@@ -255,24 +241,21 @@ export const StudentDashboard = ({
                         <button 
                             type="submit" 
                             className="aero-gloss-btn" 
-                            style={{ width: '100%', maxWidth: '340px' }}
+                            style={{ width: '100%', maxWidth: '340px', padding: '11px 24px' }}
                             disabled={isSubmitting || otpInput.length !== 6}
                         >
-                            <span>{isSubmitting ? 'Verifying Device & OTP...' : 'Verify & Mark Present'}</span>
+                            <span>{isSubmitting ? 'Verifying OTP...' : 'Verify & Mark Present'}</span>
                         </button>
                     </form>
                 </div>
             </div>
 
-            {/* Right Column: Today's Schedule */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Right Column: Today's Official Schedule */}
+            <div className="student-schedule-col">
                 <div className="fa-glass-card">
                     <div className="aero-card-header">
                         <div className="aero-card-title">
                             <span>Today's Official Schedule</span>
-                            <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: 500 }}>
-                                (Dismissal: 4:05 PM)
-                            </span>
                         </div>
                         <span className="aero-pill cyan">
                             {totalPresent} / 7 Marked
@@ -304,20 +287,6 @@ export const StudentDashboard = ({
                             </div>
                         ))}
                     </div>
-
-                    {/* Device Protection Footer */}
-                    <div style={{ 
-                        borderTop: '1px solid var(--border-subtle)', 
-                        paddingTop: '12px', 
-                        fontSize: '0.76rem', 
-                        color: 'var(--text-sub)', 
-                        display: 'flex', 
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                    }}>
-                        <span>Device: {deviceInfo?.deviceName || 'Windows Workstation / Laptop'}</span>
-                        <span style={{ color: 'var(--dark-blue)', fontWeight: 700 }}>Strict 1-Device Lock: Active</span>
-                    </div>
                 </div>
             </div>
 
@@ -328,13 +297,6 @@ export const StudentDashboard = ({
                 hierarchy={hierarchy}
                 onSelectRoom={handleRoomModalSelect}
                 currentRoomId={selectedRoom}
-            />
-
-            {/* Attendance Calendar Modal */}
-            <AttendanceCalendarModal 
-                isOpen={isCalendarOpen}
-                onClose={() => setIsCalendarOpen(false)}
-                currentUser={currentUser}
             />
 
         </div>

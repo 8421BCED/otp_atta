@@ -1,0 +1,16 @@
+{
+  "short_name": "FXEC OTP",
+  "name": "Francis Xavier Engineering College - OTP Attendance",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0B3064",
+  "theme_color": "#0B3064",
+  "display": "standalone",
+  "orientation": "portrait-primary"
+}

@@ -1,0 +1,868 @@
+/* ==========================================================================
+   FRANCIS XAVIER ENGINEERING COLLEGE (AUTONOMOUS)
+   OTP Attendance & Real-Time Movement Tracking System
+   Design Tokens & CSS Stylesheet (Full-Screen Rich Architecture)
+   ========================================================================== */
+
+:root {
+  --font-main: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+
+  /* Official FXEC Color Palette (from header image) */
+  --fxec-navy-dark: #07172F;
+  --fxec-navy: #0B3064;
+  --fxec-navy-light: #124082;
+  --fxec-royal: #1D4ED8;
+  --fxec-gold: #FFB800;
+  --fxec-gold-hover: #E5A600;
+  --fxec-gold-light: #FEF3C7;
+  --fxec-gold-glow: rgba(255, 184, 0, 0.35);
+
+  /* Functional Accents */
+  --fxec-emerald: #10B981;
+  --fxec-emerald-glow: rgba(16, 185, 129, 0.3);
+  --fxec-rose: #EF4444;
+  --fxec-rose-glow: rgba(239, 68, 68, 0.3);
+  --fxec-cyan: #06B6D4;
+  --fxec-indigo: #6366F1;
+
+  /* Backgrounds & Glassmorphism */
+  --bg-canvas: #060D1A;
+  --bg-surface: #0B192E;
+  --bg-surface-elevated: #112240;
+  --bg-card: rgba(17, 34, 64, 0.75);
+  --bg-card-hover: rgba(23, 42, 77, 0.9);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(255, 184, 0, 0.4);
+  --border-highlight: rgba(59, 130, 246, 0.3);
+
+  /* Typography */
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+  --text-dim: #64748B;
+  --text-gold: #FFC01E;
+
+  /* Elevation */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 0 25px var(--fxec-gold-glow);
+  --shadow-emerald-glow: 0 0 30px var(--fxec-emerald-glow);
+
+  /* Transitions */
+  --trans-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --trans-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --trans-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* CSS Reset & Full Screen Layout */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--bg-canvas);
+  color: var(--text-main);
+  font-family: var(--font-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+::-webkit-scrollbar-thumb {
+  background: #1e3a66;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fxec-gold);
+}
+
+/* ==========================================================================
+   FXEC Brand Topbar & Header Components
+   ========================================================================== */
+
+.fxec-top-accent-bar {
+  background: linear-gradient(90deg, #07172F 0%, #0B3064 50%, #07172F 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.fxec-top-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.fxec-top-links span {
+  cursor: pointer;
+  transition: color var(--trans-fast);
+}
+.fxec-top-links span:hover {
+  color: var(--fxec-gold);
+}
+
+.fxec-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fxec-gold-pill {
+  background: linear-gradient(135deg, #FFB800 0%, #E5A600 100%);
+  color: #07172F;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: 0 0 15px rgba(255, 184, 0, 0.4);
+}
+
+.fxec-accredit-chip {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: #E2E8F0;
+  font-weight: 600;
+}
+
+.fxec-header-main {
+  background: rgba(11, 48, 100, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 2px solid var(--border-subtle);
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-md);
+}
+
+.fxec-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-decoration: none;
+}
+
+.fxec-logo-symbol {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0B3064, #1E40AF);
+  border: 2px solid var(--fxec-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 16px rgba(255, 184, 0, 0.3);
+  font-weight: 800;
+  color: #FFF;
+  font-size: 1.35rem;
+}
+
+.fxec-brand-text h1 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #FFFFFF;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.fxec-brand-text h1 span {
+  color: var(--fxec-gold);
+}
+
+.fxec-brand-text p {
+  font-size: 0.72rem;
+  color: #93C5FD;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.fxec-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Role Switcher Pill */
+.role-switcher-container {
+  display: flex;
+  background: rgba(7, 23, 47, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.role-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-main);
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--trans-fast);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.role-btn:hover {
+  color: #FFF;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.role-btn.active {
+  background: linear-gradient(135deg, #1D4ED8 0%, #0B3064 100%);
+  color: #FFF;
+  border: 1px solid rgba(255, 184, 0, 0.35);
+  box-shadow: 0 2px 10px rgba(29, 78, 216, 0.4);
+}
+
+.user-profile-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(17, 34, 64, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 14px;
+  border-radius: 10px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--fxec-gold);
+  color: #07172F;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+}
+
+.user-details {
+  line-height: 1.15;
+}
+
+.user-details .name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #FFF;
+}
+
+.user-details .meta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Full Screen Main Workspace & Grid Architecture
+   ========================================================================== */
+
+.app-workspace {
+  flex: 1;
+  width: 100%;
+  padding: 24px 32px;
+  max-width: 1680px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* College Status & Time Banner */
+.college-clock-banner {
+  background: linear-gradient(135deg, rgba(11, 48, 100, 0.6) 0%, rgba(7, 23, 47, 0.8) 100%);
+  border: 1px solid rgba(255, 184, 0, 0.25);
+  border-radius: 14px;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.college-clock-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--fxec-gold);
+}
+
+.clock-info-col {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.live-time-display {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #FFF;
+  font-family: var(--font-sans);
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
+}
+
+.period-badge-live {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid var(--fxec-emerald);
+  color: #34D399;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--fxec-emerald);
+  box-shadow: 0 0 10px var(--fxec-emerald);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+
+.morning-warning-pill {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--fxec-rose);
+  color: #F87171;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* Full Viewport Multi-Column Grid */
+.dashboard-grid-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  width: 100%;
+}
+
+.dashboard-grid-tri {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  width: 100%;
+}
+
+.dashboard-grid-wide {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  width: 100%;
+}
+
+/* ==========================================================================
+   Card Styling & Glass Surfaces
+   ========================================================================== */
+
+.fx-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  transition: transform var(--trans-normal), border-color var(--trans-normal), box-shadow var(--trans-normal);
+}
+
+.fx-card:hover {
+  border-color: rgba(255, 184, 0, 0.25);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.fx-card-gold-accent {
+  border-top: 3px solid var(--fxec-gold);
+}
+
+.fx-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 12px;
+}
+
+.fx-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #FFF;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fx-card-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Location Picker (Building -> Floor -> Room)
+   ========================================================================== */
+
+.location-picker-group {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.picker-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.picker-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #93C5FD;
+}
+
+.fx-select {
+  background: rgba(7, 23, 47, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #FFF;
+  font-family: var(--font-main);
+  font-size: 0.9rem;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  outline: none;
+  transition: all var(--trans-fast);
+}
+
+.fx-select:focus {
+  border-color: var(--fxec-gold);
+  box-shadow: 0 0 12px var(--fxec-gold-glow);
+}
+
+.current-location-chip {
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.2), rgba(11, 48, 100, 0.4));
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.loc-badge-large {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--fxec-gold);
+  letter-spacing: -0.01em;
+}
+
+/* ==========================================================================
+   OTP Card & 10-Second Animated Timer
+   ========================================================================== */
+
+.otp-hero-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(circle at center, rgba(30, 64, 175, 0.25) 0%, rgba(7, 23, 47, 0.8) 100%);
+  border: 1px solid rgba(255, 184, 0, 0.3);
+  border-radius: 16px;
+  position: relative;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.otp-display-digits {
+  font-size: 3.25rem;
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  color: #FFFFFF;
+  text-shadow: 0 0 20px rgba(255, 184, 0, 0.6);
+  font-family: var(--font-sans);
+  margin-right: -0.25em; /* counteract letter-spacing offset */
+}
+
+/* 10-second Circular Countdown Timer */
+.timer-circular-wrap {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-svg {
+  transform: rotate(-90deg);
+  width: 90px;
+  height: 90px;
+}
+
+.timer-circle-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 6;
+}
+
+.timer-circle-progress {
+  fill: none;
+  stroke: var(--fxec-gold);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s linear, stroke 0.3s ease;
+}
+
+.timer-seconds-label {
+  position: absolute;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #FFF;
+}
+
+/* Student OTP Input Box */
+.otp-input-field {
+  width: 100%;
+  max-width: 380px;
+  background: rgba(7, 23, 47, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  color: var(--fxec-gold);
+  text-align: center;
+  padding: 12px;
+  outline: none;
+  transition: all var(--trans-normal);
+  font-family: var(--font-sans);
+}
+
+.otp-input-field:focus {
+  border-color: var(--fxec-gold);
+  box-shadow: 0 0 25px var(--fxec-gold-glow);
+  background: rgba(7, 23, 47, 1);
+}
+
+/* Action Buttons */
+.fx-btn-primary {
+  background: linear-gradient(135deg, #FFB800 0%, #D97706 100%);
+  color: #07172F;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-main);
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 12px 24px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all var(--trans-fast);
+  box-shadow: 0 4px 15px rgba(255, 184, 0, 0.35);
+}
+
+.fx-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #FFC72C 0%, #F59E0B 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 184, 0, 0.5);
+}
+
+.fx-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.fx-btn-outline {
+  background: transparent;
+  color: #E2E8F0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  font-family: var(--font-main);
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 10px 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all var(--trans-fast);
+}
+
+.fx-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #FFF;
+  color: #FFF;
+}
+
+.fx-btn-danger {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--fxec-rose);
+  color: #FCA5A5;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all var(--trans-fast);
+}
+
+.fx-btn-danger:hover {
+  background: var(--fxec-rose);
+  color: #FFF;
+  box-shadow: 0 0 15px var(--fxec-rose-glow);
+}
+
+/* ==========================================================================
+   Real-Time Live Room Roster Table & Counts
+   ========================================================================== */
+
+.live-count-stat-box {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(7, 23, 47, 0.7) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 14px;
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat-number-giant {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: #34D399;
+  line-height: 1;
+}
+
+.fx-table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fx-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.fx-table th {
+  background: rgba(7, 23, 47, 0.95);
+  color: #93C5FD;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fx-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #E2E8F0;
+}
+
+.fx-table tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Badges */
+.badge-present {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.badge-locked {
+  background: rgba(239, 68, 68, 0.2);
+  color: #FCA5A5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+/* ==========================================================================
+   Period Timeline Schedule (7 Periods + Dismissal at 4:05 PM)
+   ========================================================================== */
+
+.period-timeline-strip {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  overflow-x: auto;
+  padding: 8px 0;
+}
+
+.period-card-item {
+  flex: 1;
+  min-width: 120px;
+  background: rgba(7, 23, 47, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  transition: all var(--trans-fast);
+}
+
+.period-card-item.active {
+  border-color: var(--fxec-gold);
+  background: rgba(255, 184, 0, 0.08);
+  box-shadow: 0 0 15px rgba(255, 184, 0, 0.2);
+}
+
+.period-card-item.present {
+  border-color: var(--fxec-emerald);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.period-card-item.is-break {
+  opacity: 0.6;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.p-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #FFF;
+}
+
+.p-time {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* Device Security Banner */
+.device-security-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(30, 64, 175, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 0.84rem;
+}
+
+/* Modal Overlay */
+.fx-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 10, 23, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 20px;
+}
+
+.fx-modal-content {
+  background: #0B192E;
+  border: 1px solid rgba(255, 184, 0, 0.3);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 520px;
+  padding: 28px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .dashboard-grid-main,
+  .dashboard-grid-tri,
+  .dashboard-grid-wide {
+    grid-template-columns: 1fr;
+  }
+  .app-workspace {
+    padding: 16px;
+  }
+}

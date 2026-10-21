@@ -149,14 +149,14 @@ export const StudentDashboard = ({
             <div className="student-main-col">
                 <div className="fa-glass-card attendance-hub-card">
                     {/* Classroom Location & Move Classroom Button */}
-                    <div className="aero-card-header" style={{ paddingBottom: '10px' }}>
-                        <div>
-                            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--dark-blue)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <MapPin size={16} color="var(--blue)" />
-                                <span>{activeBuildingObj?.name || 'Dr. APJ Abdul Kalam Block'}</span>
-                                <span className="room-num" style={{ marginLeft: '6px' }}>Room {activeRoomObj?.room_number || '207'}</span>
+                    <div className="student-classroom-header-bar">
+                        <div className="location-info-block">
+                            <div className="building-title-row">
+                                <MapPin size={17} color="var(--blue)" className="pin-icon" />
+                                <span className="building-name">{activeBuildingObj?.name || 'Dr. APJ Abdul Kalam Block'}</span>
+                                <span className="room-badge">Room {activeRoomObj?.room_number || '207'}</span>
                             </div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-sub)', marginTop: '2px' }}>
+                            <div className="floor-room-sub">
                                 {activeFloorObj?.name || '2nd Floor'} • {activeRoomObj?.name || 'IT 2nd Year Lecture Hall'}
                             </div>
                         </div>
@@ -164,8 +164,7 @@ export const StudentDashboard = ({
                         {/* Move / Change Classroom right near the timer circle */}
                         <button 
                             type="button" 
-                            className="aero-glass-btn primary"
-                            style={{ padding: '6px 14px', fontSize: '0.78rem' }}
+                            className="aero-glass-btn primary move-classroom-btn"
                             onClick={() => setIsRoomModalOpen(true)}
                         >
                             <Navigation size={14} />

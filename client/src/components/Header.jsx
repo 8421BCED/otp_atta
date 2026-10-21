@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, User, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Clock, Calendar, LogOut, ChevronDown, Shield, User } from 'lucide-react';
 
 export const Header = ({ 
     currentUser, 
@@ -11,6 +11,8 @@ export const Header = ({
     onOpenCalendar
 }) => {
     const [realTime, setRealTime] = useState('');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
 
     useEffect(() => {
         const updateClock = () => {
@@ -22,12 +24,35 @@ export const Header = ({
         return () => clearInterval(interval);
     }, []);
 
+    // Close profile dropdown on outside click or escape key
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setIsDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
+
     const roles = [
-        { id: 'student', label: 'Student', email: 'daniela.ug.24.it@francisxavier.ac.in', name: 'Daniel A' },
-        { id: 'staff', label: 'Staff', email: 'staff.it@francisxavier.ac.in', name: 'Prof. R. David' },
-        { id: 'hod', label: 'HOD', email: 'hod.it@francisxavier.ac.in', name: 'Dr. J. B. Shajilin Labbai' },
-        { id: 'principal', label: 'Principal', email: 'principal@francisxavier.ac.in', name: 'Dr. V. Velmurugan' }
+        { id: 'student', label: 'Student', email: 'daniela.ug.24.it@francisxavier.ac.in', name: 'Daniel A', path: '/students' },
+        { id: 'staff', label: 'Staff', email: 'staff.it@francisxavier.ac.in', name: 'Prof. R. David', path: '/staffs' },
+        { id: 'hod', label: 'HOD', email: 'hod.it@francisxavier.ac.in', name: 'Dr. J. B. Shajilin Labbai', path: '/hod' },
+        { id: 'principal', label: 'Principal', email: 'principal@francisxavier.ac.in', name: 'Dr. V. Velmurugan', path: '/principal' }
     ];
+
+    const userInitial = currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U';
 
     return (
         <header className="fxec-header-main">
@@ -108,23 +133,72 @@ export const Header = ({
                     ))}
                 </div>
 
-                {/* User Pill & Sign Out */}
-                <div className="user-profile-badge">
-                    <div className="user-avatar">
-                        {currentUser?.name ? currentUser.name.charAt(0) : 'U'}
-                    </div>
-                    <div className="user-details">
-                        <div className="name">{currentUser?.name || 'User'}</div>
-                        <div className="meta">{currentUser?.role?.toUpperCase()} • {currentUser?.department || 'IT'}</div>
-                    </div>
+                {/* Top-Right Profile Icon & Dropdown Menu */}
+                <div className="profile-menu-container" ref={dropdownRef}>
                     <button
                         type="button"
-                        className="aero-logout-btn"
-                        onClick={onLogout}
-                        title="Sign out and return to Google Login page"
+                        className={`header-avatar-btn ${isDropdownOpen ? 'active' : ''}`}
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        title="User Profile & Settings"
+                        aria-label="User Profile"
                     >
-                        Sign Out
+                        <span className="avatar-initial">{userInitial}</span>
+                        <ChevronDown size={14} className={`dropdown-chevron ${isDropdownOpen ? 'rotated' : ''}`} />
                     </button>
+
+                    {/* Floating Dropdown Card */}
+                    {isDropdownOpen && (
+                        <div className="profile-dropdown-card">
+                            <div className="dropdown-user-header">
+                                <div className="dropdown-avatar-circle">
+                                    {userInitial}
+                                </div>
+                                <div className="dropdown-user-info">
+                                    <div className="dropdown-user-name">{currentUser?.name || 'User'}</div>
+                                    <div className="dropdown-user-email">{currentUser?.email}</div>
+                                    <div className="dropdown-badges-row">
+                                        <span className="dropdown-role-badge">
+                                            {currentUser?.role?.toUpperCase()}
+                                        </span>
+                                        <span className="dropdown-dept-badge">
+                                            {currentUser?.department || 'IT'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="dropdown-divider" />
+
+                            {currentUser?.role === 'student' && currentUser?.roll_number && (
+                                <div className="dropdown-info-row">
+                                    <span className="info-label">Roll Number:</span>
+                                    <span className="info-value font-mono">{currentUser.roll_number}</span>
+                                </div>
+                            )}
+
+                            <div className="dropdown-info-row">
+                                <span className="info-label">Anti-Proxy Lock:</span>
+                                <span className="info-value text-green">
+                                    <Shield size={12} style={{ display: 'inline', marginRight: '4px', verticalAlign: '-1px' }} />
+                                    Device Bound
+                                </span>
+                            </div>
+
+                            <div className="dropdown-divider" />
+
+                            <button
+                                type="button"
+                                className="dropdown-logout-btn"
+                                onClick={() => {
+                                    setIsDropdownOpen(false);
+                                    onLogout();
+                                }}
+                            >
+                                <LogOut size={15} />
+                                <span>Sign Out</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </header>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, RotateCcw, Calendar, CheckCircle2, Search, Building2 } from 'lucide-react';
 
-export const HODDashboard = ({ currentUser }) => {
+export const HODDashboard = ({ currentUser, hierarchy }) => {
     const department = currentUser?.department || 'IT';
 
     const [overview, setOverview] = useState(null);

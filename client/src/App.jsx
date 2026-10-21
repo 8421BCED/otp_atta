@@ -9,6 +9,25 @@ import { AttendanceCalendarModal } from './components/AttendanceCalendarModal';
 import { getDeviceSecurityInfo } from './utils/deviceSecurity';
 import { Calendar } from 'lucide-react';
 
+const getRoleFromPath = () => {
+    const path = window.location.pathname.toLowerCase();
+    if (path.includes('student')) return 'student';
+    if (path.includes('staff')) return 'staff';
+    if (path.includes('hod')) return 'hod';
+    if (path.includes('princip')) return 'principal';
+    return null;
+};
+
+const getPathFromRole = (role) => {
+    switch (role) {
+        case 'student': return '/students';
+        case 'staff': return '/staffs';
+        case 'hod': return '/hod';
+        case 'principal': return '/principal';
+        default: return '/';
+    }
+};
+
 export function App() {
     const [currentUser, setCurrentUser] = useState(null);
     const [deviceInfo, setDeviceInfo] = useState(null);
@@ -19,6 +38,29 @@ export function App() {
     });
     const [holidayStatus, setHolidayStatus] = useState(null);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
+    // Active endpoint route (/students, /staffs, /hod, /principal)
+    const [currentRoute, setCurrentRoute] = useState(() => getRoleFromPath() || 'student');
+
+    // Handle browser back/forward buttons
+    useEffect(() => {
+        const onPopState = () => {
+            const role = getRoleFromPath();
+            if (role) {
+                setCurrentRoute(role);
+            }
+        };
+        window.addEventListener('popstate', onPopState);
+        return () => window.removeEventListener('popstate', onPopState);
+    }, []);
+
+    const handleNavigateRoute = (role) => {
+        setCurrentRoute(role);
+        const targetPath = getPathFromRole(role);
+        if (window.location.pathname !== targetPath) {
+            window.history.pushState(null, '', targetPath);
+        }
+    };
 
     // 1. Initialize Device & Saved User
     useEffect(() => {
@@ -31,9 +73,23 @@ export function App() {
 
             if (savedToken && savedUser) {
                 try {
-                    setCurrentUser(JSON.parse(savedUser));
+                    const parsedUser = JSON.parse(savedUser);
+                    setCurrentUser(parsedUser);
+                    // If at root or invalid path, sync URL to user's role
+                    const pathRole = getRoleFromPath();
+                    if (!pathRole) {
+                        handleNavigateRoute(parsedUser.role || 'student');
+                    } else {
+                        setCurrentRoute(pathRole);
+                    }
                 } catch (e) {
                     console.error('Error parsing user:', e);
+                }
+            } else {
+                // If not logged in, ensure URL path matches currentRoute
+                const pathRole = getRoleFromPath();
+                if (pathRole) {
+                    setCurrentRoute(pathRole);
                 }
             }
         };
@@ -100,6 +156,7 @@ export function App() {
                 localStorage.setItem('fxec_token', data.token);
                 localStorage.setItem('fxec_user', JSON.stringify(data.user));
                 setCurrentUser(data.user);
+                handleNavigateRoute(data.user.role);
             }
         } catch (e) {
             console.error('Role switch failed:', e);
@@ -112,14 +169,24 @@ export function App() {
         setCurrentUser(null);
     };
 
-    // If no user is logged in, show dedicated Google Login Page
+    const handleLoginSuccess = (user) => {
+        setCurrentUser(user);
+        handleNavigateRoute(user.role || 'student');
+    };
+
+    // If no user is logged in, show dedicated Login Page tailored to current route
     if (!currentUser) {
         return (
             <LoginPage 
-                onLoginSuccess={(user) => setCurrentUser(user)}
+                onLoginSuccess={handleLoginSuccess}
+                currentRoute={currentRoute}
+                onNavigateRoute={handleNavigateRoute}
             />
         );
     }
+
+    // Determine active dashboard view: respect user role or active route
+    const activeViewRole = currentRoute || currentUser?.role || 'student';
 
     return (
         <div className="app-container">
@@ -156,7 +223,7 @@ export function App() {
                 )}
 
                 {/* Active Dashboard View */}
-                {currentUser?.role === 'student' && (
+                {activeViewRole === 'student' && (
                     <StudentDashboard 
                         currentUser={currentUser}
                         hierarchy={hierarchy}
@@ -166,7 +233,7 @@ export function App() {
                     />
                 )}
 
-                {currentUser?.role === 'staff' && (
+                {activeViewRole === 'staff' && (
                     <StaffDashboard 
                         currentUser={currentUser}
                         hierarchy={hierarchy}
@@ -174,13 +241,14 @@ export function App() {
                     />
                 )}
 
-                {currentUser?.role === 'hod' && (
+                {activeViewRole === 'hod' && (
                     <HODDashboard 
                         currentUser={currentUser}
+                        hierarchy={hierarchy}
                     />
                 )}
 
-                {currentUser?.role === 'principal' && (
+                {activeViewRole === 'principal' && (
                     <PrincipalDashboard 
                         currentUser={currentUser}
                         hierarchy={hierarchy}

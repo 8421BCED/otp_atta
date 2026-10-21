@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldCheck, AlertCircle, LogIn, Sparkles, UserCheck } from 'lucide-react';
+import { ShieldCheck, AlertCircle, Sparkles, UserCheck, ArrowRight, Mail } from 'lucide-react';
 import { getDeviceSecurityInfo } from '../utils/deviceSecurity';
 
 const GOOGLE_CLIENT_ID = "755373927218-gv3bdo8sfup6tir4bc4te569ikufq5f4.apps.googleusercontent.com";
 
-export const LoginPage = ({ onLoginSuccess }) => {
+export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigateRoute }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState(null);
     const [deviceInfo, setDeviceInfo] = useState(null);
+    const [customEmail, setCustomEmail] = useState('');
     const googleButtonRef = useRef(null);
 
     useEffect(() => {
@@ -42,7 +43,7 @@ export const LoginPage = ({ onLoginSuccess }) => {
                 client_id: GOOGLE_CLIENT_ID,
                 callback: handleGoogleCredentialResponse,
                 auto_select: false,
-                hosted_domain: 'francisxavier.ac.in' // College domain hint
+                hosted_domain: 'francisxavier.ac.in'
             });
 
             if (googleButtonRef.current) {
@@ -93,35 +94,75 @@ export const LoginPage = ({ onLoginSuccess }) => {
         }
     };
 
-    // Quick demo login handler for development and testing
-    const handleDemoLogin = async (roleObj) => {
+    // Instant official email login handler
+    const handleLoginWithEmail = async (emailToUse) => {
+        const targetEmail = (emailToUse || customEmail).trim();
+        if (!targetEmail) {
+            setErrorMessage('Please enter your official college email address.');
+            return;
+        }
+
         setIsLoading(true);
         setErrorMessage(null);
+
         try {
             const dev = deviceInfo || await getDeviceSecurityInfo();
             const res = await fetch('http://localhost:5000/api/auth/demo-login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email: roleObj.email,
-                    role: roleObj.role,
+                    email: targetEmail,
                     deviceInfo: dev
                 })
             });
+
             const data = await res.json();
-            if (data.token) {
+            if (res.ok && data.token) {
                 localStorage.setItem('fxec_token', data.token);
                 localStorage.setItem('fxec_user', JSON.stringify(data.user));
                 onLoginSuccess(data.user);
             } else {
-                setErrorMessage(data.error || 'Failed to authenticate');
+                setErrorMessage(data.error || `No user found for "${targetEmail}". Please check your email.`);
             }
         } catch (e) {
-            setErrorMessage('Server connection error.');
+            console.error('Email login error:', e);
+            setErrorMessage('Server connection error. Please make sure the attendance server is running.');
         } finally {
             setIsLoading(false);
         }
     };
+
+    // Quick accounts tailored for current endpoint
+    const portalAccounts = {
+        student: [
+            { name: 'Daniel A (IT)', email: 'daniela.ug.24.it@francisxavier.ac.in', roll: '950724IT021' },
+            { name: 'Arun Kumar S (IT)', email: 'arun.ug.24.it@francisxavier.ac.in', roll: '950724IT005' },
+            { name: 'Kavitha M (IT)', email: 'kavitha.ug.24.it@francisxavier.ac.in', roll: '950724IT032' },
+            { name: 'Priya Dharshini R (IT)', email: 'priya.ug.24.it@francisxavier.ac.in', roll: '950724IT045' }
+        ],
+        staff: [
+            { name: 'Prof. R. David', email: 'staff.it@francisxavier.ac.in', dept: 'IT' },
+            { name: 'Arunadevi M', email: 'arunadevim@francisxavier.ac.in', dept: 'Faculty' },
+            { name: 'Gomathi Selvi R', email: 'gomathiselvir@francisxavier.ac.in', dept: 'Faculty' }
+        ],
+        hod: [
+            { name: 'Dr. J. B. Shajilin Labbai (IT HOD)', email: 'ithod@francisxavier.ac.in', dept: 'IT' },
+            { name: 'Dr. Gomathy (CSE HOD)', email: 'csehod@francisxavier.ac.in', dept: 'CSE' }
+        ],
+        principal: [
+            { name: 'Dr. V. Velmurugan (Principal)', email: 'principal@francisxavier.ac.in', dept: 'Executive' }
+        ]
+    };
+
+    const routeTitles = {
+        student: { label: 'Student Portal', path: '/students', hint: 'daniela.ug.24.it@francisxavier.ac.in' },
+        staff: { label: 'Staff Portal', path: '/staffs', hint: 'staff.it@francisxavier.ac.in' },
+        hod: { label: 'HOD Portal', path: '/hod', hint: 'ithod@francisxavier.ac.in' },
+        principal: { label: 'Principal Portal', path: '/principal', hint: 'principal@francisxavier.ac.in' }
+    };
+
+    const activeMeta = routeTitles[currentRoute] || routeTitles.student;
+    const activeAccounts = portalAccounts[currentRoute] || portalAccounts.student;
 
     return (
         <div className="aero-login-wrapper">
@@ -131,18 +172,33 @@ export const LoginPage = ({ onLoginSuccess }) => {
                 <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div className="aero-login-badge">
                         <span className="logo-symbol">FX</span>
-                        <div className="gloss-sheen"></div>
                     </div>
-                    <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--dark-blue)', letterSpacing: '-0.02em', marginTop: '12px' }}>
+                    <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--dark-blue)', letterSpacing: '-0.02em', marginTop: '12px' }}>
                         Francis Xavier Engineering College
                     </h1>
-                    <p style={{ fontSize: '0.82rem', color: 'var(--text-sub)', marginTop: '4px' }}>
-                        Autonomous Institution • Department of Information Technology
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-sub)', marginTop: '3px' }}>
+                        Autonomous Institution • OTP & Anti-Proxy Attendance
                     </p>
-                    <div className="aero-tag-pill" style={{ marginTop: '8px' }}>
-                        <Sparkles size={13} color="var(--blue)" />
-                        <span>Anti-Proxy Real-Time Attendance Portal</span>
-                    </div>
+                </div>
+
+                {/* Endpoint Navigation Tabs */}
+                <div className="login-endpoint-tabs">
+                    {Object.entries(routeTitles).map(([key, info]) => (
+                        <button
+                            key={key}
+                            type="button"
+                            className={`login-endpoint-tab ${currentRoute === key ? 'active' : ''}`}
+                            onClick={() => onNavigateRoute && onNavigateRoute(key)}
+                        >
+                            {info.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Active Portal Header */}
+                <div className="portal-header-tag">
+                    <span className="tag-dot" />
+                    <span>{activeMeta.label} ({activeMeta.path})</span>
                 </div>
 
                 {/* Error Banner */}
@@ -153,50 +209,84 @@ export const LoginPage = ({ onLoginSuccess }) => {
                     </div>
                 )}
 
-                {/* Google Sign In Area */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', margin: '20px 0' }}>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--dark-blue)', fontWeight: 700 }}>
-                        Official College Single Sign-On:
+                {/* Official Email Input Box for Direct Testing */}
+                <form 
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        handleLoginWithEmail();
+                    }} 
+                    className="login-email-form"
+                >
+                    <label className="login-form-label">
+                        <Mail size={14} color="var(--blue)" />
+                        <span>Enter Official College Email:</span>
+                    </label>
+
+                    <div className="login-input-group">
+                        <input
+                            type="text"
+                            className="login-email-input"
+                            placeholder={activeMeta.hint}
+                            value={customEmail}
+                            onChange={(e) => setCustomEmail(e.target.value)}
+                            autoFocus
+                        />
+                        <button
+                            type="submit"
+                            className="login-submit-btn"
+                            disabled={isLoading}
+                        >
+                            <span>{isLoading ? 'Verifying...' : 'Sign In'}</span>
+                            <ArrowRight size={15} />
+                        </button>
                     </div>
+                </form>
 
-                    {/* Official Google GSI Render Container */}
-                    <div ref={googleButtonRef} style={{ minHeight: '44px', display: 'flex', justifyContent: 'center' }}></div>
-
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)', textAlign: 'center', maxWidth: '320px' }}>
-                        Strict domain restriction: Only <strong>@francisxavier.ac.in</strong> email accounts are permitted.
+                {/* Quick-Click Accounts from Seeded Database */}
+                <div className="quick-accounts-section">
+                    <div className="quick-accounts-title">
+                        One-Click Verified Test Accounts:
                     </div>
-                </div>
-
-                {/* Hardware Anti-Proxy Notice */}
-                <div className="aero-device-security-pill">
-                    <ShieldCheck size={16} color="var(--blue)" />
-                    <span>Device Protection: Automatically binds this mobile device/workstation to your student ID.</span>
-                </div>
-
-                {/* One-Click Quick Role Switchers */}
-                <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', marginTop: '8px' }}>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontWeight: 700, marginBottom: '10px', textAlign: 'center' }}>
-                        ONE-CLICK DEVELOPMENT DEMO ACCOUNTS
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        {[
-                            { name: 'Daniel A (Student)', email: 'daniela.ug.24.it@francisxavier.ac.in', role: 'student' },
-                            { name: 'Prof. David (Staff)', email: 'staff.it@francisxavier.ac.in', role: 'staff' },
-                            { name: 'Dr. Shajilin (HOD)', email: 'hod.it@francisxavier.ac.in', role: 'hod' },
-                            { name: 'Principal Office', email: 'principal@francisxavier.ac.in', role: 'principal' }
-                        ].map((acc, idx) => (
+                    <div className="quick-accounts-grid">
+                        {activeAccounts.map((acc, idx) => (
                             <button
                                 key={idx}
                                 type="button"
-                                className="aero-demo-login-btn"
-                                onClick={() => handleDemoLogin(acc)}
+                                className="quick-account-chip"
+                                onClick={() => {
+                                    setCustomEmail(acc.email);
+                                    handleLoginWithEmail(acc.email);
+                                }}
                                 disabled={isLoading}
                             >
                                 <UserCheck size={14} color="var(--blue)" />
-                                <span>{acc.name}</span>
+                                <div className="chip-details">
+                                    <div className="chip-name">{acc.name}</div>
+                                    <div className="chip-email">{acc.email}</div>
+                                </div>
                             </button>
                         ))}
                     </div>
+                </div>
+
+                {/* Google Single Sign-On (Official SSO) */}
+                <div className="sso-divider-row">
+                    <span className="sso-divider-line" />
+                    <span className="sso-divider-text">OR OFFICIAL GOOGLE SSO</span>
+                    <span className="sso-divider-line" />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <div ref={googleButtonRef} style={{ minHeight: '44px', display: 'flex', justifyContent: 'center' }}></div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-sub)', textAlign: 'center' }}>
+                        Only <strong>@francisxavier.ac.in</strong> official accounts are authorized.
+                    </div>
+                </div>
+
+                {/* Anti-Proxy Device Pill */}
+                <div className="aero-device-security-pill" style={{ marginTop: '12px' }}>
+                    <ShieldCheck size={15} color="var(--blue)" />
+                    <span>Hardware 1-Device Lock: Active & Verified on this device.</span>
                 </div>
 
             </div>

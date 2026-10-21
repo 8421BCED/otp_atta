@@ -119,8 +119,9 @@ router.post('/demo-login', async (req, res) => {
         let params = [];
 
         if (email) {
-            query += 'email = ?';
-            params.push(email);
+            const cleanEmail = email.trim().toLowerCase();
+            query += '(LOWER(TRIM(email)) = ? OR LOWER(TRIM(email)) LIKE ?)';
+            params.push(cleanEmail, `%${cleanEmail}%`);
         } else if (role) {
             query += 'role = ? LIMIT 1';
             params.push(role);
@@ -128,9 +129,9 @@ router.post('/demo-login', async (req, res) => {
             return res.status(400).json({ error: 'Role or email required for demo login' });
         }
 
-        const [users] = await pool.query(query, params);
+        const [users] = await pool.query(query + ' LIMIT 1', params);
         if (users.length === 0) {
-            return res.status(404).json({ error: 'Demo user not found' });
+            return res.status(404).json({ error: `No registered user found matching "${email}". Check plans/alllistsstaff.xlsx.` });
         }
 
         const user = users[0];

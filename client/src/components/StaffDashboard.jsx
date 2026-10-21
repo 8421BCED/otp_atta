@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Users, RefreshCw, QrCode, Search, Radio, CheckCircle2 } from 'lucide-react';
+import { Users, RefreshCw, QrCode, Search, Radio, CheckCircle2, DoorOpen, MapPin } from 'lucide-react';
+import { RoomSelectionModal } from './RoomSelectionModal';
 
 export const StaffDashboard = ({ 
     currentUser, 
@@ -7,6 +8,7 @@ export const StaffDashboard = ({
     currentPeriodInfo 
 }) => {
     const [selectedRoomId, setSelectedRoomId] = useState(3); // Room 207
+    const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
 
     // 10s OTP State
     const [currentOtp, setCurrentOtp] = useState('------');
@@ -114,36 +116,33 @@ export const StaffDashboard = ({
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
             
-            {/* Top Room Selector */}
+            {/* Top Room Selector: Building -> Floor -> Room */}
             <div className="fx-card" style={{ padding: '16px 20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <Radio size={20} color="var(--blue)" />
+                        <Radio size={22} color="var(--blue)" />
                         <div>
-                            <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '1rem' }}>
-                                Staff Classroom Session
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '1.02rem' }}>
+                                    {roomInfo?.building_name || 'Dr. APJ Abdul Kalam Block'}
+                                </span>
+                                <span className="room-badge">Room {roomInfo ? roomInfo.room_number : '207'}</span>
                             </div>
-                            <div style={{ fontSize: '0.78rem', color: 'var(--text-sub)' }}>
-                                {currentPeriodInfo?.activePeriod?.name || 'Class Period'} • {currentUser?.department || 'IT'} Department
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-sub)', marginTop: '2px' }}>
+                                {roomInfo?.floor_name || '2nd Floor'} • {roomInfo?.name || 'IT 2nd Year Lecture Hall'} ({currentUser?.department || 'IT'} Dept)
                             </div>
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '0.82rem', color: 'var(--text-sub)' }}>Select Classroom:</span>
-                        <select 
-                            className="fx-select"
-                            style={{ minWidth: '240px', fontWeight: 600 }}
-                            value={selectedRoomId}
-                            onChange={(e) => setSelectedRoomId(Number(e.target.value))}
-                        >
-                            <option value={3}>Room 207 (IT Lecture Hall)</option>
-                            <option value={1}>Room 101 (IT Smart Class 1)</option>
-                            <option value={2}>Room 102 (IT Smart Class 2)</option>
-                            <option value={6}>Room AL-01 (Applied AI & ML Lab)</option>
-                            <option value={7}>Room AL-02 (Cloud Computing Lab)</option>
-                        </select>
-                    </div>
+                    <button 
+                        type="button" 
+                        className="aero-glass-btn primary"
+                        style={{ padding: '8px 16px', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                        onClick={() => setIsRoomModalOpen(true)}
+                    >
+                        <DoorOpen size={16} />
+                        <span>Select Classroom (Building & Floor)</span>
+                    </button>
                 </div>
             </div>
 
@@ -333,6 +332,17 @@ export const StaffDashboard = ({
                     </div>
                 )}
             </div>
+
+            {/* Hierarchical Building -> Floor -> Room Selection Modal */}
+            <RoomSelectionModal 
+                isOpen={isRoomModalOpen}
+                onClose={() => setIsRoomModalOpen(false)}
+                hierarchy={hierarchy}
+                onSelectRoom={(bId, fId, rId) => {
+                    setSelectedRoomId(rId);
+                }}
+                currentRoomId={selectedRoomId}
+            />
 
         </div>
     );

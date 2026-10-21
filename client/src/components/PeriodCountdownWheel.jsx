@@ -33,6 +33,7 @@ export const PeriodCountdownWheel = ({ currentPeriodInfo, timeline }) => {
     let displayTime = '--:--';
     let progressPct = 0;
     let labelSub = 'PERIOD DURATION';
+    let isUrgent = false;
 
     if (currentTimeStr) {
         const nowSec = timeToSeconds(currentTimeStr);
@@ -47,7 +48,11 @@ export const PeriodCountdownWheel = ({ currentPeriodInfo, timeline }) => {
             const m = Math.floor(remainingSec / 60);
             const s = remainingSec % 60;
             displayTime = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-            progressPct = Math.min(100, Math.round((elapsedSec / durationSec) * 100));
+            progressPct = Math.min(100, Math.max(0, (elapsedSec / durationSec) * 100));
+
+            if (remainingSec <= 300) {
+                isUrgent = true;
+            }
 
             if (isBreak) {
                 labelSub = `${activePeriod.name.toUpperCase()} INTERVAL`;
@@ -55,7 +60,7 @@ export const PeriodCountdownWheel = ({ currentPeriodInfo, timeline }) => {
                 labelSub = `${activePeriod.name.toUpperCase()} DURATION`;
             }
         } else if (isBeforeCollege) {
-            // Before college hours (9:00 AM) - format cleanly as HH:MM:SS or opening time
+            // Before college hours (9:00 AM)
             const startSec = timeToSeconds('09:00:00');
             const diffSec = Math.max(0, startSec - nowSec);
             const h = Math.floor(diffSec / 3600);
@@ -76,33 +81,35 @@ export const PeriodCountdownWheel = ({ currentPeriodInfo, timeline }) => {
         }
     }
 
-    // SVG Circular Geometry with thicker green progress stroke
-    const radius = 72;
-    const strokeWidth = 11;
-    const circumference = 2 * Math.PI * radius; // ≈ 452.39
+    // SVG Circular Geometry: 210x210 container, radius 80, stroke 10
+    const radius = 80;
+    const strokeWidth = 10;
+    const circumference = 2 * Math.PI * radius; // ≈ 502.65
     const strokeDashoffset = circumference - (circumference * progressPct) / 100;
+
+    const isLongTime = displayTime.length >= 7; // e.g. "05:10:59"
 
     return (
         <div className="period-wheel-pure">
             {/* Circular Progress Wheel */}
             <div className="countdown-wheel-container">
                 <div className="countdown-svg-wrap">
-                    <svg className="countdown-svg" viewBox="0 0 190 190">
-                        {/* Background Track Circle */}
+                    <svg className="countdown-svg" viewBox="0 0 210 210">
+                        {/* Background Light Blue Track */}
                         <circle
                             className="countdown-circle-track"
-                            cx="95"
-                            cy="95"
+                            cx="105"
+                            cy="105"
                             r={radius}
                             stroke="#E8F4FC"
                             strokeWidth={strokeWidth}
                             fill="none"
                         />
-                        {/* Thick Green Period Duration Arc */}
+                        {/* Light Green Live Border Arc Moving along to the Period */}
                         <circle
                             className="countdown-circle-progress"
-                            cx="95"
-                            cy="95"
+                            cx="105"
+                            cy="105"
                             r={radius}
                             stroke="#C3F84A"
                             strokeWidth={strokeWidth}
@@ -113,12 +120,21 @@ export const PeriodCountdownWheel = ({ currentPeriodInfo, timeline }) => {
                         />
                     </svg>
 
-                    {/* Centered Timer Inside Circle */}
+                    {/* Centered Timer Inside Circle - Sized cleanly so it never spills out */}
                     <div className="countdown-inner-content">
-                        <div className="countdown-time-digits">{displayTime}</div>
-                        <div className="countdown-label-sub">{labelSub}</div>
+                        <div className={`countdown-time-digits ${isLongTime ? 'long-digits' : 'standard-digits'}`}>
+                            {displayTime}
+                        </div>
+                        <div className="countdown-label-sub">
+                            {labelSub}
+                        </div>
+                        {isUrgent && activePeriod && (
+                            <span className="count-pill orange" style={{ marginTop: '4px', fontSize: '0.65rem' }}>
+                                Ending Soon
+                            </span>
+                        )}
                         {isCurrentMarked && (
-                            <span className="count-pill green" style={{ marginTop: '6px', fontSize: '0.7rem' }}>
+                            <span className="count-pill green" style={{ marginTop: '4px', fontSize: '0.68rem' }}>
                                 ✓ Marked Present
                             </span>
                         )}

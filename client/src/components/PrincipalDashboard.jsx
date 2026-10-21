@@ -92,18 +92,18 @@ export const PrincipalDashboard = ({ currentUser, hierarchy, simulatedTime, setS
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
             
             {/* Master College Schedule Clock Controller (Principal Exclusive) */}
-            <div className="fx-card" style={{ border: '1px solid var(--buttermilk-border)' }}>
+            <div className="fx-card">
                 <div className="fx-card-header">
                     <div className="fx-card-title">
-                        <Clock size={18} color="var(--buttermilk)" />
+                        <Clock size={18} color="var(--blue)" />
                         <span>Master Campus Time Controller</span>
                     </div>
-                    <span className="count-pill">
+                    <span className="count-pill green">
                         System Clock: {simulatedTime ? `${simulatedTime} (Simulated)` : 'Live Real Time'}
                     </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--smoke-subtle)' }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-sub)' }}>
                         Selecting a time updates the global schedule, active period countdown wheels, and 10-second OTP verification windows across all student, staff, and HOD dashboards in real-time.
                     </p>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -141,27 +141,27 @@ export const PrincipalDashboard = ({ currentUser, hierarchy, simulatedTime, setS
             {/* Top Stats */}
             <div className="dashboard-grid-tri">
                 <div className="fx-card">
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Total Enrolled Students</div>
-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#FFF' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-sub)' }}>Total Enrolled Students</div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--dark-blue)' }}>
                         {overviewData?.summary?.totalStudents || 0}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Across All Departments</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Across All Departments</div>
                 </div>
 
                 <div className="fx-card">
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Present Today</div>
-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#10B981' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-sub)' }}>Present Today</div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--blue)' }}>
                         {overviewData?.summary?.totalPresent || 0}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Overall Rate: {overviewData?.summary?.overallAttendanceRate || 0}%</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Overall Rate: {overviewData?.summary?.overallAttendanceRate || 0}%</div>
                 </div>
 
                 <div className="fx-card">
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Total Rooms</div>
-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#3B82F6' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-sub)' }}>Total Rooms</div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--blue)' }}>
                         {overviewData?.summary?.totalRooms || 0}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Classrooms & Labs</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Classrooms & Labs</div>
                 </div>
             </div>
 
@@ -170,7 +170,7 @@ export const PrincipalDashboard = ({ currentUser, hierarchy, simulatedTime, setS
                 <div className="fx-card">
                     <div className="fx-card-header">
                         <div className="fx-card-title">
-                            <Users size={20} color="#3B82F6" />
+                            <Users size={20} color="var(--blue)" />
                             Department Breakdown
                         </div>
                     </div>
@@ -190,9 +190,9 @@ export const PrincipalDashboard = ({ currentUser, hierarchy, simulatedTime, setS
                                     const rate = d.total_students > 0 ? Math.round((d.present_today / d.total_students) * 100) : 0;
                                     return (
                                         <tr key={i}>
-                                            <td style={{ fontWeight: 600, color: '#FFF' }}>{d.department}</td>
+                                            <td style={{ fontWeight: 700, color: 'var(--dark-blue)' }}>{d.department}</td>
                                             <td>{d.total_students}</td>
-                                            <td style={{ color: '#10B981', fontWeight: 600 }}>{d.present_today}</td>
+                                            <td style={{ color: 'var(--blue)', fontWeight: 700 }}>{d.present_today}</td>
                                             <td>{rate}%</td>
                                         </tr>
                                     );
@@ -205,19 +205,19 @@ export const PrincipalDashboard = ({ currentUser, hierarchy, simulatedTime, setS
                 <div className="fx-card">
                     <div className="fx-card-header">
                         <div className="fx-card-title">
-                            <Building size={20} color="#3B82F6" />
+                            <Building size={20} color="var(--blue)" />
                             Building Distribution
                         </div>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {overviewData?.buildingOccupancy?.map((b, i) => (
-                            <div key={i} className="list-row-item">
+                            <div key={i} className="list-row-item" style={{ background: 'var(--light-blue)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div>
-                                    <div style={{ fontWeight: 600, color: '#FFF' }}>{b.building_name}</div>
-                                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{b.room_count} rooms</div>
+                                    <div style={{ fontWeight: 800, color: 'var(--dark-blue)' }}>{b.building_name}</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-sub)' }}>{b.room_count} rooms</div>
                                 </div>
-                                <span className="status-tag present">
+                                <span className="aero-status-tag present">
                                     {b.students_present} Present
                                 </span>
                             </div>

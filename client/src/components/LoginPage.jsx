@@ -133,14 +133,14 @@ export const LoginPage = ({ onLoginSuccess }) => {
                         <span className="logo-symbol">FX</span>
                         <div className="gloss-sheen"></div>
                     </div>
-                    <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#FFF', letterSpacing: '-0.02em', marginTop: '12px' }}>
+                    <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--dark-blue)', letterSpacing: '-0.02em', marginTop: '12px' }}>
                         Francis Xavier Engineering College
                     </h1>
-                    <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.85)', marginTop: '4px' }}>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-sub)', marginTop: '4px' }}>
                         Autonomous Institution • Department of Information Technology
                     </p>
                     <div className="aero-tag-pill" style={{ marginTop: '8px' }}>
-                        <Sparkles size={13} color="#00E5FF" />
+                        <Sparkles size={13} color="var(--blue)" />
                         <span>Anti-Proxy Real-Time Attendance Portal</span>
                     </div>
                 </div>
@@ -155,27 +155,27 @@ export const LoginPage = ({ onLoginSuccess }) => {
 
                 {/* Google Sign In Area */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', margin: '20px 0' }}>
-                    <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--dark-blue)', fontWeight: 700 }}>
                         Official College Single Sign-On:
                     </div>
 
                     {/* Official Google GSI Render Container */}
                     <div ref={googleButtonRef} style={{ minHeight: '44px', display: 'flex', justifyContent: 'center' }}></div>
 
-                    <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.7)', textAlign: 'center', maxWidth: '320px' }}>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)', textAlign: 'center', maxWidth: '320px' }}>
                         Strict domain restriction: Only <strong>@francisxavier.ac.in</strong> email accounts are permitted.
                     </div>
                 </div>
 
                 {/* Hardware Anti-Proxy Notice */}
                 <div className="aero-device-security-pill">
-                    <ShieldCheck size={16} color="#00E676" />
+                    <ShieldCheck size={16} color="var(--blue)" />
                     <span>Device Protection: Automatically binds this mobile device/workstation to your student ID.</span>
                 </div>
 
                 {/* One-Click Quick Role Switchers */}
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.18)', paddingTop: '16px', marginTop: '8px' }}>
-                    <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.75)', fontWeight: 700, marginBottom: '10px', textAlign: 'center' }}>
+                <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', marginTop: '8px' }}>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontWeight: 700, marginBottom: '10px', textAlign: 'center' }}>
                         ONE-CLICK DEVELOPMENT DEMO ACCOUNTS
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -192,7 +192,7 @@ export const LoginPage = ({ onLoginSuccess }) => {
                                 onClick={() => handleDemoLogin(acc)}
                                 disabled={isLoading}
                             >
-                                <UserCheck size={14} color="#00E5FF" />
+                                <UserCheck size={14} color="var(--blue)" />
                                 <span>{acc.name}</span>
                             </button>
                         ))}

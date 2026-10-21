@@ -104,27 +104,27 @@ export const HODDashboard = ({ currentUser }) => {
             {/* KPI Cards */}
             <div className="dashboard-grid-tri">
                 <div className="fx-card">
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Department of {department}</div>
-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#FFF' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-sub)' }}>Department of {department}</div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--dark-blue)' }}>
                         {overview?.totalStudents || 0}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Total Enrolled Students</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Total Enrolled Students</div>
                 </div>
 
                 <div className="fx-card">
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Present Today</div>
-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#10B981' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-sub)' }}>Present Today</div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--blue)' }}>
                         {overview?.presentToday || 0}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>In Attendance ({overview?.attendanceRate || 0}%)</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>In Attendance ({overview?.attendanceRate || 0}%)</div>
                 </div>
 
                 <div className="fx-card">
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Active Rooms</div>
-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#3B82F6' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-sub)' }}>Active Rooms</div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--blue)' }}>
                         {overview?.roomDistribution?.length || 0}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Classrooms / Labs in Session</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Classrooms / Labs in Session</div>
                 </div>
             </div>
 
@@ -134,7 +134,7 @@ export const HODDashboard = ({ currentUser }) => {
                 <div className="fx-card">
                     <div className="fx-card-header">
                         <div className="fx-card-title">
-                            <Building2 size={20} color="#3B82F6" />
+                            <Building2 size={20} color="var(--blue)" />
                             Active Room Locations
                         </div>
                     </div>
@@ -142,20 +142,20 @@ export const HODDashboard = ({ currentUser }) => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {overview?.roomDistribution?.length > 0 ? (
                             overview.roomDistribution.map((r, i) => (
-                                <div key={i} className="list-row-item">
+                                <div key={i} className="list-row-item" style={{ background: 'var(--light-blue)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <div>
-                                        <div style={{ fontWeight: 700, color: '#FFF', fontSize: '0.9rem' }}>
+                                        <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.9rem' }}>
                                             Room {r.room_number} – {r.room_name}
                                         </div>
-                                        <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{r.building_name}</div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-sub)' }}>{r.building_name}</div>
                                     </div>
-                                    <span className="status-tag present">
+                                    <span className="aero-status-tag present">
                                         {r.student_count} Present
                                     </span>
                                 </div>
                             ))
                         ) : (
-                            <div style={{ padding: '24px', textAlign: 'center', color: '#64748B' }}>
+                            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-dim)' }}>
                                 No rooms currently active for {department}.
                             </div>
                         )}
@@ -166,18 +166,18 @@ export const HODDashboard = ({ currentUser }) => {
                 <div className="fx-card">
                     <div className="fx-card-header">
                         <div className="fx-card-title">
-                            <Calendar size={20} color="#3B82F6" />
+                            <Calendar size={20} color="var(--blue)" />
                             Declare Department Holiday
                         </div>
                     </div>
 
                     {holidayNotice && (
-                        <div className="alert-box-success">{holidayNotice}</div>
+                        <div className="aero-alert-success">{holidayNotice}</div>
                     )}
 
                     <form onSubmit={handleDeclareHoliday} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div>
-                            <label className="picker-label">Holiday Name</label>
+                            <label className="picker-label" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Holiday Name</label>
                             <input 
                                 type="text"
                                 className="fx-select"
@@ -189,7 +189,7 @@ export const HODDashboard = ({ currentUser }) => {
                         </div>
 
                         <div>
-                            <label className="picker-label">Date</label>
+                            <label className="picker-label" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Date</label>
                             <input 
                                 type="date"
                                 className="fx-select"
@@ -210,16 +210,16 @@ export const HODDashboard = ({ currentUser }) => {
             <div className="fx-card">
                 <div className="fx-card-header">
                     <div className="fx-card-title">
-                        <Users size={20} color="#3B82F6" />
+                        <Users size={20} color="var(--blue)" />
                         Student Device Management
                     </div>
-                    <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-sub)' }}>
                         Authorized devices bound to each student
                     </span>
                 </div>
 
                 {resetNotice && (
-                    <div className="alert-box-success">{resetNotice}</div>
+                    <div className="aero-alert-success">{resetNotice}</div>
                 )}
 
                 <div style={{ maxWidth: '380px' }}>
@@ -248,15 +248,15 @@ export const HODDashboard = ({ currentUser }) => {
                         <tbody>
                             {students.map((st, i) => (
                                 <tr key={i}>
-                                    <td style={{ fontFamily: 'monospace', color: '#93C5FD' }}>{st.roll_number}</td>
-                                    <td style={{ fontWeight: 600, color: '#FFF' }}>{st.name}</td>
-                                    <td style={{ fontSize: '0.78rem', color: '#94A3B8' }}>{st.email}</td>
+                                    <td style={{ fontFamily: 'monospace', color: 'var(--blue)', fontWeight: 700 }}>{st.roll_number}</td>
+                                    <td style={{ fontWeight: 700, color: 'var(--dark-blue)' }}>{st.name}</td>
+                                    <td style={{ fontSize: '0.78rem', color: 'var(--text-sub)' }}>{st.email}</td>
                                     <td>{st.device_name || 'Primary Mobile'}</td>
                                     <td>
                                         {st.current_room ? (
-                                            <span className="status-tag present">Room {st.current_room}</span>
+                                            <span className="aero-status-tag present">Room {st.current_room}</span>
                                         ) : (
-                                            <span style={{ color: '#64748B', fontSize: '0.75rem' }}>Not checked-in</span>
+                                            <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>Not checked-in</span>
                                         )}
                                     </td>
                                     <td style={{ textAlign: 'center' }}>

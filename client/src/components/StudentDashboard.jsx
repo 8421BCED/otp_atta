@@ -124,13 +124,13 @@ export const StudentDashboard = ({
             <div className="aero-action-banner fa-glass-card" style={{ gridColumn: '1 / -1' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div className="aero-badge-circle">
-                        <Sparkles size={18} color="#00E5FF" />
+                        <Sparkles size={18} color="#136CFC" />
                     </div>
                     <div>
-                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#FFF' }}>
+                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--dark-blue)' }}>
                             {currentUser?.name || 'Daniel A'} • Roll No: {currentUser?.roll_number || '24IT021'}
                         </div>
-                        <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.75)' }}>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)' }}>
                             Department of Information Technology • 2nd Year (Semester 4)
                         </div>
                     </div>
@@ -143,7 +143,7 @@ export const StudentDashboard = ({
                         className="aero-glass-btn"
                         onClick={() => setIsCalendarOpen(true)}
                     >
-                        <Calendar size={16} color="#00E5FF" />
+                        <Calendar size={16} color="#136CFC" />
                         <span>Attendance History</span>
                     </button>
 
@@ -172,7 +172,7 @@ export const StudentDashboard = ({
                 <div className="fa-glass-card">
                     <div className="aero-card-header">
                         <div className="aero-card-title">
-                            <MapPin size={18} color="#00E5FF" />
+                            <MapPin size={18} color="#136CFC" />
                             <span>Classroom & OTP Verification</span>
                         </div>
                         <button 
@@ -197,7 +197,7 @@ export const StudentDashboard = ({
 
                     {/* Quick Room Jump Strip */}
                     <div className="aero-quick-chips">
-                        <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Quick Labs:</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-sub)', fontWeight: 600 }}>Quick Labs:</span>
                         <button 
                             type="button" 
                             className={`aero-chip ${selectedRoom === 3 ? 'active' : ''}`}
@@ -223,8 +223,8 @@ export const StudentDashboard = ({
 
                     {/* OTP Entry Form */}
                     <form onSubmit={handleSubmitOtp} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', paddingTop: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(255,255,255,0.85)', fontSize: '0.82rem' }}>
-                            <KeyRound size={16} color="#00E5FF" />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-sub)', fontSize: '0.82rem' }}>
+                            <KeyRound size={16} color="var(--blue)" />
                             <span>Enter the 6-digit rolling OTP displayed by your staff:</span>
                         </div>
 
@@ -258,7 +258,6 @@ export const StudentDashboard = ({
                             style={{ width: '100%', maxWidth: '340px' }}
                             disabled={isSubmitting || otpInput.length !== 6}
                         >
-                            <span className="gloss-sheen"></span>
                             <span>{isSubmitting ? 'Verifying Device & OTP...' : 'Verify & Mark Present'}</span>
                         </button>
                     </form>
@@ -271,7 +270,7 @@ export const StudentDashboard = ({
                     <div className="aero-card-header">
                         <div className="aero-card-title">
                             <span>Today's Official Schedule</span>
-                            <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: 500 }}>
                                 (Dismissal: 4:05 PM)
                             </span>
                         </div>
@@ -308,16 +307,16 @@ export const StudentDashboard = ({
 
                     {/* Device Protection Footer */}
                     <div style={{ 
-                        borderTop: '1px solid rgba(255,255,255,0.15)', 
+                        borderTop: '1px solid var(--border-subtle)', 
                         paddingTop: '12px', 
                         fontSize: '0.76rem', 
-                        color: 'rgba(255,255,255,0.7)', 
+                        color: 'var(--text-sub)', 
                         display: 'flex', 
                         justifyContent: 'space-between',
                         alignItems: 'center'
                     }}>
                         <span>Device: {deviceInfo?.deviceName || 'Windows Workstation / Laptop'}</span>
-                        <span style={{ color: '#00E676', fontWeight: 700 }}>Strict 1-Device Lock: Active</span>
+                        <span style={{ color: 'var(--dark-blue)', fontWeight: 700 }}>Strict 1-Device Lock: Active</span>
                     </div>
                 </div>
             </div>

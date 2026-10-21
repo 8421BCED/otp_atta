@@ -1,37 +1,42 @@
 /* ==========================================================================
    Francis Xavier Engineering College - OTP Attendance System
-   Official Aesthetic: Authentic Frutiger Aero (Windows Vista/7 Aero Glass,
-   Vibrant Azure/Sky Blue, Gloss Overlays, Skeuomorphic Depth & Glassmorphism)
+   Official Palette (4 Specific Brand Colors - Light / Smoke White Theme):
+   - Blue:       #136CFC
+   - Dark Blue:  #152641 (Headings, primary typography, deep contrast)
+   - Green:      #C3F84A (Vivid status accent, active indicators)
+   - Light Blue: #E8F4FC (Subtle surfaces, borders, soft card fills)
+   - Canvas:     #F3F7FA (Crisp Smoke White background)
+   - Cards:      #FFFFFF (Pure elevated white cards)
    ========================================================================== */
 
 :root {
-  --font-main: 'Segoe UI', 'Outfit', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Segoe UI Mono', monospace;
+  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
-  /* Frutiger Aero Palette */
-  --aero-sky: #00A6F9;
-  --aero-azure: #0084FF;
-  --aero-ocean: #0052A3;
-  --aero-deep: #00224D;
-  --aero-cyan: #00E5FF;
-  --aero-emerald: #00E676;
-  --aero-amber: #FFD54F;
-  --aero-coral: #FF5252;
+  /* 4 Official Swatch Colors */
+  --blue: #136CFC;
+  --dark-blue: #152641;
+  --green: #C3F84A;
+  --light-blue: #E8F4FC;
 
-  /* Glassmorphism Tokens */
-  --glass-bg: rgba(255, 255, 255, 0.16);
-  --glass-bg-hover: rgba(255, 255, 255, 0.24);
-  --glass-bg-darker: rgba(0, 35, 75, 0.35);
-  --glass-border: rgba(255, 255, 255, 0.35);
-  --glass-border-top: rgba(255, 255, 255, 0.85);
-  --glass-shadow: 0 16px 40px rgba(0, 25, 70, 0.3);
-  --glass-inner-glow: inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  /* Clean Light Theme Surfaces */
+  --bg-app: #F0F5FA;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F8FAFD;
+  --bg-surface: #E8F4FC;
+  --bg-input: #FFFFFF;
+
+  /* Borders */
+  --border-subtle: #E2ECF5;
+  --border-card: #D8E5F2;
+  --border-blue: #136CFC;
+  --border-green: #C3F84A;
 
   /* Typography */
-  --text-pure: #FFFFFF;
-  --text-glow: rgba(255, 255, 255, 0.95);
-  --text-soft: rgba(255, 255, 255, 0.78);
-  --text-dim: rgba(255, 255, 255, 0.55);
+  --text-pure: #152641;
+  --text-sub: #4A6382;
+  --text-dim: #7E95B0;
+  --text-white: #FFFFFF;
 }
 
 *, *::before, *::after {
@@ -43,25 +48,10 @@
 html, body {
   width: 100%;
   min-height: 100vh;
-  background: linear-gradient(135deg, #0096E6 0%, #0060BF 45%, #002859 100%);
+  background-color: var(--bg-app);
   color: var(--text-pure);
   font-family: var(--font-main);
   -webkit-font-smoothing: antialiased;
-  background-attachment: fixed;
-}
-
-/* Frutiger Aero Organic Light Orbs (Nature + Water Bokeh Aura) */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background: 
-    radial-gradient(circle at 12% 18%, rgba(0, 229, 255, 0.45) 0%, transparent 40%),
-    radial-gradient(circle at 88% 30%, rgba(0, 230, 118, 0.35) 0%, transparent 45%),
-    radial-gradient(circle at 50% 90%, rgba(0, 140, 255, 0.4) 0%, transparent 50%),
-    radial-gradient(circle at 75% 85%, rgba(0, 229, 255, 0.25) 0%, transparent 40%);
-  pointer-events: none;
-  z-index: -1;
 }
 
 .app-container {
@@ -72,22 +62,20 @@ body::before {
 }
 
 /* ==========================================================================
-   Frutiger Aero Glass Header
+   Header Navbar (Light, Crisp, High-Contrast)
    ========================================================================== */
 
 .fxec-header-main {
-  background: rgba(0, 30, 70, 0.4);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 4px 20px rgba(0, 15, 45, 0.2);
-  padding: 10px 28px;
+  background: #FFFFFF;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: 0 2px 10px rgba(21, 38, 65, 0.04);
 }
 
 .fxec-brand {
@@ -97,48 +85,30 @@ body::before {
 }
 
 .fxec-logo-symbol {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #00E5FF 0%, #0077EE 100%);
-  border: 1.5px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 
-    0 4px 10px rgba(0, 140, 255, 0.4),
-    inset 0 1px 2px rgba(255, 255, 255, 0.9);
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 1.1rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  color: #FFF;
-  font-size: 1.15rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-.fxec-logo-symbol::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.1) 100%);
-  pointer-events: none;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 8px rgba(19, 108, 252, 0.25);
 }
 
 .fxec-brand-text h1 {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 800;
-  color: #FFF;
-  text-shadow: 0 1px 3px rgba(0, 20, 60, 0.5);
+  color: var(--dark-blue);
   line-height: 1.2;
 }
 
 .fxec-brand-text p {
   font-size: 0.72rem;
-  color: var(--text-soft);
-  text-shadow: 0 1px 2px rgba(0, 20, 60, 0.4);
+  color: var(--text-sub);
 }
 
 .fxec-nav-controls {
@@ -151,53 +121,48 @@ body::before {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-top: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  background: var(--light-blue);
+  border: 1px solid var(--border-card);
   padding: 6px 14px;
-  border-radius: 20px;
+  border-radius: 8px;
   font-size: 0.82rem;
   font-weight: 700;
-  color: #FFF;
+  color: var(--dark-blue);
 }
 
 .header-period-tag {
-  background: linear-gradient(180deg, #00E5FF 0%, #0099FF 100%);
-  color: #00224D;
-  font-weight: 800;
-  padding: 2px 9px;
-  border-radius: 12px;
+  background: var(--blue);
+  color: #FFFFFF;
+  padding: 2px 8px;
+  border-radius: 4px;
   font-size: 0.72rem;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  font-weight: 800;
 }
 
 .time-sim-select {
-  background: rgba(0, 40, 90, 0.5);
-  border: 1px solid var(--aero-cyan);
-  color: #FFF;
+  background: #FFFFFF;
+  border: 1.5px solid var(--blue);
+  color: var(--dark-blue);
   font-family: var(--font-main);
   font-size: 0.78rem;
   font-weight: 700;
   padding: 6px 12px;
-  border-radius: 18px;
+  border-radius: 8px;
   outline: none;
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
 }
 
 .time-sim-select option {
-  background: #002859;
-  color: #FFF;
+  background: #FFFFFF;
+  color: var(--dark-blue);
 }
 
 /* Role Switcher Tabs */
 .role-switcher-container {
   display: flex;
-  background: rgba(0, 25, 60, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
+  background: var(--light-blue);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
   padding: 3px;
   gap: 2px;
 }
@@ -205,26 +170,24 @@ body::before {
 .role-btn {
   background: transparent;
   border: none;
-  color: var(--text-soft);
+  color: var(--text-sub);
   font-family: var(--font-main);
   font-weight: 700;
   font-size: 0.8rem;
   padding: 6px 14px;
-  border-radius: 16px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .role-btn:hover {
-  color: #FFF;
+  color: var(--dark-blue);
 }
 
 .role-btn.active {
-  background: linear-gradient(180deg, #00E5FF 0%, #0088FF 100%);
-  color: #00224D;
-  box-shadow: 
-    0 2px 8px rgba(0, 140, 255, 0.4),
-    inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  background: var(--blue);
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(19, 108, 252, 0.25);
 }
 
 /* User Badge & Logout */
@@ -232,67 +195,64 @@ body::before {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-top: 1px solid rgba(255, 255, 255, 0.6);
+  background: #FFFFFF;
+  border: 1px solid var(--border-card);
   padding: 5px 12px;
-  border-radius: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(21, 38, 65, 0.04);
 }
 
 .user-avatar {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #00E676 0%, #00A344 100%);
-  color: #003314;
+  background: var(--blue);
+  color: #FFFFFF;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.78rem;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  font-size: 0.75rem;
 }
 
 .user-details .name {
   font-size: 0.8rem;
   font-weight: 800;
-  color: #FFF;
+  color: var(--dark-blue);
 }
 
 .user-details .meta {
   font-size: 0.68rem;
-  color: var(--text-soft);
+  color: var(--text-sub);
 }
 
 .aero-logout-btn {
-  background: rgba(255, 82, 82, 0.25);
-  border: 1px solid rgba(255, 82, 82, 0.6);
-  color: #FFA4A4;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #DC2626;
   font-family: var(--font-main);
   font-size: 0.72rem;
   font-weight: 700;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
   margin-left: 4px;
 }
 
 .aero-logout-btn:hover {
-  background: #FF5252;
-  color: #FFF;
-  box-shadow: 0 0 10px rgba(255, 82, 82, 0.5);
+  background: #DC2626;
+  color: #FFFFFF;
 }
 
 /* ==========================================================================
-   Frutiger Aero Glassmorphism Cards
+   Workspace Layout & Elevated White Cards
    ========================================================================== */
 
 .app-workspace {
   flex: 1;
   width: 100%;
-  max-width: 1480px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 24px;
   display: flex;
@@ -300,45 +260,250 @@ body::before {
   gap: 20px;
 }
 
-.fa-glass-card {
-  position: relative;
-  background: var(--glass-bg);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-radius: 18px;
-  border: 1px solid var(--glass-border);
-  border-top: 1.5px solid var(--glass-border-top);
-  box-shadow: var(--glass-shadow), var(--glass-inner-glow);
+.fa-glass-card,
+.fx-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
   padding: 22px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 16px rgba(21, 38, 65, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.fa-glass-card:hover {
-  box-shadow: 0 20px 48px rgba(0, 30, 85, 0.38), inset 0 1px 2px rgba(255, 255, 255, 0.7);
+.fa-glass-card:hover,
+.fx-card:hover {
+  border-color: rgba(19, 108, 252, 0.35);
+  box-shadow: 0 6px 22px rgba(21, 38, 65, 0.08);
 }
 
-.aero-card-header {
+.aero-card-header,
+.fx-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 12px;
 }
 
-.aero-card-title {
-  font-size: 1rem;
+.aero-card-title,
+.fx-card-title {
+  font-size: 0.98rem;
   font-weight: 800;
-  color: #FFF;
-  text-shadow: 0 1px 2px rgba(0, 20, 60, 0.4);
+  color: var(--dark-blue);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* Student Grids */
+.aero-card-title svg,
+.fx-card-title svg {
+  color: var(--blue);
+}
+
+/* Common Form Controls & Badges (Light & Clean) */
+.fx-select {
+  background: #FFFFFF;
+  border: 1.5px solid var(--border-card);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--dark-blue);
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fx-select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(19, 108, 252, 0.15);
+}
+
+.fx-btn-outline {
+  background: #FFFFFF;
+  border: 1.5px solid var(--blue);
+  color: var(--blue);
+  font-family: var(--font-main);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.fx-btn-outline:hover:not(:disabled) {
+  background: var(--light-blue);
+}
+
+.fx-btn-primary {
+  background: var(--blue);
+  border: none;
+  color: #FFFFFF;
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 9px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(19, 108, 252, 0.25);
+  transition: all 0.15s ease;
+}
+
+.fx-btn-primary:hover:not(:disabled) {
+  background: #0E56D1;
+}
+
+.fx-btn-danger {
+  background: #FEE2E2;
+  border: 1px solid #EF4444;
+  color: #DC2626;
+  font-family: var(--font-main);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fx-btn-danger:hover {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+/* Staff OTP & Live Roster Box */
+.otp-hero-box {
+  background: var(--light-blue);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.otp-display-digits {
+  font-family: var(--font-mono);
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--dark-blue);
+  letter-spacing: 0.3em;
+  line-height: 1;
+}
+
+.timer-circular-wrap {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-svg {
+  transform: rotate(-90deg);
+  width: 90px;
+  height: 90px;
+}
+
+.timer-circle-bg {
+  fill: none;
+  stroke: #D2E4F2;
+  stroke-width: 6;
+}
+
+.timer-circle-progress {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s ease-in-out;
+}
+
+.timer-seconds-label {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--dark-blue);
+}
+
+.live-count-stat-box {
+  background: var(--light-blue);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat-number-giant {
+  font-family: var(--font-mono);
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: var(--blue);
+  line-height: 1;
+}
+
+.room-chip-btn {
+  background: #FFFFFF;
+  border: 1.5px solid var(--border-card);
+  color: var(--dark-blue);
+  font-family: var(--font-main);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.room-chip-btn:hover {
+  background: var(--light-blue);
+  border-color: var(--blue);
+}
+
+.room-chip-btn.active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(19, 108, 252, 0.25);
+}
+
+.alert-box-warning {
+  background: #FFFBEB;
+  border: 1px solid #F59E0B;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: #92400E;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Grid */
 .aero-student-grid {
   display: grid;
   grid-template-columns: 1.25fr 1fr;
@@ -360,41 +525,34 @@ body::before {
   width: 100%;
 }
 
-/* ==========================================================================
-   Top Student Banner & Action Buttons
-   ========================================================================== */
-
+/* Top Action Banner */
 .aero-action-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  padding: 16px 20px;
 }
 
 .aero-badge-circle {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
-  background: rgba(0, 229, 255, 0.2);
-  border: 1px solid var(--aero-cyan);
-  box-shadow: 0 0 12px rgba(0, 229, 255, 0.35);
+  border-radius: 8px;
+  background: var(--light-blue);
+  border: 1px solid var(--border-blue);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .aero-glass-btn {
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-top: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 4px 12px rgba(0, 20, 60, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.6);
-  color: #FFF;
+  background: var(--light-blue);
+  border: 1px solid var(--border-card);
+  color: var(--dark-blue);
   font-family: var(--font-main);
   font-size: 0.84rem;
   font-weight: 700;
-  padding: 9px 18px;
-  border-radius: 20px;
+  padding: 8px 16px;
+  border-radius: 8px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -403,56 +561,49 @@ body::before {
 }
 
 .aero-glass-btn:hover {
-  background: rgba(255, 255, 255, 0.28);
-  transform: translateY(-1px);
+  background: #DCECF8;
 }
 
 .aero-glass-btn.primary {
-  background: linear-gradient(180deg, #00E5FF 0%, #0077EE 100%);
-  color: #00224D;
-  border-color: rgba(255, 255, 255, 0.6);
-  box-shadow: 0 6px 16px rgba(0, 140, 255, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #FFFFFF;
 }
 
 .aero-glass-btn.primary:hover {
-  background: linear-gradient(180deg, #33EBFF 0%, #1A88FF 100%);
+  background: #0F58D6;
 }
 
 .aero-mini-pill-btn {
-  background: rgba(0, 229, 255, 0.18);
-  border: 1px solid var(--aero-cyan);
-  color: var(--aero-cyan);
+  background: var(--light-blue);
+  border: 1px solid var(--blue);
+  color: var(--blue);
   font-family: var(--font-main);
   font-size: 0.74rem;
   font-weight: 700;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s ease;
 }
 
 .aero-mini-pill-btn:hover {
-  background: var(--aero-cyan);
-  color: #00224D;
+  background: var(--blue);
+  color: #FFFFFF;
 }
 
 /* ==========================================================================
-   Period Countdown Wheel (Frutiger Aero Crystal Glow)
+   Period Countdown Wheel (Clean Light Aesthetic)
    ========================================================================== */
 
 .countdown-hero-card {
-  position: relative;
-  background: var(--glass-bg);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-radius: 18px;
-  border: 1px solid var(--glass-border);
-  border-top: 1.5px solid var(--glass-border-top);
-  box-shadow: var(--glass-shadow), var(--glass-inner-glow);
+  background: #FFFFFF;
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
   padding: 22px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-shadow: 0 4px 16px rgba(21, 38, 65, 0.05);
 }
 
 .countdown-wheel-container {
@@ -480,17 +631,16 @@ body::before {
 
 .countdown-circle-track {
   fill: none;
-  stroke: rgba(0, 30, 70, 0.4);
-  stroke-width: 8;
+  stroke: var(--light-blue);
+  stroke-width: 9;
 }
 
 .countdown-circle-progress {
   fill: none;
-  stroke: url(#aero-gradient) #00E5FF;
-  stroke-width: 8;
+  stroke: var(--blue);
+  stroke-width: 9;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.6s ease-in-out;
-  filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.6));
 }
 
 .countdown-inner-content {
@@ -504,31 +654,30 @@ body::before {
 }
 
 .countdown-time-digits {
-  font-size: 2.3rem;
+  font-size: 2.4rem;
   font-weight: 800;
-  color: #FFF;
+  color: var(--dark-blue);
   font-family: var(--font-mono);
   line-height: 1.1;
-  text-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+  letter-spacing: -0.02em;
 }
 
 .countdown-label-sub {
   font-size: 0.68rem;
   font-weight: 800;
-  color: var(--aero-cyan);
-  letter-spacing: 0.12em;
+  color: var(--blue);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-top: 4px;
-  text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
 }
 
 .countdown-metrics-bar {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  background: rgba(0, 25, 60, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
+  background: var(--light-blue);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
   padding: 10px 14px;
 }
 
@@ -540,7 +689,7 @@ body::before {
 
 .countdown-metric-label {
   font-size: 0.68rem;
-  color: var(--text-soft);
+  color: var(--text-dim);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -548,21 +697,21 @@ body::before {
 .countdown-metric-val {
   font-size: 0.85rem;
   font-weight: 800;
-  color: #FFF;
+  color: var(--dark-blue);
 }
 
 .countdown-metric-val.highlight {
-  color: var(--aero-cyan);
+  color: var(--blue);
 }
 
 /* ==========================================================================
-   Classroom Location Display & OTP Input
+   Classroom Location & OTP Input
    ========================================================================== */
 
 .aero-location-display {
-  background: rgba(0, 30, 70, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 14px;
+  background: var(--light-blue);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
@@ -578,22 +727,22 @@ body::before {
 .loc-main .bld-name {
   font-size: 0.95rem;
   font-weight: 800;
-  color: #FFF;
+  color: var(--dark-blue);
 }
 
 .loc-main .room-num {
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 800;
-  color: var(--aero-cyan);
-  background: rgba(0, 229, 255, 0.15);
-  border: 1px solid rgba(0, 229, 255, 0.4);
+  color: var(--dark-blue);
+  background: var(--green);
+  border: 1px solid rgba(21, 38, 65, 0.15);
   padding: 2px 10px;
-  border-radius: 10px;
+  border-radius: 6px;
 }
 
 .loc-sub {
   font-size: 0.74rem;
-  color: var(--text-soft);
+  color: var(--text-sub);
 }
 
 .aero-quick-chips {
@@ -604,108 +753,84 @@ body::before {
 }
 
 .aero-chip {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: var(--text-glow);
+  background: var(--light-blue);
+  border: 1px solid var(--border-card);
+  color: var(--dark-blue);
   font-family: var(--font-main);
   font-size: 0.76rem;
   font-weight: 700;
-  padding: 5px 12px;
-  border-radius: 14px;
+  padding: 6px 12px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .aero-chip:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: #DCECF8;
 }
 
 .aero-chip.active {
-  background: linear-gradient(180deg, #00E5FF 0%, #0077EE 100%);
-  color: #00224D;
-  border-color: rgba(255, 255, 255, 0.6);
-  box-shadow: 0 2px 8px rgba(0, 140, 255, 0.4);
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #FFFFFF;
 }
 
 /* OTP Field */
 .aero-otp-input {
   width: 100%;
   max-width: 320px;
-  background: rgba(0, 25, 60, 0.45);
-  border: 2px solid rgba(0, 229, 255, 0.5);
-  border-radius: 14px;
-  font-size: 2.3rem;
+  background: #FFFFFF;
+  border: 2px solid var(--border-card);
+  border-radius: 10px;
+  font-size: 2.2rem;
   font-weight: 800;
   letter-spacing: 0.35em;
-  color: #FFF;
+  color: var(--dark-blue);
   text-align: center;
   padding: 10px;
   outline: none;
   font-family: var(--font-mono);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 15px rgba(0, 229, 255, 0.25);
-  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(21, 38, 65, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .aero-otp-input:focus {
-  border-color: var(--aero-cyan);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 25px rgba(0, 229, 255, 0.55);
+  border-color: var(--blue);
+  box-shadow: 0 0 12px rgba(19, 108, 252, 0.2);
 }
 
-/* Glossy Action Button with Curved Specular Sheen */
+/* Action Button */
 .aero-gloss-btn {
-  position: relative;
-  background: linear-gradient(180deg, #00D2FF 0%, #0066FF 100%);
-  color: #FFF;
+  background: var(--blue);
+  color: #FFFFFF;
   font-family: var(--font-main);
   font-size: 0.95rem;
   font-weight: 800;
-  padding: 12px 28px;
-  border: 1px solid #0044BB;
-  border-radius: 24px;
+  padding: 11px 24px;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
-  overflow: hidden;
-  box-shadow: 
-    0 6px 18px rgba(0, 102, 255, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.25);
-  text-shadow: 0 1px 2px rgba(0, 20, 60, 0.5);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: transform 0.1s ease, box-shadow 0.15s ease;
-}
-
-.aero-gloss-btn .gloss-sheen {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.1) 100%);
-  border-radius: 24px 24px 0 0;
-  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(19, 108, 252, 0.3);
+  transition: background 0.15s ease, transform 0.1s ease;
 }
 
 .aero-gloss-btn:hover:not(:disabled) {
-  background: linear-gradient(180deg, #22DEFF 0%, #1A75FF 100%);
+  background: #0E56D1;
   transform: translateY(-1px);
-  box-shadow: 0 8px 22px rgba(0, 102, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-
-.aero-gloss-btn:active:not(:disabled) {
-  transform: translateY(1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .aero-gloss-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
   transform: none;
 }
 
 /* ==========================================================================
-   Today's Schedule Rows & Status Tags
+   Schedule Rows
    ========================================================================== */
 
 .aero-schedule-row {
@@ -713,95 +838,106 @@ body::before {
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  border-radius: 12px;
-  background: rgba(0, 25, 60, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-top: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
-  transition: all 0.15s ease;
+  border-radius: 8px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .aero-schedule-row:hover {
-  background: rgba(0, 35, 80, 0.45);
+  border-color: var(--border-card);
+  background: #F8FAFD;
 }
 
 .aero-schedule-row.is-break {
   opacity: 0.65;
-  background: rgba(0, 20, 50, 0.2);
+  background: #F8FAFD;
 }
 
 .aero-schedule-row.is-marked {
-  background: rgba(0, 230, 118, 0.14);
-  border-color: rgba(0, 230, 118, 0.45);
-  box-shadow: 0 0 12px rgba(0, 230, 118, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  border-color: var(--green);
+  background: rgba(195, 248, 74, 0.15);
 }
 
 .row-p-title {
   font-weight: 800;
   font-size: 0.86rem;
-  color: #FFF;
+  color: var(--dark-blue);
 }
 
 .row-p-time {
   font-size: 0.72rem;
-  color: var(--text-soft);
+  color: var(--text-dim);
 }
 
 .aero-status-tag {
   font-size: 0.72rem;
   font-weight: 800;
   padding: 3px 10px;
-  border-radius: 12px;
+  border-radius: 4px;
 }
 
 .aero-status-tag.present {
-  background: linear-gradient(180deg, #00E676 0%, #009944 100%);
-  color: #003314;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 2px 6px rgba(0, 230, 118, 0.3);
+  background: var(--green);
+  color: var(--dark-blue);
+  border: 1px solid rgba(21, 38, 65, 0.15);
 }
 
 .aero-status-tag.pending {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-soft);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #F1F5F9;
+  color: var(--text-dim);
+  border: 1px solid #E2E8F0;
 }
 
 .aero-status-tag.break {
-  background: rgba(255, 213, 79, 0.2);
-  color: #FFE082;
-  border: 1px solid rgba(255, 213, 79, 0.4);
+  background: var(--light-blue);
+  color: var(--blue);
+  border: 1px solid var(--border-card);
 }
 
 .aero-pill {
   font-size: 0.78rem;
   font-weight: 800;
-  padding: 4px 12px;
-  border-radius: 14px;
+  padding: 4px 10px;
+  border-radius: 6px;
 }
 
 .aero-pill.cyan {
-  background: rgba(0, 229, 255, 0.2);
-  color: var(--aero-cyan);
-  border: 1px solid var(--aero-cyan);
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+  background: var(--light-blue);
+  color: var(--blue);
+  border: 1px solid var(--blue);
 }
 
 .aero-pill.green {
-  background: rgba(0, 230, 118, 0.2);
-  color: #00E676;
-  border: 1px solid #00E676;
+  background: var(--green);
+  color: var(--dark-blue);
+}
+
+.count-pill {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--dark-blue);
+  background: var(--light-blue);
+  border: 1px solid var(--border-card);
+  padding: 3px 9px;
+  border-radius: 6px;
+}
+
+.count-pill.green {
+  color: var(--dark-blue);
+  background: var(--green);
+  border: 1px solid rgba(21, 38, 65, 0.15);
 }
 
 /* ==========================================================================
-   Modals (Step-by-Step Room Routing & Attendance Calendar)
+   Modals
    ========================================================================== */
 
 .aero-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 15, 45, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(21, 38, 65, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -818,39 +954,37 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 14px;
 }
 
 .aero-icon-bubble {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: rgba(0, 229, 255, 0.2);
-  border: 1px solid var(--aero-cyan);
-  box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--light-blue);
+  border: 1px solid var(--blue);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .aero-close-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #FFF;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  background: #F1F5F9;
+  border: 1px solid var(--border-subtle);
+  color: var(--dark-blue);
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.15s ease;
 }
 
 .aero-close-btn:hover {
-  background: rgba(255, 82, 82, 0.4);
-  border-color: #FF5252;
+  background: #FEE2E2;
+  color: #DC2626;
 }
 
 /* Breadcrumbs in Room Modal */
@@ -858,17 +992,17 @@ body::before {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(0, 25, 60, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 14px;
-  padding: 8px 14px;
+  background: var(--light-blue);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  padding: 8px 12px;
   flex-wrap: wrap;
 }
 
 .crumb-pill {
   background: transparent;
   border: none;
-  color: var(--text-soft);
+  color: var(--text-sub);
   font-family: var(--font-main);
   font-size: 0.78rem;
   font-weight: 700;
@@ -879,12 +1013,11 @@ body::before {
 }
 
 .crumb-pill.active {
-  color: var(--aero-cyan);
-  text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+  color: var(--blue);
 }
 
 .crumb-pill.done {
-  color: #00E676;
+  color: var(--dark-blue);
 }
 
 .crumb-pill:disabled {
@@ -892,7 +1025,7 @@ body::before {
   cursor: not-allowed;
 }
 
-/* Options Grid for Room / Floor / Building Tiles */
+/* Options Grid */
 .aero-picker-step-view {
   display: flex;
   flex-direction: column;
@@ -906,12 +1039,12 @@ body::before {
 }
 
 .aero-back-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #FFF;
+  background: var(--light-blue);
+  border: 1px solid var(--border-subtle);
+  color: var(--dark-blue);
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -921,17 +1054,16 @@ body::before {
 .aero-card-options-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .aero-option-tile {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(0, 30, 75, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-top: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 14px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
   padding: 12px 16px;
   cursor: pointer;
   text-align: left;
@@ -939,22 +1071,21 @@ body::before {
 }
 
 .aero-option-tile:hover {
-  background: rgba(0, 50, 120, 0.45);
-  border-color: var(--aero-cyan);
-  transform: translateX(3px);
+  background: var(--light-blue);
+  border-color: var(--blue);
 }
 
 .aero-option-tile.active {
-  background: rgba(0, 229, 255, 0.18);
-  border-color: var(--aero-cyan);
-  box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+  background: var(--light-blue);
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px var(--blue);
 }
 
 .tile-icon-wrap {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--light-blue);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -968,34 +1099,34 @@ body::before {
 .tile-name {
   font-size: 0.92rem;
   font-weight: 800;
-  color: #FFF;
+  color: var(--dark-blue);
 }
 
 .tile-sub {
   font-size: 0.74rem;
-  color: var(--text-soft);
+  color: var(--text-sub);
 }
 
 .tile-select-badge {
   font-size: 0.74rem;
   font-weight: 800;
-  color: #00224D;
-  background: var(--aero-cyan);
-  padding: 4px 12px;
-  border-radius: 12px;
+  color: #FFFFFF;
+  background: var(--blue);
+  padding: 4px 10px;
+  border-radius: 4px;
 }
 
 /* ==========================================================================
-   Attendance Calendar Modal Styles
+   Attendance Calendar
    ========================================================================== */
 
 .aero-metric-ribbon {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  background: rgba(0, 25, 60, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 14px;
+  background: var(--light-blue);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
   padding: 10px 14px;
 }
 
@@ -1007,7 +1138,7 @@ body::before {
 
 .ribbon-col .lbl {
   font-size: 0.68rem;
-  color: var(--text-soft);
+  color: var(--text-dim);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -1015,20 +1146,20 @@ body::before {
 .ribbon-col .val {
   font-size: 0.92rem;
   font-weight: 800;
-  color: #FFF;
+  color: var(--dark-blue);
 }
 
 .ribbon-col .val.highlight {
-  color: var(--aero-cyan);
+  color: var(--blue);
 }
 
 .aero-mini-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #FFF;
+  background: var(--light-blue);
+  border: 1px solid var(--border-subtle);
+  color: var(--dark-blue);
   width: 26px;
   height: 26px;
-  border-radius: 50%;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1045,7 +1176,7 @@ body::before {
 .weekday-lbl {
   font-size: 0.7rem;
   font-weight: 800;
-  color: var(--text-soft);
+  color: var(--text-dim);
   text-transform: uppercase;
   padding: 4px 0;
 }
@@ -1057,9 +1188,9 @@ body::before {
 }
 
 .calendar-day-cell {
-  background: rgba(0, 25, 60, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 10px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
   height: 48px;
   display: flex;
   flex-direction: column;
@@ -1071,14 +1202,13 @@ body::before {
 }
 
 .calendar-day-cell:hover:not(:disabled) {
-  background: rgba(0, 60, 140, 0.45);
-  border-color: var(--aero-cyan);
+  border-color: var(--blue);
+  background: #F8FAFD;
 }
 
 .calendar-day-cell.selected {
-  border-color: var(--aero-cyan);
-  box-shadow: 0 0 12px rgba(0, 229, 255, 0.5);
-  background: rgba(0, 140, 255, 0.3);
+  border-color: var(--blue);
+  background: var(--light-blue);
 }
 
 .calendar-day-cell.empty {
@@ -1086,18 +1216,14 @@ body::before {
 }
 
 .calendar-day-cell:disabled {
-  opacity: 0.3;
+  opacity: 0.35;
   cursor: default;
-}
-
-.calendar-day-cell.weekend {
-  opacity: 0.45;
 }
 
 .day-num {
   font-size: 0.8rem;
   font-weight: 800;
-  color: #FFF;
+  color: var(--dark-blue);
 }
 
 .aero-dot {
@@ -1108,24 +1234,22 @@ body::before {
 }
 
 .aero-dot.green {
-  background: #00E676;
-  box-shadow: 0 0 6px #00E676;
+  background: var(--green);
+  border: 1px solid rgba(21, 38, 65, 0.2);
 }
 
 .aero-dot.amber {
-  background: var(--aero-amber);
-  box-shadow: 0 0 6px var(--aero-amber);
+  background: var(--blue);
 }
 
 .aero-dot.blue {
-  background: var(--aero-cyan);
-  box-shadow: 0 0 6px var(--aero-cyan);
+  background: var(--dark-blue);
 }
 
 .aero-day-detail-panel {
-  background: rgba(0, 30, 75, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 14px;
+  background: var(--light-blue);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -1143,15 +1267,15 @@ body::before {
   align-items: center;
   gap: 8px;
   font-size: 0.78rem;
-  color: var(--text-soft);
+  color: var(--text-sub);
 }
 
 .mini-trail-item strong {
-  color: #FFF;
+  color: var(--dark-blue);
 }
 
 /* ==========================================================================
-   Full-Screen Frutiger Aero Login Portal
+   Login Page
    ========================================================================== */
 
 .aero-login-wrapper {
@@ -1161,127 +1285,110 @@ body::before {
   align-items: center;
   justify-content: center;
   padding: 24px;
+  background-color: var(--bg-app);
 }
 
 .aero-login-card {
   width: 100%;
-  max-width: 480px;
+  max-width: 460px;
   padding: 32px 28px;
 }
 
 .aero-login-badge {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #00E5FF 0%, #0066FF 100%);
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 
-    0 8px 24px rgba(0, 140, 255, 0.5),
-    inset 0 2px 3px rgba(255, 255, 255, 0.9);
+  width: 58px;
+  height: 58px;
+  border-radius: 12px;
+  background: var(--blue);
+  color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  overflow: hidden;
 }
 
 .aero-login-badge .logo-symbol {
-  font-size: 1.8rem;
+  font-size: 1.7rem;
   font-weight: 900;
-  color: #FFF;
-  text-shadow: 0 1px 3px rgba(0, 20, 60, 0.4);
-}
-
-.aero-login-badge .gloss-sheen {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.1) 100%);
-  border-radius: 18px 18px 0 0;
-  pointer-events: none;
 }
 
 .aero-tag-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(0, 229, 255, 0.18);
-  border: 1px solid var(--aero-cyan);
+  background: var(--light-blue);
+  border: 1px solid var(--blue);
   padding: 4px 12px;
-  border-radius: 14px;
+  border-radius: 6px;
   font-size: 0.74rem;
   font-weight: 700;
-  color: var(--aero-cyan);
-  box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+  color: var(--blue);
 }
 
 .aero-alert-error {
-  background: rgba(255, 82, 82, 0.2);
-  border: 1px solid rgba(255, 82, 82, 0.6);
-  border-radius: 12px;
+  background: #FEE2E2;
+  border: 1px solid #EF4444;
+  border-radius: 8px;
   padding: 10px 14px;
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 0.82rem;
-  color: #FFB4B4;
+  color: #DC2626;
 }
 
 .aero-alert-success {
-  background: rgba(0, 230, 118, 0.2);
-  border: 1px solid rgba(0, 230, 118, 0.6);
-  border-radius: 12px;
+  background: rgba(195, 248, 74, 0.25);
+  border: 1px solid rgba(21, 38, 65, 0.2);
+  border-radius: 8px;
   padding: 10px 14px;
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 0.82rem;
-  color: #B9F6CA;
+  color: var(--dark-blue);
 }
 
 .aero-device-security-pill {
-  background: rgba(0, 25, 60, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
+  background: var(--light-blue);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
   padding: 10px 14px;
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 0.75rem;
-  color: var(--text-soft);
+  color: var(--text-sub);
 }
 
 .aero-demo-login-btn {
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-top: 1px solid rgba(255, 255, 255, 0.6);
-  color: #FFF;
+  background: #FFFFFF;
+  border: 1px solid var(--border-card);
+  color: var(--dark-blue);
   font-family: var(--font-main);
   font-size: 0.76rem;
   font-weight: 700;
   padding: 8px 12px;
-  border-radius: 12px;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  box-shadow: 0 1px 3px rgba(21, 38, 65, 0.04);
   transition: all 0.15s ease;
 }
 
 .aero-demo-login-btn:hover {
-  background: rgba(255, 255, 255, 0.26);
-  border-color: var(--aero-cyan);
+  background: var(--light-blue);
+  border-color: var(--blue);
 }
 
 /* Tables in Staff & HOD */
 .fx-table-container {
   width: 100%;
   overflow-x: auto;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: #FFFFFF;
 }
 
 .fx-table {
@@ -1291,18 +1398,18 @@ body::before {
 }
 
 .fx-table th {
-  background: rgba(0, 30, 70, 0.5);
-  color: var(--aero-cyan);
+  background: var(--light-blue);
+  color: var(--dark-blue);
   font-weight: 800;
   text-align: left;
   padding: 10px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid var(--border-card);
 }
 
 .fx-table td {
   padding: 10px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  color: #FFF;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--dark-blue);
 }
 
 @media (max-width: 1024px) {

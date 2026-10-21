@@ -118,19 +118,19 @@ export const StaffDashboard = ({
             <div className="fx-card" style={{ padding: '16px 20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <Radio size={20} color="#3B82F6" />
+                        <Radio size={20} color="var(--blue)" />
                         <div>
-                            <div style={{ fontWeight: 700, color: '#FFF', fontSize: '1rem' }}>
+                            <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '1rem' }}>
                                 Staff Classroom Session
                             </div>
-                            <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-sub)' }}>
                                 {currentPeriodInfo?.activePeriod?.name || 'Class Period'} • {currentUser?.department || 'IT'} Department
                             </div>
                         </div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '0.82rem', color: '#94A3B8' }}>Select Classroom:</span>
+                        <span style={{ fontSize: '0.82rem', color: 'var(--text-sub)' }}>Select Classroom:</span>
                         <select 
                             className="fx-select"
                             style={{ minWidth: '240px', fontWeight: 600 }}
@@ -154,11 +154,11 @@ export const StaffDashboard = ({
                 <div className="fx-card" style={{ textAlign: 'center', alignItems: 'center' }}>
                     <div className="fx-card-header" style={{ width: '100%' }}>
                         <div className="fx-card-title">
-                            <QrCode size={20} color="#3B82F6" />
+                            <QrCode size={20} color="var(--blue)" />
                             10-Second Rolling OTP
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Auto-Refresh</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-sub)' }}>Auto-Refresh</span>
                             <input 
                                 type="checkbox" 
                                 checked={autoRegen} 
@@ -169,7 +169,7 @@ export const StaffDashboard = ({
                     </div>
 
                     <div className="otp-hero-box" style={{ width: '100%' }}>
-                        <div style={{ fontSize: '0.78rem', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-sub)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                             Active Code for Room {roomInfo ? roomInfo.room_number : '207'}
                         </div>
                         
@@ -187,16 +187,16 @@ export const StaffDashboard = ({
                                     style={{
                                         strokeDasharray: '251.2',
                                         strokeDashoffset: strokeDashoffset,
-                                        stroke: secondsLeft <= 3 ? '#EF4444' : '#3B82F6'
+                                        stroke: secondsLeft <= 3 ? '#EF4444' : 'var(--blue)'
                                     }}
                                 />
                             </svg>
-                            <div className="timer-seconds-label" style={{ color: secondsLeft <= 3 ? '#F87171' : '#FFF' }}>
+                            <div className="timer-seconds-label" style={{ color: secondsLeft <= 3 ? '#DC2626' : 'var(--dark-blue)' }}>
                                 {secondsLeft}s
                             </div>
                         </div>
 
-                        <div style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-sub)' }}>
                             Regenerates automatically every 10 seconds
                         </div>
                     </div>
@@ -216,7 +216,7 @@ export const StaffDashboard = ({
                 <div className="fx-card">
                     <div className="fx-card-header">
                         <div className="fx-card-title">
-                            <Users size={20} color="#10B981" />
+                            <Users size={20} color="var(--blue)" />
                             Live Classroom Roster (Room {roomInfo ? roomInfo.room_number : '207'})
                         </div>
                         <span className="count-pill green">
@@ -227,10 +227,10 @@ export const StaffDashboard = ({
                     {/* Room Count Stat Box */}
                     <div className="live-count-stat-box">
                         <div>
-                            <div style={{ fontSize: '0.8rem', color: '#94A3B8', textTransform: 'uppercase' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-sub)', textTransform: 'uppercase' }}>
                                 Students Present In This Room
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
                                 Updates instantly when students enter OTP
                             </div>
                         </div>
@@ -272,7 +272,7 @@ export const StaffDashboard = ({
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="5" style={{ textAlign: 'center', padding: '28px', color: '#64748B' }}>
+                                        <td colSpan="5" style={{ textAlign: 'center', padding: '28px', color: 'var(--text-dim)' }}>
                                             No students have entered the OTP for Room {roomInfo ? roomInfo.room_number : '207'} yet.
                                         </td>
                                     </tr>
@@ -288,7 +288,7 @@ export const StaffDashboard = ({
             <div className="fx-card">
                 <div className="fx-card-header">
                     <div className="fx-card-title">
-                        <Search size={20} color="#3B82F6" />
+                        <Search size={20} color="var(--blue)" />
                         Search Students in Department
                     </div>
                 </div>
@@ -319,12 +319,12 @@ export const StaffDashboard = ({
                             <tbody>
                                 {searchResults.map((st, i) => (
                                     <tr key={i}>
-                                        <td style={{ fontFamily: 'monospace', color: '#93C5FD' }}>{st.roll_number}</td>
-                                        <td style={{ fontWeight: 600, color: '#FFF' }}>{st.name}</td>
+                                        <td style={{ fontFamily: 'monospace', color: 'var(--blue)' }}>{st.roll_number}</td>
+                                        <td style={{ fontWeight: 700, color: 'var(--dark-blue)' }}>{st.name}</td>
                                         <td><strong>{st.current_room ? `Room ${st.current_room}` : 'Not checked-in'}</strong></td>
                                         <td>{st.current_building || 'Campus'}</td>
                                         <td>
-                                            <span className="status-tag present">{st.periods_attended} / 7</span>
+                                            <span className="aero-status-tag present">{st.periods_attended} / 7</span>
                                         </td>
                                     </tr>
                                 ))}

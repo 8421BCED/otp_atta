@@ -53,11 +53,11 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, currentUser }) => {
                 <div className="aero-modal-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div className="aero-icon-bubble">
-                            <CalendarIcon size={20} color="#00E5FF" />
+                            <CalendarIcon size={20} color="#136CFC" />
                         </div>
                         <div>
-                            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFF' }}>Attendance History & Calendar</h2>
-                            <p style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.7)' }}>
+                            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--dark-blue)' }}>Attendance History & Calendar</h2>
+                            <p style={{ fontSize: '0.74rem', color: 'var(--text-sub)' }}>
                                 Student: {currentUser?.name || 'Daniel A'} • Department of IT
                             </p>
                         </div>
@@ -79,13 +79,13 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, currentUser }) => {
                     </div>
                     <div className="ribbon-col">
                         <span className="lbl">Exam Eligibility</span>
-                        <span className="val" style={{ color: '#00E676' }}>Eligible (Min 75%)</span>
+                        <span className="val" style={{ color: 'var(--blue)' }}>Eligible (Min 75%)</span>
                     </div>
                 </div>
 
                 {/* Month Navigator */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' }}>
-                    <span style={{ fontWeight: 800, color: '#FFF', fontSize: '0.92rem' }}>{currentMonth}</span>
+                    <span style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.92rem' }}>{currentMonth}</span>
                     <div style={{ display: 'flex', gap: '6px' }}>
                         <button type="button" className="aero-mini-btn"><ChevronLeft size={16} /></button>
                         <button type="button" className="aero-mini-btn"><ChevronRight size={16} /></button>
@@ -130,8 +130,8 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, currentUser }) => {
                 <div className="aero-day-detail-panel">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <CheckCircle2 size={18} color="#00E676" />
-                            <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>
+                            <CheckCircle2 size={18} color="var(--blue)" />
+                            <strong style={{ color: 'var(--dark-blue)', fontSize: '0.9rem' }}>
                                 Details for {activeDayInfo.date} ({activeDayInfo.status === 'today' ? 'Today' : 'Completed'})
                             </strong>
                         </div>
@@ -142,17 +142,17 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, currentUser }) => {
 
                     <div className="aero-timeline-mini">
                         <div className="mini-trail-item">
-                            <Clock size={14} color="#00E5FF" />
+                            <Clock size={14} color="#136CFC" />
                             <span>Periods 1 – 3 (09:00 AM – 11:50 AM):</span>
                             <strong>{activeDayInfo.room || 'Dr. APJ Block Rm 207'}</strong>
                         </div>
                         <div className="mini-trail-item">
-                            <Clock size={14} color="#00E5FF" />
+                            <Clock size={14} color="#136CFC" />
                             <span>Periods 4 – 5 (11:50 AM – 02:15 PM):</span>
                             <strong>AI & Machine Learning Lab</strong>
                         </div>
                         <div className="mini-trail-item">
-                            <Clock size={14} color="#00E5FF" />
+                            <Clock size={14} color="#136CFC" />
                             <span>Periods 6 – 7 (02:15 PM – 04:05 PM Dismissal):</span>
                             <strong>Dr. APJ Block Rm 207</strong>
                         </div>

@@ -43,7 +43,7 @@ export const Header = ({
             <div className="fxec-nav-controls">
                 {/* Time / Period Pill */}
                 <div className="header-time-pill">
-                    <Clock size={15} color="#FFF2BA" />
+                    <Clock size={15} color="var(--blue)" />
                     <span>{simulatedTime || realTime}</span>
                     {activePeriod && (
                         <span className="header-period-tag">{activePeriod.name}</span>

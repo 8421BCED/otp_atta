@@ -47,11 +47,11 @@ export const RoomSelectionModal = ({
                 <div className="aero-modal-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div className="aero-icon-bubble">
-                            <DoorOpen size={20} color="#00E5FF" />
+                            <DoorOpen size={20} color="#136CFC" />
                         </div>
                         <div>
-                            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFF' }}>Select Classroom / Lab Location</h2>
-                            <p style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.7)' }}>
+                            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--dark-blue)' }}>Select Classroom / Lab Location</h2>
+                            <p style={{ fontSize: '0.74rem', color: 'var(--text-sub)' }}>
                                 Step-by-step room routing for active period attendance
                             </p>
                         </div>
@@ -96,7 +96,7 @@ export const RoomSelectionModal = ({
                 {step === 1 && (
                     <div className="aero-picker-step-view">
                         <div className="step-title-row">
-                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#00E5FF' }}>Step 1: Choose Your Building</span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#136CFC' }}>Step 1: Choose Your Building</span>
                             <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>Tap to proceed</span>
                         </div>
                         <div className="aero-card-options-grid">
@@ -108,7 +108,7 @@ export const RoomSelectionModal = ({
                                     onClick={() => handleBuildingSelect(b)}
                                 >
                                     <div className="tile-icon-wrap">
-                                        <Building size={22} color="#00E5FF" />
+                                        <Building size={22} color="#136CFC" />
                                     </div>
                                     <div className="tile-details">
                                         <div className="tile-name">{b.name}</div>
@@ -129,7 +129,7 @@ export const RoomSelectionModal = ({
                                 <button type="button" className="aero-back-btn" onClick={() => setStep(1)}>
                                     <ArrowLeft size={16} />
                                 </button>
-                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#00E5FF' }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#136CFC' }}>
                                     Step 2: Choose Floor in {selectedB?.name}
                                 </span>
                             </div>
@@ -143,7 +143,7 @@ export const RoomSelectionModal = ({
                                     onClick={() => handleFloorSelect(f)}
                                 >
                                     <div className="tile-icon-wrap">
-                                        <Layers size={22} color="#00E676" />
+                                        <Layers size={22} color="#C3F84A" />
                                     </div>
                                     <div className="tile-details">
                                         <div className="tile-name">{f.name}</div>
@@ -164,7 +164,7 @@ export const RoomSelectionModal = ({
                                 <button type="button" className="aero-back-btn" onClick={() => setStep(2)}>
                                     <ArrowLeft size={16} />
                                 </button>
-                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#00E5FF' }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#136CFC' }}>
                                     Step 3: Select Room ({selectedF?.name})
                                 </span>
                             </div>
@@ -178,7 +178,7 @@ export const RoomSelectionModal = ({
                                     onClick={() => handleRoomSelect(r)}
                                 >
                                     <div className="tile-icon-wrap">
-                                        <DoorOpen size={22} color="#00E5FF" />
+                                        <DoorOpen size={22} color="#136CFC" />
                                     </div>
                                     <div className="tile-details">
                                         <div className="tile-name">Room {r.room_number}</div>

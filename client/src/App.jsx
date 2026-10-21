@@ -5,7 +5,7 @@ import { StaffDashboard } from './components/StaffDashboard';
 import { HODDashboard } from './components/HODDashboard';
 import { PrincipalDashboard } from './components/PrincipalDashboard';
 import { LoginModal } from './components/LoginModal';
-import { getDeviceFingerprint } from './utils/fingerprint';
+import { getDeviceSecurityInfo } from './utils/deviceSecurity';
 import { Clock, AlertTriangle, ShieldCheck, Calendar, LogIn } from 'lucide-react';
 
 export function App() {
@@ -20,7 +20,7 @@ export function App() {
     // 1. Initialize Device Fingerprint & Default Demo User
     useEffect(() => {
         const initDevice = async () => {
-            const fp = await getDeviceFingerprint();
+            const fp = await getDeviceSecurityInfo();
             setDeviceInfo(fp);
 
             // Default login as Student (Daniel A) if not logged in
@@ -90,7 +90,7 @@ export function App() {
     // Handle Quick Role Switcher
     const handleQuickRoleSwitch = async (roleObj, overrideFp) => {
         try {
-            const fp = overrideFp || deviceInfo || await getDeviceFingerprint();
+            const fp = overrideFp || deviceInfo || await getDeviceSecurityInfo();
             const res = await fetch('http://localhost:5000/api/auth/demo-login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

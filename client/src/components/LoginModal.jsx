@@ -106,8 +106,8 @@ export const LoginModal = ({ isOpen, onClose, onLoginSuccess, deviceInfo }) => {
                         </div>
                     </div>
 
-                    <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                        🔒 Anti-Proxy Protection: On successful sign-in, this account will be bound to your current mobile device ({deviceInfo?.deviceName || 'Mobile Phone'}).
+                    <div style={{ fontSize: '0.74rem', color: 'var(--smoke-subtle)' }}>
+                        Anti-Proxy Protection: On successful sign-in, this account will be bound to your current mobile device ({deviceInfo?.deviceName || 'Workstation / Mobile'}).
                     </div>
 
                     <button type="submit" className="fx-btn-primary" disabled={isLoading} style={{ marginTop: '6px' }}>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Building, Users, PlusCircle, Calendar, CheckCircle2 } from 'lucide-react';
+import { Building, Users, PlusCircle, Calendar, CheckCircle2, Clock } from 'lucide-react';
 
-export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
+export const PrincipalDashboard = ({ currentUser, hierarchy, simulatedTime, setSimulatedTime }) => {
     const [overviewData, setOverviewData] = useState(null);
 
     // Room form state
@@ -91,6 +91,53 @@ export const PrincipalDashboard = ({ currentUser, hierarchy }) => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
             
+            {/* Master College Schedule Clock Controller (Principal Exclusive) */}
+            <div className="fx-card" style={{ border: '1px solid var(--buttermilk-border)' }}>
+                <div className="fx-card-header">
+                    <div className="fx-card-title">
+                        <Clock size={18} color="var(--buttermilk)" />
+                        <span>Master Campus Time Controller</span>
+                    </div>
+                    <span className="count-pill">
+                        System Clock: {simulatedTime ? `${simulatedTime} (Simulated)` : 'Live Real Time'}
+                    </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--smoke-subtle)' }}>
+                        Selecting a time updates the global schedule, active period countdown wheels, and 10-second OTP verification windows across all student, staff, and HOD dashboards in real-time.
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {[
+                            { label: 'Real Live Time', val: null },
+                            { label: '09:02 AM (P1 Day-Start Lockout)', val: '09:02:00' },
+                            { label: '09:15 AM (P1 Standard)', val: '09:15:00' },
+                            { label: '10:00 AM (Period 2)', val: '10:00:00' },
+                            { label: '10:50 AM (Morning Break)', val: '10:50:00' },
+                            { label: '11:15 AM (Period 3)', val: '11:15:00' },
+                            { label: '12:00 PM (Period 4)', val: '12:00:00' },
+                            { label: '01:00 PM (Lunch Break)', val: '13:00:00' },
+                            { label: '01:45 PM (Period 5)', val: '13:45:00' },
+                            { label: '02:30 PM (Period 6)', val: '14:30:00' },
+                            { label: '03:10 PM (Afternoon Break)', val: '15:10:00' },
+                            { label: '03:45 PM (Period 7 - Dismissal 4:05 PM)', val: '15:45:00' }
+                        ].map((p, idx) => (
+                            <button
+                                key={idx}
+                                type="button"
+                                className={`room-chip-btn ${(!simulatedTime && !p.val) || simulatedTime === p.val ? 'active' : ''}`}
+                                onClick={() => {
+                                    setSimulatedTime(p.val);
+                                    if (p.val) localStorage.setItem('fxec_simulated_time', p.val);
+                                    else localStorage.removeItem('fxec_simulated_time');
+                                }}
+                            >
+                                {p.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
             {/* Top Stats */}
             <div className="dashboard-grid-tri">
                 <div className="fx-card">

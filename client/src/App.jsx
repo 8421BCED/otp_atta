@@ -13,7 +13,9 @@ export function App() {
     const [deviceInfo, setDeviceInfo] = useState(null);
     const [hierarchy, setHierarchy] = useState([]);
     const [currentPeriodInfo, setCurrentPeriodInfo] = useState(null);
-    const [simulatedTime, setSimulatedTime] = useState(null);
+    const [simulatedTime, setSimulatedTime] = useState(() => {
+        return localStorage.getItem('fxec_simulated_time') || null;
+    });
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [holidayStatus, setHolidayStatus] = useState(null);
 
@@ -163,6 +165,8 @@ export function App() {
                     <PrincipalDashboard 
                         currentUser={currentUser}
                         hierarchy={hierarchy}
+                        simulatedTime={simulatedTime}
+                        setSimulatedTime={setSimulatedTime}
                     />
                 )}
 

@@ -42,33 +42,43 @@ export const Header = ({
             <div className="fxec-nav-controls">
                 {/* Time / Period Pill */}
                 <div className="header-time-pill">
-                    <Clock size={15} color="#60A5FA" />
+                    <Clock size={15} color="#FFF2BA" />
                     <span>{simulatedTime || realTime}</span>
                     {activePeriod && (
                         <span className="header-period-tag">{activePeriod.name}</span>
                     )}
                 </div>
 
-                {/* Simulator (for quick period testing) */}
-                <select 
-                    className="time-sim-select"
-                    value={simulatedTime || ''}
-                    onChange={(e) => setSimulatedTime(e.target.value || null)}
-                    title="Simulate schedule time for testing"
-                >
-                    <option value="">Live Time</option>
-                    <option value="09:02:00">09:02 AM (Period 1 - Morning)</option>
-                    <option value="09:15:00">09:15 AM (Period 1 - Late)</option>
-                    <option value="10:00:00">10:00 AM (Period 2)</option>
-                    <option value="10:50:00">10:50 AM (Morning Break)</option>
-                    <option value="11:15:00">11:15 AM (Period 3)</option>
-                    <option value="12:00:00">12:00 PM (Period 4)</option>
-                    <option value="13:00:00">01:00 PM (Lunch Break)</option>
-                    <option value="13:45:00">01:45 PM (Period 5)</option>
-                    <option value="14:30:00">02:30 PM (Period 6)</option>
-                    <option value="15:10:00">03:10 PM (Break)</option>
-                    <option value="15:45:00">03:45 PM (Period 7)</option>
-                </select>
+                {/* Simulator: ONLY available to Principal as Master College Time Controller */}
+                {currentUser?.role === 'principal' && (
+                    <select 
+                        className="time-sim-select"
+                        value={simulatedTime || ''}
+                        onChange={(e) => {
+                            const val = e.target.value || null;
+                            setSimulatedTime(val);
+                            if (val) {
+                                localStorage.setItem('fxec_simulated_time', val);
+                            } else {
+                                localStorage.removeItem('fxec_simulated_time');
+                            }
+                        }}
+                        title="Principal Master College Clock: Moves time across entire system"
+                    >
+                        <option value="">Live System Time</option>
+                        <option value="09:02:00">09:02 AM (Period 1 - Morning)</option>
+                        <option value="09:15:00">09:15 AM (Period 1 - Late)</option>
+                        <option value="10:00:00">10:00 AM (Period 2)</option>
+                        <option value="10:50:00">10:50 AM (Morning Break)</option>
+                        <option value="11:15:00">11:15 AM (Period 3)</option>
+                        <option value="12:00:00">12:00 PM (Period 4)</option>
+                        <option value="13:00:00">01:00 PM (Lunch Break)</option>
+                        <option value="13:45:00">01:45 PM (Period 5)</option>
+                        <option value="14:30:00">02:30 PM (Period 6)</option>
+                        <option value="15:10:00">03:10 PM (Break)</option>
+                        <option value="15:45:00">03:45 PM (Period 7)</option>
+                    </select>
+                )}
 
                 {/* Role Switcher Tabs */}
                 <div className="role-switcher-container">

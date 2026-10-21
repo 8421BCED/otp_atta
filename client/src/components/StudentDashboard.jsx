@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, KeyRound, CheckCircle2, ArrowRightLeft, Clock, AlertCircle } from 'lucide-react';
+import { MapPin, KeyRound, CheckCircle2, AlertCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { PeriodCountdownWheel } from './PeriodCountdownWheel';
 
 export const StudentDashboard = ({ 
     currentUser, 
@@ -42,7 +43,7 @@ export const StudentDashboard = ({
 
     useEffect(() => {
         loadTimeline();
-        const interval = setInterval(loadTimeline, 4000);
+        const interval = setInterval(loadTimeline, 3000);
         return () => clearInterval(interval);
     }, [currentUser.id]);
 
@@ -88,8 +89,8 @@ export const StudentDashboard = ({
                 setStatusMessage('Attendance marked successfully!');
                 setOtpInput('');
                 confetti({
-                    particleCount: 70,
-                    spread: 60,
+                    particleCount: 60,
+                    spread: 55,
                     origin: { y: 0.6 }
                 });
                 loadTimeline();
@@ -102,33 +103,29 @@ export const StudentDashboard = ({
     };
 
     return (
-        <div className="dashboard-grid-wide">
-            {/* Left: Location & OTP Verification */}
+        <div className="dashboard-grid-student">
+            {/* Left Column: Period Countdown Wheel & OTP Entry */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 
-                {/* Morning Window Alert */}
-                {currentPeriodInfo?.isMorningWindow && (
-                    <div className="alert-box-warning">
-                        <Clock size={20} color="#F59E0B" />
-                        <div>
-                            <strong>9:00 AM – 9:05 AM Day-Start Verification</strong>
-                            <p>Enter the 1st period OTP now to initialize your day.</p>
-                        </div>
-                    </div>
-                )}
+                {/* 1. Period Countdown Wheel */}
+                <PeriodCountdownWheel 
+                    currentPeriodInfo={currentPeriodInfo} 
+                    timeline={timeline}
+                />
 
-                {/* 1. Classroom Selection */}
+                {/* 2. Room Selector & OTP Verification Card */}
                 <div className="fx-card">
                     <div className="fx-card-header">
                         <div className="fx-card-title">
-                            <MapPin size={20} color="#3B82F6" />
-                            Select Classroom / Lab
+                            <MapPin size={18} />
+                            <span>Classroom & Attendance Verification</span>
                         </div>
                         <span className="room-indicator-pill">
-                            Current: <strong>{activeRoomObj ? `Room ${activeRoomObj.room_number}` : 'Not Selected'}</strong>
+                            Selected: <strong>{activeRoomObj ? `Room ${activeRoomObj.room_number}` : 'Room 207'}</strong>
                         </span>
                     </div>
 
+                    {/* Room Hierarchy Selectors */}
                     <div className="location-picker-group">
                         <div className="picker-col">
                             <label className="picker-label">Building</label>
@@ -174,7 +171,7 @@ export const StudentDashboard = ({
                         </div>
 
                         <div className="picker-col">
-                            <label className="picker-label">Room Number</label>
+                            <label className="picker-label">Room</label>
                             <select 
                                 className="fx-select"
                                 value={selectedRoom}
@@ -191,7 +188,7 @@ export const StudentDashboard = ({
 
                     {/* Quick Room Shortcuts */}
                     <div className="quick-room-strip">
-                        <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>Common Rooms:</span>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--smoke-subtle)' }}>Quick Switch:</span>
                         <button 
                             type="button"
                             className={`room-chip-btn ${selectedRoom === 3 ? 'active' : ''}`}
@@ -214,21 +211,14 @@ export const StudentDashboard = ({
                             Cloud Lab
                         </button>
                     </div>
-                </div>
 
-                {/* 2. Enter OTP */}
-                <div className="fx-card">
-                    <div className="fx-card-header">
-                        <div className="fx-card-title">
-                            <KeyRound size={20} color="#3B82F6" />
-                            Enter Attendance OTP
+                    {/* OTP Entry Form */}
+                    <form onSubmit={handleSubmitOtp} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', paddingTop: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--smoke-subtle)', fontSize: '0.82rem' }}>
+                            <KeyRound size={16} color="var(--buttermilk)" />
+                            <span>Enter the 6-digit rolling OTP displayed by your staff:</span>
                         </div>
-                        <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
-                            Valid for Room {activeRoomObj ? activeRoomObj.room_number : '207'}
-                        </span>
-                    </div>
 
-                    <form onSubmit={handleSubmitOtp} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px', padding: '12px 0' }}>
                         <input
                             type="text"
                             maxLength="6"
@@ -240,14 +230,14 @@ export const StudentDashboard = ({
                         />
 
                         {statusMessage && (
-                            <div className="alert-box-success">
+                            <div className="alert-box-success" style={{ width: '100%', maxWidth: '340px' }}>
                                 <CheckCircle2 size={18} />
                                 <span>{statusMessage}</span>
                             </div>
                         )}
 
                         {errorMessage && (
-                            <div className="alert-box-error">
+                            <div className="alert-box-error" style={{ width: '100%', maxWidth: '340px' }}>
                                 <AlertCircle size={18} />
                                 <span>{errorMessage}</span>
                             </div>
@@ -263,21 +253,17 @@ export const StudentDashboard = ({
                         </button>
                     </form>
                 </div>
-
-                {/* Movement note */}
-                <div className="movement-info-bar">
-                    <ArrowRightLeft size={16} color="#60A5FA" />
-                    <span>Moving to another lab or class? Change your room above and enter the OTP from the staff in that room.</span>
-                </div>
             </div>
 
-            {/* Right: Today's Schedule */}
+            {/* Right Column: Today's Schedule */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div className="fx-card">
                     <div className="fx-card-header">
                         <div className="fx-card-title">
-                            <Clock size={20} color="#3B82F6" />
-                            Today's Schedule
+                            <span>Today's Schedule</span>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--smoke-subtle)', fontWeight: 500 }}>
+                                (Dismissal 4:05 PM)
+                            </span>
                         </div>
                         <span className="count-pill">
                             {totalPresent} / 7 Marked
@@ -310,9 +296,18 @@ export const StudentDashboard = ({
                         ))}
                     </div>
 
-                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', fontSize: '0.78rem', color: '#64748B', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>📱 Device: {deviceInfo?.deviceName || 'Authorized Phone'}</span>
-                        <span>Lock: Active</span>
+                    {/* Clean Enterprise Device Footer (Zero emojis) */}
+                    <div style={{ 
+                        borderTop: '1px solid rgba(255,242,186,0.08)', 
+                        paddingTop: '12px', 
+                        fontSize: '0.76rem', 
+                        color: 'var(--smoke-subtle)', 
+                        display: 'flex', 
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                    }}>
+                        <span>Device: {deviceInfo?.deviceName || 'Windows Workstation / Laptop'}</span>
+                        <span style={{ color: 'var(--buttermilk)', fontWeight: 600 }}>Strict 1-Device Lock: Active</span>
                     </div>
                 </div>
             </div>

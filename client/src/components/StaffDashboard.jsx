@@ -10,7 +10,7 @@ export const StaffDashboard = ({
     hierarchy, 
     currentPeriodInfo 
 }) => {
-    const [selectedRoomId, setSelectedRoomId] = useState(3); // Room 207
+    const [selectedRoomId, setSelectedRoomId] = useState(null); // Location unset initially
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
     const [inspectedStudentId, setInspectedStudentId] = useState(null);
 
@@ -38,6 +38,7 @@ export const StaffDashboard = ({
     const [searchResults, setSearchResults] = useState([]);
 
     const generateNewOtp = async () => {
+        if (!selectedRoomId) return;
         setIsGenerating(true);
         try {
             const token = localStorage.getItem('fxec_token');
@@ -64,8 +65,9 @@ export const StaffDashboard = ({
         }
     };
 
-    // Countdown Timer Effect
+    // Countdown Timer Effect: Only runs when a classroom is selected
     useEffect(() => {
+        if (!selectedRoomId) return;
         const timer = setInterval(() => {
             setSecondsLeft(prev => {
                 if (prev <= 1) {
@@ -82,11 +84,20 @@ export const StaffDashboard = ({
     }, [selectedRoomId, autoRegen]);
 
     useEffect(() => {
-        generateNewOtp();
+        if (selectedRoomId) {
+            generateNewOtp();
+            fetchLiveRoster();
+        } else {
+            setCurrentOtp('------');
+            setRoomInfo(null);
+            setPresentCount(0);
+            setRoomStudents([]);
+        }
     }, [selectedRoomId]);
 
-    // Live Room Roster Polling
+    // Live Room Roster Polling: Only active when room is selected
     const fetchLiveRoster = async () => {
+        if (!selectedRoomId) return;
         try {
             const token = localStorage.getItem('fxec_token');
             const res = await fetch(`http://localhost:5000/api/attendance/room-live-roster/${selectedRoomId}`, {
@@ -104,6 +115,7 @@ export const StaffDashboard = ({
     };
 
     useEffect(() => {
+        if (!selectedRoomId) return;
         fetchLiveRoster();
         const poll = setInterval(fetchLiveRoster, 2000);
         return () => clearInterval(poll);
@@ -155,16 +167,20 @@ export const StaffDashboard = ({
             <div className="fx-card" style={{ padding: '16px 20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <Radio size={22} color="var(--blue)" />
+                        <Radio size={22} color={selectedRoomId ? 'var(--blue)' : 'var(--text-sub)'} />
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                 <span style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '1.02rem' }}>
-                                    {roomInfo?.building_name || 'Dr. APJ Abdul Kalam Block'}
+                                    {roomInfo ? roomInfo.building_name : 'No Classroom Selected (Location Unset)'}
                                 </span>
-                                <span className="room-badge">Room {roomInfo ? roomInfo.room_number : '207'}</span>
+                                <span className={`room-badge ${!selectedRoomId ? 'amber' : ''}`} style={!selectedRoomId ? { background: '#FEF3C7', color: '#D97706', border: '1px solid #FCD34D' } : {}}>
+                                    {selectedRoomId && roomInfo ? `Room ${roomInfo.room_number}` : 'Location Required'}
+                                </span>
                             </div>
                             <div style={{ fontSize: '0.78rem', color: 'var(--text-sub)', marginTop: '2px' }}>
-                                {roomInfo?.floor_name || '2nd Floor'} • {roomInfo?.name || 'IT 2nd Year Lecture Hall'} ({currentUser?.department || 'IT'} Dept)
+                                {selectedRoomId && roomInfo 
+                                    ? `${roomInfo.floor_name} • ${roomInfo.name} (${currentUser?.department || 'IT'} Dept)`
+                                    : 'Please select where you are currently conducting class (Building, Floor & Room) to unlock the 10-second OTP.'}
                             </div>
                         </div>
                     </div>
@@ -172,11 +188,11 @@ export const StaffDashboard = ({
                     <button 
                         type="button" 
                         className="aero-glass-btn primary"
-                        style={{ padding: '8px 16px', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                        style={{ padding: '8px 18px', fontSize: '0.84rem', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                         onClick={() => setIsRoomModalOpen(true)}
                     >
                         <DoorOpen size={16} />
-                        <span>Select Classroom (Building & Floor)</span>
+                        <span>{selectedRoomId ? 'Change Classroom / Lab' : 'Select Classroom (Building & Floor)'}</span>
                     </button>
                 </div>
             </div>
@@ -236,59 +252,86 @@ export const StaffDashboard = ({
                             <QrCode size={20} color="var(--blue)" />
                             10-Second Rolling OTP
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-sub)' }}>Auto-Refresh</span>
-                            <input 
-                                type="checkbox" 
-                                checked={autoRegen} 
-                                onChange={(e) => setAutoRegen(e.target.checked)} 
-                                style={{ cursor: 'pointer', width: '14px', height: '14px' }}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="otp-hero-box" style={{ width: '100%' }}>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-sub)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Active Code for Room {roomInfo ? roomInfo.room_number : '207'}
-                        </div>
-                        
-                        <div className="otp-display-digits">
-                            {currentOtp}
-                        </div>
-
-                        {/* Circular Timer */}
-                        <div className="timer-circular-wrap">
-                            <svg className="timer-svg" viewBox="0 0 90 90">
-                                <circle className="timer-circle-bg" cx="45" cy="45" r="40" />
-                                <circle 
-                                    className="timer-circle-progress" 
-                                    cx="45" cy="45" r="40"
-                                    style={{
-                                        strokeDasharray: '251.2',
-                                        strokeDashoffset: strokeDashoffset,
-                                        stroke: secondsLeft <= 3 ? '#EF4444' : 'var(--blue)'
-                                    }}
+                        {selectedRoomId && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-sub)' }}>Auto-Refresh</span>
+                                <input 
+                                    type="checkbox" 
+                                    checked={autoRegen} 
+                                    onChange={(e) => setAutoRegen(e.target.checked)} 
+                                    style={{ cursor: 'pointer', width: '14px', height: '14px' }}
                                 />
-                            </svg>
-                            <div className="timer-seconds-label" style={{ color: secondsLeft <= 3 ? '#DC2626' : 'var(--dark-blue)' }}>
-                                {secondsLeft}s
                             </div>
-                        </div>
-
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-sub)' }}>
-                            Regenerates automatically every 10 seconds
-                        </div>
+                        )}
                     </div>
 
-                    <button 
-                        className="fx-btn-outline" 
-                        onClick={generateNewOtp}
-                        disabled={isGenerating}
-                        style={{ marginTop: '8px' }}
-                    >
-                        <RefreshCw size={14} className={isGenerating ? 'spin-icon' : ''} />
-                        Generate New Code
-                    </button>
+                    {selectedRoomId ? (
+                        <>
+                            <div className="otp-hero-box" style={{ width: '100%' }}>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-sub)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Active Code for Room {roomInfo ? roomInfo.room_number : selectedRoomId}
+                                </div>
+                                
+                                <div className="otp-display-digits">
+                                    {currentOtp}
+                                </div>
+
+                                {/* Circular Timer */}
+                                <div className="timer-circular-wrap">
+                                    <svg className="timer-svg" viewBox="0 0 90 90">
+                                        <circle className="timer-circle-bg" cx="45" cy="45" r="40" />
+                                        <circle 
+                                            className="timer-circle-progress" 
+                                            cx="45" cy="45" r="40"
+                                            style={{
+                                                strokeDasharray: '251.2',
+                                                strokeDashoffset: strokeDashoffset,
+                                                stroke: secondsLeft <= 3 ? '#EF4444' : 'var(--blue)'
+                                            }}
+                                        />
+                                    </svg>
+                                    <div className="timer-seconds-label" style={{ color: secondsLeft <= 3 ? '#DC2626' : 'var(--dark-blue)' }}>
+                                        {secondsLeft}s
+                                    </div>
+                                </div>
+
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-sub)' }}>
+                                    Regenerates automatically every 10 seconds
+                                </div>
+                            </div>
+
+                            <button 
+                                className="fx-btn-outline" 
+                                onClick={generateNewOtp}
+                                disabled={isGenerating}
+                                style={{ marginTop: '8px' }}
+                            >
+                                <RefreshCw size={14} className={isGenerating ? 'spin-icon' : ''} />
+                                Generate New Code
+                            </button>
+                        </>
+                    ) : (
+                        <div style={{ padding: '36px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', width: '100%' }}>
+                            <div className="aero-badge-circle" style={{ width: '56px', height: '56px', background: '#FEF3C7', color: '#D97706', border: '1px solid #FCD34D' }}>
+                                <DoorOpen size={26} />
+                            </div>
+                            <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '1.05rem' }}>
+                                Classroom Location Required
+                            </div>
+                            <p style={{ fontSize: '0.80rem', color: 'var(--text-sub)', maxWidth: '320px', margin: 0, lineHeight: 1.5 }}>
+                                The 10-second rolling OTP is blocked until you set your current teaching location. First enter where you are (Building, Floor, and Room), then the OTP will unlock immediately.
+                            </p>
+                            <button 
+                                type="button" 
+                                className="aero-gloss-btn" 
+                                onClick={() => setIsRoomModalOpen(true)}
+                                style={{ width: 'auto', padding: '10px 22px', marginTop: '6px' }}
+                            >
+                                <DoorOpen size={15} style={{ marginRight: '6px' }} />
+                                <span>Select Current Classroom / Lab</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Right: Live Room Counter & Roster Table */}
@@ -296,69 +339,81 @@ export const StaffDashboard = ({
                     <div className="fx-card-header">
                         <div className="fx-card-title">
                             <Users size={20} color="var(--blue)" />
-                            Live Classroom Roster (Room {roomInfo ? roomInfo.room_number : '207'})
+                            Live Classroom Roster {roomInfo ? `(Room ${roomInfo.room_number})` : ''}
                         </div>
-                        <span className="count-pill green">
-                            Live Sync Active
+                        <span className={`count-pill ${selectedRoomId ? 'green' : 'amber'}`}>
+                            {selectedRoomId ? 'Live Sync Active' : 'Location Required'}
                         </span>
                     </div>
 
-                    {/* Room Count Stat Box */}
-                    <div className="live-count-stat-box">
-                        <div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-sub)', textTransform: 'uppercase' }}>
-                                Students Present In This Room
+                    {selectedRoomId ? (
+                        <>
+                            {/* Room Count Stat Box */}
+                            <div className="live-count-stat-box">
+                                <div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-sub)', textTransform: 'uppercase' }}>
+                                        Students Present In This Room
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                                        Updates instantly when students enter OTP
+                                    </div>
+                                </div>
+                                <div className="stat-number-giant">
+                                    {presentCount}
+                                </div>
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                                Updates instantly when students enter OTP
-                            </div>
-                        </div>
-                        <div className="stat-number-giant">
-                            {presentCount}
-                        </div>
-                    </div>
 
-                    {/* Present Students Table */}
-                    <div className="fx-table-container" style={{ maxHeight: '280px' }}>
-                        <table className="fx-table">
-                            <thead>
-                                <tr>
-                                    <th>Roll Number</th>
-                                    <th>Student Name</th>
-                                    <th>Dept</th>
-                                    <th>Time</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {roomStudents.length > 0 ? (
-                                    roomStudents.map((st, idx) => (
-                                        <tr key={idx}>
-                                            <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#93C5FD' }}>
-                                                {st.roll_number}
-                                            </td>
-                                            <td style={{ fontWeight: 600, color: '#FFF' }}>
-                                                {st.name}
-                                            </td>
-                                            <td>{st.department}</td>
-                                            <td style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                                                {st.marked_at ? new Date(st.marked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Now'}
-                                            </td>
-                                            <td>
-                                                <span className="status-tag present">✓ Present</span>
-                                            </td>
+                            {/* Present Students Table */}
+                            <div className="fx-table-container" style={{ maxHeight: '280px' }}>
+                                <table className="fx-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Roll Number</th>
+                                            <th>Student Name</th>
+                                            <th>Dept</th>
+                                            <th>Time</th>
+                                            <th>Status</th>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="5" style={{ textAlign: 'center', padding: '28px', color: 'var(--text-dim)' }}>
-                                            No students have entered the OTP for Room {roomInfo ? roomInfo.room_number : '207'} yet.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                    </thead>
+                                    <tbody>
+                                        {roomStudents.length > 0 ? (
+                                            roomStudents.map((st, idx) => (
+                                                <tr key={idx}>
+                                                    <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#93C5FD' }}>
+                                                        {st.roll_number}
+                                                    </td>
+                                                    <td style={{ fontWeight: 600, color: '#FFF' }}>
+                                                        {st.name}
+                                                    </td>
+                                                    <td>{st.department}</td>
+                                                    <td style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                                                        {st.marked_at ? new Date(st.marked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Now'}
+                                                    </td>
+                                                    <td>
+                                                        <span className="status-tag present">✓ Present</span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="5" style={{ textAlign: 'center', padding: '28px', color: 'var(--text-dim)' }}>
+                                                    No students have entered the OTP for Room {roomInfo ? roomInfo.room_number : selectedRoomId} yet.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-sub)', fontSize: '0.84rem' }}>
+                            <Users size={34} color="var(--text-dim)" style={{ marginBottom: '10px', opacity: 0.5 }} />
+                            <div style={{ fontWeight: 700, color: 'var(--dark-blue)', fontSize: '0.96rem' }}>Awaiting Classroom Selection</div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginTop: '4px', maxWidth: '340px', margin: '6px auto 0' }}>
+                                Student attendance and live check-in roster will appear here once you select your classroom above.
+                            </div>
+                        </div>
+                    )}
                 </div>
 
             </div>

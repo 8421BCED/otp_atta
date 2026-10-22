@@ -262,14 +262,57 @@ router.post('/submit-otp', authenticate, authorizeRoles('student'), async (req, 
             [studentId, effectivePeriodId, today]
         );
 
+        // Fetch room info for from & to rooms
+        const [targetRooms] = await pool.query(
+            'SELECT r.id, r.room_number, r.name, b.name as building_name FROM rooms r JOIN buildings b ON r.building_id = b.id WHERE r.id = ?',
+            [roomId]
+        );
+        const targetRoomInfo = targetRooms[0] || { room_number: roomId, name: 'Room' };
+
         if (existing.length > 0) {
-            return res.status(409).json({
-                error: 'Attendance Already Recorded',
-                message: 'You have already marked your attendance for this period today.'
+            const currentRecord = existing[0];
+            // If already in this exact room
+            if (parseInt(currentRecord.room_id) === parseInt(roomId)) {
+                return res.status(409).json({
+                    error: 'Attendance Already Recorded',
+                    message: `You have already marked your attendance in Room ${targetRoomInfo.room_number} for this period.`
+                });
+            }
+
+            // Student is RELOCATING to a new classroom or lab mid-period!
+            const [oldRooms] = await pool.query(
+                'SELECT r.id, r.room_number, r.name FROM rooms r WHERE r.id = ?',
+                [currentRecord.room_id]
+            );
+            const oldRoomInfo = oldRooms[0] || { room_number: currentRecord.room_id, name: 'Previous Room' };
+
+            // 1. Update attendance record with the new room and staff
+            await pool.query(
+                `UPDATE attendance_records 
+                 SET room_id = ?, staff_id = ?, otp_used = ?, marked_at = NOW() 
+                 WHERE id = ?`,
+                [roomId, activeOtp.staff_id, otpCode, currentRecord.id]
+            );
+
+            // 2. Insert verified movement record into student_movements
+            const moveNote = `Relocated from Room ${oldRoomInfo.room_number} to Room ${targetRoomInfo.room_number} (${targetRoomInfo.name}) - Verified via Lab Staff OTP`;
+            await pool.query(
+                `INSERT INTO student_movements 
+                 (student_id, from_room_id, to_room_id, period_id, date, duration_minutes, note)
+                 VALUES (?, ?, ?, ?, ?, 50, ?)`,
+                [studentId, currentRecord.room_id, roomId, effectivePeriodId, today, moveNote]
+            );
+
+            return res.json({
+                success: true,
+                isRelocation: true,
+                message: `Arrival verified! You are now checked into Room ${targetRoomInfo.room_number} (${targetRoomInfo.name}). Movement recorded.`,
+                periodId: effectivePeriodId,
+                roomId
             });
         }
 
-        // F. Insert Attendance Record
+        // F. Initial Check-in: Insert Attendance Record
         await pool.query(
             `INSERT INTO attendance_records 
             (student_id, period_id, room_id, staff_id, date, status, otp_used, device_id)
@@ -277,7 +320,7 @@ router.post('/submit-otp', authenticate, authorizeRoles('student'), async (req, 
             [studentId, effectivePeriodId, roomId, activeOtp.staff_id, today, otpCode, deviceInfo ? deviceInfo.deviceId : null]
         );
 
-        // G. Update / Record Movement
+        // G. Update / Record Initial Movement
         const [lastMovement] = await pool.query(
             'SELECT * FROM student_movements WHERE student_id = ? AND date = ? ORDER BY id DESC LIMIT 1',
             [studentId, today]
@@ -288,7 +331,7 @@ router.post('/submit-otp', authenticate, authorizeRoles('student'), async (req, 
             `INSERT INTO student_movements 
             (student_id, from_room_id, to_room_id, period_id, date, duration_minutes, note)
             VALUES (?, ?, ?, ?, ?, 50, ?)`,
-            [studentId, fromRoomId, roomId, effectivePeriodId, today, 'Verified via 10s OTP']
+            [studentId, fromRoomId, roomId, effectivePeriodId, today, `Checked in to Room ${targetRoomInfo.room_number} via 10s OTP`]
         );
 
         // H. If 1st period, record day unlock
@@ -303,7 +346,7 @@ router.post('/submit-otp', authenticate, authorizeRoles('student'), async (req, 
 
         return res.json({
             success: true,
-            message: 'Attendance verified and marked present!',
+            message: `Attendance verified and marked present in Room ${targetRoomInfo.room_number}!`,
             periodId: effectivePeriodId,
             roomId
         });
@@ -481,12 +524,28 @@ router.get('/student-details/:studentId', authenticate, async (req, res) => {
             [studentId]
         );
 
+        // Full Student Movement Trail (Every classroom & lab transfer with timestamps)
+        const [movements] = await pool.query(
+            `SELECT sm.*, 
+                    r_to.room_number as to_room, r_to.name as to_room_name, b_to.name as to_building,
+                    r_from.room_number as from_room, r_from.name as from_room_name, b_from.name as from_building
+             FROM student_movements sm
+             JOIN rooms r_to ON sm.to_room_id = r_to.id
+             JOIN buildings b_to ON r_to.building_id = b_to.id
+             LEFT JOIN rooms r_from ON sm.from_room_id = r_from.id
+             LEFT JOIN buildings b_from ON r_from.building_id = b_from.id
+             WHERE sm.student_id = ?
+             ORDER BY sm.timestamp DESC LIMIT 25`,
+            [studentId]
+        );
+
         return res.json({
             student,
             currentLocation: latestMove.length > 0 ? latestMove[0] : null,
             deviceLock,
             todayRecords,
             yesterdayRecords,
+            movements,
             stats: {
                 totalPeriods: stats[0].total_periods || 0,
                 presentPeriods: stats[0].present_periods || 0,

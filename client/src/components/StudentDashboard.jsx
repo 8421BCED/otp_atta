@@ -69,6 +69,29 @@ export const StudentDashboard = ({
     const activePeriodNumber = currentPeriodInfo?.activePeriod?.period_number;
     const currentPeriodItem = activePeriodNumber ? timeline?.find(p => p.id === activePeriodNumber) : null;
     const isCurrentPeriodMarked = !!currentPeriodItem?.isMarked;
+    const markedRoomId = currentPeriodItem?.attendance?.room_id;
+    const markedRoomNumber = currentPeriodItem?.attendance?.room_number;
+
+    // Detect if student has relocated to a different classroom or lab mid-period
+    const isRelocating = isCurrentPeriodMarked && selectedRoom && markedRoomId && Number(selectedRoom) !== Number(markedRoomId);
+
+    // If student was already marked in a room and has not manually selected another room, sync to current verified room
+    useEffect(() => {
+        if (markedRoomId && !selectedRoom && hierarchy?.length > 0) {
+            for (const b of hierarchy) {
+                for (const f of b.floors || []) {
+                    for (const r of f.rooms || []) {
+                        if (Number(r.id) === Number(markedRoomId)) {
+                            setSelectedBuilding(b.id);
+                            setSelectedFloor(f.id);
+                            setSelectedRoom(r.id);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }, [markedRoomId, hierarchy, selectedRoom]);
 
     const handleRoomModalSelect = (bId, fId, rId) => {
         setSelectedBuilding(bId);
@@ -80,7 +103,11 @@ export const StudentDashboard = ({
         const f = b?.floors?.find(x => x.id === Number(fId));
         const r = f?.rooms?.find(x => x.id === Number(rId));
 
-        setStatusMessage(`Classroom set to Room ${r ? r.room_number : rId}. Ready for OTP verification.`);
+        if (markedRoomId && Number(rId) !== Number(markedRoomId)) {
+            setStatusMessage(`Relocating to Room ${r ? r.room_number : rId}. Please enter the Lab Check-in OTP.`);
+        } else {
+            setStatusMessage(`Classroom set to Room ${r ? r.room_number : rId}. Ready for OTP verification.`);
+        }
         setTimeout(() => setStatusMessage(null), 4000);
     };
 
@@ -224,15 +251,101 @@ export const StudentDashboard = ({
                     </div>
 
                     {/* Attendance Form / Prompt / Confirmation */}
-                    {isCurrentPeriodMarked ? (
+                    {isRelocating ? (
+                        <div className="student-relocation-box" style={{ width: '100%', maxWidth: '390px', margin: '0 auto', background: '#F8FAFC', border: '1.5px solid rgba(19, 108, 252, 0.35)', borderRadius: '14px', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Navigation size={18} color="var(--blue)" />
+                                    <span style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.94rem' }}>
+                                        Lab / Classroom Relocation Check-in
+                                    </span>
+                                </div>
+                                <span className="aero-pill cyan" style={{ fontSize: '0.68rem', padding: '2px 8px' }}>
+                                    Arrival Verification
+                                </span>
+                            </div>
+
+                            <div style={{ background: '#FFF', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.78rem', color: 'var(--text-sub)' }}>
+                                <div>Previously checked in: <strong style={{ color: 'var(--dark-blue)' }}>Room {markedRoomNumber || markedRoomId}</strong></div>
+                                <div style={{ marginTop: '2px' }}>Moving to: <strong style={{ color: 'var(--blue)' }}>Room {activeRoomObj ? activeRoomObj.room_number : selectedRoom} ({activeRoomObj ? activeRoomObj.name : 'Lab'})</strong></div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '2px' }}>{activeBuildingObj?.name} • {activeFloorObj?.name}</div>
+                            </div>
+
+                            <p style={{ fontSize: '0.76rem', color: 'var(--text-sub)', margin: 0, lineHeight: 1.4 }}>
+                                The faculty member in this lab is broadcasting an active OTP. Enter the 6-digit rolling OTP displayed in this lab to verify your arrival:
+                            </p>
+
+                            <form onSubmit={handleSubmitOtp} className="student-otp-form" style={{ width: '100%', gap: '8px' }}>
+                                <input
+                                    type="text"
+                                    maxLength="6"
+                                    placeholder="------"
+                                    className="aero-otp-input"
+                                    value={otpInput}
+                                    onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                                    autoFocus
+                                    style={{ width: '100%', maxWidth: '240px', margin: '0 auto' }}
+                                />
+
+                                {statusMessage && (
+                                    <div className="aero-alert-success" style={{ width: '100%' }}>
+                                        <CheckCircle2 size={16} />
+                                        <span>{statusMessage}</span>
+                                    </div>
+                                )}
+
+                                {errorMessage && (
+                                    <div className="aero-alert-error" style={{ width: '100%' }}>
+                                        <AlertCircle size={16} />
+                                        <span>{errorMessage}</span>
+                                    </div>
+                                )}
+
+                                <button 
+                                    type="submit" 
+                                    className="aero-gloss-btn" 
+                                    style={{ width: '100%', padding: '10px 20px', marginTop: '2px' }}
+                                    disabled={isSubmitting || otpInput.length !== 6}
+                                >
+                                    <span>{isSubmitting ? 'Verifying Lab OTP...' : 'Verify Lab Arrival & Check-in'}</span>
+                                </button>
+
+                                <button 
+                                    type="button" 
+                                    className="fx-btn-outline"
+                                    style={{ width: '100%', padding: '6px 12px', fontSize: '0.74rem' }}
+                                    onClick={() => {
+                                        setSelectedRoom(markedRoomId);
+                                        if (hierarchy) {
+                                            for (const b of hierarchy) {
+                                                for (const f of b.floors || []) {
+                                                    for (const r of f.rooms || []) {
+                                                        if (Number(r.id) === Number(markedRoomId)) {
+                                                            setSelectedBuilding(b.id);
+                                                            setSelectedFloor(f.id);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }}
+                                >
+                                    Cancel (Stay in Room {markedRoomNumber || markedRoomId})
+                                </button>
+                            </form>
+                        </div>
+                    ) : isCurrentPeriodMarked ? (
                         <div className="aero-alert-success" style={{ width: '100%', maxWidth: '380px', margin: '0 auto', padding: '16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                             <CheckCircle2 size={28} color="#16A34A" />
                             <strong style={{ fontSize: '0.98rem', color: '#15803D' }}>
                                 Period {activePeriodNumber} Attendance Recorded
                             </strong>
                             <span style={{ fontSize: '0.80rem', color: 'var(--dark-blue)', lineHeight: '1.4' }}>
-                                You are recorded <strong>Present {currentPeriodItem?.attendance?.room_number ? `in Room ${currentPeriodItem.attendance.room_number}` : ''}</strong> for this period. OTP verification complete. Next period unlocks when it begins.
+                                You are recorded <strong>Present {currentPeriodItem?.attendance?.room_number ? `in Room ${currentPeriodItem.attendance.room_number}` : ''}</strong> for this period. OTP verification complete.
                             </span>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)', marginTop: '4px', background: 'rgba(22, 163, 74, 0.08)', padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(22, 163, 74, 0.2)' }}>
+                                Need to go to a lab? Click <strong>Move / Change Classroom</strong> above to switch to the lab and enter the lab faculty's check-in OTP.
+                            </div>
                         </div>
                     ) : !selectedRoom ? (
                         <div className="no-room-prompt-box">

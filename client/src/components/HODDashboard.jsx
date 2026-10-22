@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Users, RotateCcw, Calendar, CheckCircle2, Search, Building2, Clock, Lock, Unlock, Eye, Sparkles } from 'lucide-react';
+import { Users, RotateCcw, Calendar, CheckCircle2, Search, Building2, Clock, Lock, Unlock, Eye, Sparkles, QrCode, RefreshCw, DoorOpen, Radio } from 'lucide-react';
 import { RoomStudentsModal } from './RoomStudentsModal';
 import { AttendanceCalendarModal } from './AttendanceCalendarModal';
 import { StudentDetailsModal } from './StudentDetailsModal';
+import { RoomSelectionModal } from './RoomSelectionModal';
 
 export const HODDashboard = ({ currentUser, hierarchy }) => {
     const department = currentUser?.department || 'IT';
@@ -22,6 +23,17 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
     // Inspected student modal state
     const [inspectedStudentId, setInspectedStudentId] = useState(null);
 
+    // HOD Faculty Teaching Session & Live OTP State
+    const [teachingRoomId, setTeachingRoomId] = useState(null);
+    const [isTeachingRoomModalOpen, setIsTeachingRoomModalOpen] = useState(false);
+    const [teachingOtp, setTeachingOtp] = useState('------');
+    const [teachingSecondsLeft, setTeachingSecondsLeft] = useState(10);
+    const [teachingAutoRegen, setTeachingAutoRegen] = useState(true);
+    const [isGeneratingTeachingOtp, setIsGeneratingTeachingOtp] = useState(false);
+    const [teachingRoomInfo, setTeachingRoomInfo] = useState(null);
+    const [teachingPresentCount, setTeachingPresentCount] = useState(0);
+    const [teachingRoomStudents, setTeachingRoomStudents] = useState([]);
+
     // Holiday & Timed Event Exemption declaration state
     const [holidayTitle, setHolidayTitle] = useState('');
     const [holidayDate, setHolidayDate] = useState('');
@@ -30,6 +42,85 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
     const [startTime, setStartTime] = useState('09:00');
     const [endTime, setEndTime] = useState('12:30');
     const [holidayNotice, setHolidayNotice] = useState(null);
+
+    // Generate 10-Second OTP for HOD's Teaching Room
+    const generateTeachingOtp = async () => {
+        if (!teachingRoomId) return;
+        setIsGeneratingTeachingOtp(true);
+        try {
+            const token = localStorage.getItem('fxec_token');
+            const res = await fetch('http://localhost:5000/api/attendance/generate-otp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    roomId: teachingRoomId,
+                    periodId: 1
+                })
+            });
+            const data = await res.json();
+            if (data.otpCode) {
+                setTeachingOtp(data.otpCode);
+                setTeachingSecondsLeft(10);
+            }
+        } catch (e) {
+            console.error('Failed to generate HOD teaching OTP:', e);
+        } finally {
+            setIsGeneratingTeachingOtp(false);
+        }
+    };
+
+    // HOD 10s Timer Countdown
+    useEffect(() => {
+        if (!teachingRoomId) return;
+        const timer = setInterval(() => {
+            setTeachingSecondsLeft(prev => {
+                if (prev <= 1) {
+                    if (teachingAutoRegen) {
+                        generateTeachingOtp();
+                    }
+                    return 10;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [teachingRoomId, teachingAutoRegen]);
+
+    // Live Teaching Room Roster Polling
+    const fetchTeachingRoster = async () => {
+        if (!teachingRoomId) return;
+        try {
+            const token = localStorage.getItem('fxec_token');
+            const res = await fetch(`http://localhost:5000/api/attendance/room-live-roster/${teachingRoomId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.room) {
+                setTeachingRoomInfo(data.room);
+                setTeachingPresentCount(data.presentCount || 0);
+                setTeachingRoomStudents(data.students || []);
+            }
+        } catch (e) {
+            console.error('Failed to fetch teaching room roster:', e);
+        }
+    };
+
+    useEffect(() => {
+        if (teachingRoomId) {
+            generateTeachingOtp();
+            fetchTeachingRoster();
+            const poll = setInterval(fetchTeachingRoster, 2000);
+            return () => clearInterval(poll);
+        } else {
+            setTeachingOtp('------');
+            setTeachingRoomInfo(null);
+            setTeachingPresentCount(0);
+            setTeachingRoomStudents([]);
+        }
+    }, [teachingRoomId]);
 
     const loadHODData = async () => {
         try {
@@ -154,6 +245,188 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Tap room below to view students</div>
                 </div>
+            </div>
+
+            {/* HOD Faculty Teaching Session & Live Classroom OTP Generator */}
+            <div className="fx-card" style={{ padding: '18px 20px', border: '1.5px solid rgba(19, 108, 252, 0.25)' }}>
+                <div className="fx-card-header" style={{ marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div>
+                        <div className="fx-card-title" style={{ fontSize: '1.05rem' }}>
+                            <QrCode size={20} color="var(--blue)" />
+                            HOD Faculty Teaching Session & Live Classroom OTP
+                        </div>
+                        <div style={{ fontSize: '0.76rem', color: 'var(--text-sub)', marginTop: '2px' }}>
+                            As teaching faculty, select where you are conducting lecture/lab to unlock the rolling 10s OTP and view your classroom roster.
+                        </div>
+                    </div>
+                    
+                    <button 
+                        type="button" 
+                        className="aero-glass-btn primary"
+                        style={{ padding: '8px 18px', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                        onClick={() => setIsTeachingRoomModalOpen(true)}
+                    >
+                        <DoorOpen size={16} />
+                        <span>{teachingRoomId ? 'Change Teaching Room / Lab' : 'Select Classroom (Building & Floor)'}</span>
+                    </button>
+                </div>
+
+                {teachingRoomId ? (
+                    <div>
+                        {/* Selected Room Location Banner */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--light-blue)', padding: '10px 14px', borderRadius: '10px', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Radio size={18} color="var(--blue)" />
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.96rem' }}>
+                                            {teachingRoomInfo?.building_name || 'Dr. APJ Abdul Kalam Block'}
+                                        </span>
+                                        <span className="room-badge">Room {teachingRoomInfo ? teachingRoomInfo.room_number : teachingRoomId}</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)', marginTop: '2px' }}>
+                                        {teachingRoomInfo?.floor_name || '2nd Floor'} • {teachingRoomInfo?.name || 'Classroom / Lab'} (Dept of {department})
+                                    </div>
+                                </div>
+                            </div>
+                            <span className="count-pill green" style={{ fontSize: '0.72rem' }}>
+                                Live Session Broadcasting
+                            </span>
+                        </div>
+
+                        {/* Split Grid: OTP Box + Roster Table */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' }}>
+                            {/* 10s Rolling OTP */}
+                            <div className="fx-card" style={{ textAlign: 'center', alignItems: 'center', background: '#F8FAFC', padding: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '10px' }}>
+                                    <span style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.88rem' }}>10-Second Rolling Code</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ fontSize: '0.72rem', color: 'var(--text-sub)' }}>Auto-Refresh</span>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={teachingAutoRegen} 
+                                            onChange={(e) => setTeachingAutoRegen(e.target.checked)} 
+                                            style={{ cursor: 'pointer', width: '13px', height: '13px' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="otp-hero-box" style={{ width: '100%', margin: 0 }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-sub)', textTransform: 'uppercase' }}>
+                                        Broadcast Code for Room {teachingRoomInfo ? teachingRoomInfo.room_number : teachingRoomId}
+                                    </div>
+                                    <div className="otp-display-digits" style={{ fontSize: '2.4rem', margin: '6px 0' }}>
+                                        {teachingOtp}
+                                    </div>
+
+                                    {/* Circular Timer */}
+                                    <div className="timer-circular-wrap" style={{ margin: '8px auto' }}>
+                                        <svg className="timer-svg" viewBox="0 0 90 90">
+                                            <circle className="timer-circle-bg" cx="45" cy="45" r="40" />
+                                            <circle 
+                                                className="timer-circle-progress" 
+                                                cx="45" cy="45" r="40"
+                                                style={{
+                                                    strokeDasharray: '251.2',
+                                                    strokeDashoffset: 251.2 - (251.2 * teachingSecondsLeft) / 10,
+                                                    stroke: teachingSecondsLeft <= 3 ? '#EF4444' : 'var(--blue)'
+                                                }}
+                                            />
+                                        </svg>
+                                        <div className="timer-seconds-label" style={{ color: teachingSecondsLeft <= 3 ? '#DC2626' : 'var(--dark-blue)' }}>
+                                            {teachingSecondsLeft}s
+                                        </div>
+                                    </div>
+                                    <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)' }}>
+                                        Regenerates every 10 seconds (Strict Anti-Proxy Lock)
+                                    </div>
+                                </div>
+
+                                <button 
+                                    className="fx-btn-outline" 
+                                    onClick={generateTeachingOtp}
+                                    disabled={isGeneratingTeachingOtp}
+                                    style={{ marginTop: '10px', fontSize: '0.78rem' }}
+                                >
+                                    <RefreshCw size={13} className={isGeneratingTeachingOtp ? 'spin-icon' : ''} />
+                                    Generate Fresh OTP
+                                </button>
+                            </div>
+
+                            {/* Live Students Roster */}
+                            <div className="fx-card" style={{ background: '#F8FAFC', padding: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                    <span style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.88rem' }}>
+                                        Live Classroom Roster ({teachingPresentCount} Checked-in)
+                                    </span>
+                                    <span className="aero-pill green" style={{ fontSize: '0.68rem', padding: '2px 8px' }}>
+                                        Room {teachingRoomInfo ? teachingRoomInfo.room_number : teachingRoomId}
+                                    </span>
+                                </div>
+
+                                <div className="fx-table-container" style={{ maxHeight: '230px' }}>
+                                    <table className="fx-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Roll No</th>
+                                                <th>Student Name</th>
+                                                <th>Time</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {teachingRoomStudents.length > 0 ? (
+                                                teachingRoomStudents.map((st, idx) => (
+                                                    <tr key={idx}>
+                                                        <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#93C5FD' }}>
+                                                            {st.roll_number}
+                                                        </td>
+                                                        <td style={{ fontWeight: 600, color: '#FFF' }}>
+                                                            {st.name}
+                                                        </td>
+                                                        <td style={{ fontSize: '0.74rem', color: '#94A3B8' }}>
+                                                            {st.marked_at ? new Date(st.marked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
+                                                        </td>
+                                                        <td>
+                                                            <span className="status-tag present">✓ Present</span>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan="4" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-dim)', fontSize: '0.78rem' }}>
+                                                        No students have checked into Room {teachingRoomInfo ? teachingRoomInfo.room_number : teachingRoomId} yet.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ padding: '28px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                        <div className="aero-badge-circle" style={{ width: '52px', height: '52px', background: '#FEF3C7', color: '#D97706', border: '1px solid #FCD34D' }}>
+                            <DoorOpen size={24} />
+                        </div>
+                        <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '1.02rem' }}>
+                            Classroom Location Required to Generate OTP
+                        </div>
+                        <p style={{ fontSize: '0.80rem', color: 'var(--text-sub)', maxWidth: '380px', margin: 0, lineHeight: 1.45 }}>
+                            HODs can teach courses and broadcast live OTPs to students. To unlock the rolling OTP and live student roster, select your teaching Building, Floor, and Room.
+                        </p>
+                        <button 
+                            type="button" 
+                            className="aero-gloss-btn" 
+                            onClick={() => setIsTeachingRoomModalOpen(true)}
+                            style={{ width: 'auto', padding: '9px 20px', marginTop: '4px' }}
+                        >
+                            <DoorOpen size={15} style={{ marginRight: '6px' }} />
+                            <span>Select Teaching Classroom / Lab</span>
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Room Distribution & Holiday */}
@@ -458,6 +731,18 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                 isOpen={!!inspectedStudentId}
                 onClose={() => setInspectedStudentId(null)}
                 studentId={inspectedStudentId}
+            />
+
+            {/* Modal: HOD Teaching Room Selection (Building -> Floor -> Room) */}
+            <RoomSelectionModal 
+                isOpen={isTeachingRoomModalOpen}
+                onClose={() => setIsTeachingRoomModalOpen(false)}
+                hierarchy={hierarchy}
+                onSelectRoom={(bId, fId, rId) => {
+                    setTeachingRoomId(Number(rId));
+                    setIsTeachingRoomModalOpen(false);
+                }}
+                currentRoomId={teachingRoomId}
             />
 
         </div>

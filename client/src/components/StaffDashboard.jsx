@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, RefreshCw, QrCode, Search, Radio, CheckCircle2, DoorOpen, MapPin, Eye, Building2, Calendar } from 'lucide-react';
+import { Users, RefreshCw, QrCode, Search, Radio, CheckCircle2, DoorOpen, MapPin, Eye, Building2, Calendar, FileText, Filter } from 'lucide-react';
 import { RoomSelectionModal } from './RoomSelectionModal';
 import { RoomStudentsModal } from './RoomStudentsModal';
 import { AttendanceCalendarModal } from './AttendanceCalendarModal';
@@ -20,6 +20,7 @@ export const StaffDashboard = ({
 
     // Student Calendar Modal State
     const [selectedStudentForCalendar, setSelectedStudentForCalendar] = useState(null);
+    const [studentFilter, setStudentFilter] = useState('all'); // 'all', 'present', 'pending'
 
     // 10s OTP State
     const [currentOtp, setCurrentOtp] = useState('------');
@@ -126,6 +127,7 @@ export const StaffDashboard = ({
 
     useEffect(() => {
         fetchActiveRooms();
+        handleSearchStudents('');
         const pollRooms = setInterval(fetchActiveRooms, 3000);
         return () => clearInterval(pollRooms);
     }, []);
@@ -361,80 +363,124 @@ export const StaffDashboard = ({
 
             </div>
 
-            {/* Department Student Search */}
-            <div className="fx-card">
-                <div className="fx-card-header">
-                    <div className="fx-card-title">
-                        <Search size={20} color="var(--blue)" />
-                        Search Students in Department
-                    </div>
-                </div>
+            {/* Department Student Attendance & Leave Reports */}
+            {(() => {
+                const countPresent = searchResults.filter(st => st.current_room && st.periods_attended > 0).length;
+                const countPending = searchResults.filter(st => !st.current_room || st.periods_attended === 0).length;
+                const filteredStudents = searchResults.filter(st => {
+                    if (studentFilter === 'present') return st.current_room && st.periods_attended > 0;
+                    if (studentFilter === 'pending') return !st.current_room || st.periods_attended === 0;
+                    return true;
+                });
 
-                <div style={{ maxWidth: '420px' }}>
-                    <input 
-                        type="text"
-                        className="fx-select"
-                        style={{ width: '100%' }}
-                        placeholder="Search student by name (e.g. Daniel A)..."
-                        value={searchQuery}
-                        onChange={(e) => handleSearchStudents(e.target.value)}
-                    />
-                </div>
+                return (
+                    <div className="fx-card">
+                        <div className="fx-card-header">
+                            <div className="fx-card-title">
+                                <FileText size={20} color="var(--blue)" />
+                                Department Student Attendance & Leave Reports
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                <button
+                                    type="button"
+                                    className={`role-btn ${studentFilter === 'all' ? 'active' : ''}`}
+                                    style={{ padding: '4px 10px', fontSize: '0.74rem' }}
+                                    onClick={() => setStudentFilter('all')}
+                                >
+                                    All Students ({searchResults.length})
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`role-btn ${studentFilter === 'present' ? 'active' : ''}`}
+                                    style={{ padding: '4px 10px', fontSize: '0.74rem' }}
+                                    onClick={() => setStudentFilter('present')}
+                                >
+                                    Present Today ({countPresent})
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`role-btn ${studentFilter === 'pending' ? 'active' : ''}`}
+                                    style={{ padding: '4px 10px', fontSize: '0.74rem' }}
+                                    onClick={() => setStudentFilter('pending')}
+                                >
+                                    Pending / Not In Class ({countPending})
+                                </button>
+                            </div>
+                        </div>
 
-                {searchResults.length > 0 && (
-                    <div className="fx-table-container">
-                        <table className="fx-table">
-                            <thead>
-                                <tr>
-                                    <th>Roll Number</th>
-                                    <th>Name</th>
-                                    <th>Current Room</th>
-                                    <th>Building</th>
-                                    <th>Periods Marked</th>
-                                    <th style={{ textAlign: 'center' }}>Details & Calendar</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {searchResults.map((st, i) => (
-                                    <tr 
-                                        key={i}
-                                        style={{ cursor: 'pointer' }}
-                                        onClick={() => setSelectedStudentForCalendar(st)}
-                                        title="Click to view student attendance calendar"
-                                    >
-                                        <td style={{ fontFamily: 'monospace', color: 'var(--blue)', fontWeight: 700 }}>
-                                            {st.roll_number}
-                                        </td>
-                                        <td style={{ fontWeight: 800, color: 'var(--dark-blue)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <span>{st.name}</span>
-                                            <span style={{ fontSize: '0.68rem', color: 'var(--blue)', textDecoration: 'underline' }}>View Calendar</span>
-                                        </td>
-                                        <td><strong>{st.current_room ? `Room ${st.current_room}` : 'Not checked-in'}</strong></td>
-                                        <td>{st.current_building || 'Campus'}</td>
-                                        <td>
-                                            <span className="aero-status-tag present">{st.periods_attended} / 7</span>
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <button 
-                                                type="button" 
-                                                className="fx-btn-outline" 
-                                                style={{ padding: '5px 12px', fontSize: '0.74rem' }}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedStudentForCalendar(st);
-                                                }}
-                                            >
-                                                <Calendar size={13} style={{ marginRight: '4px', verticalAlign: '-1px' }} />
-                                                View Calendar
-                                            </button>
-                                        </td>
+                        <div style={{ maxWidth: '420px', marginBottom: '8px' }}>
+                            <input 
+                                type="text"
+                                className="fx-select"
+                                style={{ width: '100%' }}
+                                placeholder="Search by name or roll number (e.g. Daniel A or 950724IT021)..."
+                                value={searchQuery}
+                                onChange={(e) => handleSearchStudents(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="fx-table-container">
+                            <table className="fx-table">
+                                <thead>
+                                    <tr>
+                                        <th>Roll Number</th>
+                                        <th>Student Name</th>
+                                        <th>Current Room</th>
+                                        <th>Building</th>
+                                        <th>Periods Marked</th>
+                                        <th style={{ textAlign: 'center' }}>Attendance & Leave Report</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {filteredStudents.length > 0 ? (
+                                        filteredStudents.map((st, i) => (
+                                            <tr 
+                                                key={i}
+                                                style={{ cursor: 'pointer' }}
+                                                onClick={() => setSelectedStudentForCalendar(st)}
+                                                title="Click to view full calendar, daily rooms & leave report"
+                                            >
+                                                <td style={{ fontFamily: 'monospace', color: 'var(--blue)', fontWeight: 700 }}>
+                                                    {st.roll_number}
+                                                </td>
+                                                <td style={{ fontWeight: 800, color: 'var(--dark-blue)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <span>{st.name}</span>
+                                                    <span style={{ fontSize: '0.68rem', color: 'var(--blue)', textDecoration: 'underline' }}>View Report</span>
+                                                </td>
+                                                <td><strong>{st.current_room ? `Room ${st.current_room}` : 'Not checked-in'}</strong></td>
+                                                <td>{st.current_building || 'Campus'}</td>
+                                                <td>
+                                                    <span className="aero-status-tag present">{st.periods_attended} / 7</span>
+                                                </td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <button 
+                                                        type="button" 
+                                                        className="fx-btn-outline" 
+                                                        style={{ padding: '5px 12px', fontSize: '0.74rem' }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedStudentForCalendar(st);
+                                                        }}
+                                                    >
+                                                        <FileText size={13} style={{ marginRight: '4px', verticalAlign: '-1px' }} />
+                                                        View Report & Calendar
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="6" style={{ textAlign: 'center', padding: '28px', color: 'var(--text-dim)' }}>
+                                                No students found matching your filters.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                )}
-            </div>
+                );
+            })()}
 
             {/* Hierarchical Building -> Floor -> Room Selection Modal */}
             <RoomSelectionModal 

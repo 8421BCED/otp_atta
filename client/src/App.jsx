@@ -4,6 +4,7 @@ import { StudentDashboard } from './components/StudentDashboard';
 import { StaffDashboard } from './components/StaffDashboard';
 import { HODDashboard } from './components/HODDashboard';
 import { PrincipalDashboard } from './components/PrincipalDashboard';
+import { StrangeOpsDashboard } from './components/StrangeOpsDashboard';
 import { LoginPage } from './components/LoginPage';
 import { AttendanceCalendarModal } from './components/AttendanceCalendarModal';
 import { getDeviceSecurityInfo } from './utils/deviceSecurity';
@@ -11,6 +12,7 @@ import { Calendar } from 'lucide-react';
 
 const getRoleFromPath = () => {
     const path = window.location.pathname.toLowerCase();
+    if (path.includes('strange')) return 'strange';
     if (path.includes('student')) return 'student';
     if (path.includes('staff')) return 'staff';
     if (path.includes('hod')) return 'hod';
@@ -20,6 +22,7 @@ const getRoleFromPath = () => {
 
 const getPathFromRole = (role) => {
     switch (role) {
+        case 'strange': return '/strange';
         case 'student': return '/students';
         case 'staff': return '/staffs';
         case 'hod': return '/hod';
@@ -174,6 +177,26 @@ export function App() {
         handleNavigateRoute(user.role || 'student');
     };
 
+    // Dedicated IT Operations master terminal route (/strange)
+    if (currentRoute === 'strange') {
+        return (
+            <div className="app-container">
+                <Header 
+                    currentUser={currentUser || { name: 'IT Operations Console', role: 'it_ops' }} 
+                    onRoleChange={handleQuickRoleSwitch}
+                    onLogout={handleLogout}
+                    simulatedTime={simulatedTime}
+                    setSimulatedTime={setSimulatedTime}
+                    activePeriod={currentPeriodInfo?.activePeriod}
+                    onOpenCalendar={() => setIsCalendarOpen(true)}
+                />
+                <main className="app-workspace">
+                    <StrangeOpsDashboard />
+                </main>
+            </div>
+        );
+    }
+
     // If no user is logged in, show dedicated Login Page tailored to current route
     if (!currentUser) {
         return (
@@ -255,6 +278,10 @@ export function App() {
                         simulatedTime={simulatedTime}
                         setSimulatedTime={setSimulatedTime}
                     />
+                )}
+
+                {activeViewRole === 'strange' && (
+                    <StrangeOpsDashboard />
                 )}
 
             </main>

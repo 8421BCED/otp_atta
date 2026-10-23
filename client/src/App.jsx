@@ -5,6 +5,7 @@ import { StaffDashboard } from './components/StaffDashboard';
 import { HODDashboard } from './components/HODDashboard';
 import { PrincipalDashboard } from './components/PrincipalDashboard';
 import { StrangeOpsDashboard } from './components/StrangeOpsDashboard';
+import { PTSportsDashboard } from './components/PTSportsDashboard';
 import { LoginPage } from './components/LoginPage';
 import { AttendanceCalendarModal } from './components/AttendanceCalendarModal';
 import { getDeviceSecurityInfo } from './utils/deviceSecurity';
@@ -13,6 +14,7 @@ import { Calendar } from 'lucide-react';
 const getRoleFromPath = () => {
     const path = window.location.pathname.toLowerCase();
     if (path.includes('strange')) return 'strange';
+    if (path.includes('pt') || path.includes('sports')) return 'pt';
     if (path.includes('student')) return 'student';
     if (path.includes('staff')) return 'staff';
     if (path.includes('hod')) return 'hod';
@@ -23,6 +25,7 @@ const getRoleFromPath = () => {
 const getPathFromRole = (role) => {
     switch (role) {
         case 'strange': return '/strange';
+        case 'pt': return '/pt';
         case 'student': return '/students';
         case 'staff': return '/staffs';
         case 'hod': return '/hod';
@@ -284,6 +287,12 @@ export function App() {
                         hierarchy={hierarchy}
                         simulatedTime={simulatedTime}
                         setSimulatedTime={setSimulatedTime}
+                    />
+                )}
+
+                {activeViewRole === 'pt' && (
+                    <PTSportsDashboard 
+                        currentUser={currentUser}
                     />
                 )}
 

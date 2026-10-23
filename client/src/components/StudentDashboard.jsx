@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, KeyRound, CheckCircle2, AlertCircle, Navigation, DoorOpen, Lock } from 'lucide-react';
+import { MapPin, KeyRound, CheckCircle2, AlertCircle, Navigation, DoorOpen, Lock, Trophy } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { PeriodCountdownWheel } from './PeriodCountdownWheel';
 import { RoomSelectionModal } from './RoomSelectionModal';
@@ -19,6 +19,9 @@ export const StudentDashboard = ({
     // Modals
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
 
+    // Sports OD Pass State
+    const [activeSportsPass, setActiveSportsPass] = useState(null);
+
     // OTP Input State
     const [otpInput, setOtpInput] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,6 +31,27 @@ export const StudentDashboard = ({
     // Timeline data
     const [timeline, setTimeline] = useState([]);
     const [totalPresent, setTotalPresent] = useState(0);
+
+    // Check if student has an active Sports OD Pass
+    const checkSportsPass = async () => {
+        try {
+            const res = await fetch(`http://localhost:5000/api/sports/student-active-pass/${currentUser.id}`);
+            const data = await res.json();
+            if (data.hasActivePass) {
+                setActiveSportsPass(data.pass);
+            } else {
+                setActiveSportsPass(null);
+            }
+        } catch (e) {
+            console.error('Failed to check sports pass:', e);
+        }
+    };
+
+    useEffect(() => {
+        checkSportsPass();
+        const interval = setInterval(checkSportsPass, 6000);
+        return () => clearInterval(interval);
+    }, [currentUser.id]);
 
     const loadTimeline = async () => {
         try {
@@ -63,7 +87,7 @@ export const StudentDashboard = ({
     const isPeriod1Marked = !!period1Item?.isMarked;
     const isPastCutoff = !!currentPeriodInfo?.isPastMorningCutoff;
     const isCurrentPeriod1 = currentPeriodInfo?.activePeriod?.period_number === 1;
-    const isDayStartLocked = isCurrentPeriod1 && isPastCutoff && !isPeriod1Marked;
+    const isDayStartLocked = !activeSportsPass && isCurrentPeriod1 && isPastCutoff && !isPeriod1Marked;
 
     // Check if current active period is already marked present
     const activePeriodNumber = currentPeriodInfo?.activePeriod?.period_number;
@@ -251,7 +275,44 @@ export const StudentDashboard = ({
                     </div>
 
                     {/* Attendance Form / Prompt / Confirmation */}
-                    {isRelocating ? (
+                    {activeSportsPass ? (
+                        <div style={{ 
+                            width: '100%', 
+                            maxWidth: '400px', 
+                            margin: '0 auto', 
+                            background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', 
+                            border: '1.5px solid #F59E0B', 
+                            borderRadius: '14px', 
+                            padding: '18px 20px', 
+                            textAlign: 'center', 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            boxShadow: '0 4px 14px rgba(245, 158, 11, 0.12)' 
+                        }}>
+                            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#F59E0B', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Trophy size={24} />
+                            </div>
+                            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#B45309', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                Official Sports On-Duty (OD) Pass
+                            </div>
+                            <strong style={{ fontSize: '1.05rem', color: '#78350F' }}>
+                                {activeSportsPass.event_name}
+                            </strong>
+                            <div style={{ fontSize: '0.78rem', color: '#92400E' }}>
+                                {activeSportsPass.sport_category} • {activeSportsPass.venue}
+                            </div>
+                            <div style={{ background: '#FFFFFF', padding: '10px 14px', borderRadius: '8px', border: '1px solid #FDE68A', fontSize: '0.74rem', color: '#78350F', marginTop: '4px', width: '100%', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                <div><strong style={{ color: '#16A34A' }}>✓ 100% Present Credited:</strong> On-Duty attendance officially logged.</div>
+                                <div><strong style={{ color: '#16A34A' }}>✓ OTP Entry Exempt:</strong> No 10-second rolling code required.</div>
+                                <div><strong style={{ color: '#16A34A' }}>✓ Lockout Exemption:</strong> Morning 9:00 - 9:05 AM lockout lifted.</div>
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: '#B45309', marginTop: '2px' }}>
+                                Authorized by: {activeSportsPass.issued_by || 'Director of Physical Education'}
+                            </div>
+                        </div>
+                    ) : isRelocating ? (
                         <div className="student-relocation-box" style={{ width: '100%', maxWidth: '390px', margin: '0 auto', background: '#F8FAFC', border: '1.5px solid rgba(19, 108, 252, 0.35)', borderRadius: '14px', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

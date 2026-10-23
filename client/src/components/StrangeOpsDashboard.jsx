@@ -473,6 +473,14 @@ export const StrangeOpsDashboard = ({ onLogout }) => {
                 </div>
 
                 <div className="fx-card" style={{ padding: '16px 20px' }}>
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-sub)', textTransform: 'uppercase' }}>Sports & PT Staff</div>
+                    <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#F59E0B' }}>
+                        {stats?.ptCount || 1}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Physical Education Directors</div>
+                </div>
+
+                <div className="fx-card" style={{ padding: '16px 20px' }}>
                     <div style={{ fontSize: '0.76rem', color: 'var(--text-sub)', textTransform: 'uppercase' }}>Left College / Inactive</div>
                     <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#DC2626' }}>
                         {stats?.inactiveCount || 0}
@@ -492,7 +500,7 @@ export const StrangeOpsDashboard = ({ onLogout }) => {
                             type="text"
                             className="fx-select"
                             style={{ width: '100%', paddingLeft: '36px' }}
-                            placeholder="Search by name, email, or designation (e.g. Aruna Devi)..."
+                            placeholder="Search by name, email, or designation (e.g. Aruna Devi, PT)..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -510,6 +518,7 @@ export const StrangeOpsDashboard = ({ onLogout }) => {
                             <option value="staff">Staff Only</option>
                             <option value="hod">HODs Only</option>
                             <option value="principal">Principal Only</option>
+                            <option value="pt">PT / Sports Staff</option>
                             <option value="student">Students</option>
                         </select>
                     </div>
@@ -533,6 +542,7 @@ export const StrangeOpsDashboard = ({ onLogout }) => {
                             <option value="CSBS">CSBS (Business Systems)</option>
                             <option value="MBA">MBA</option>
                             <option value="MCA">MCA</option>
+                            <option value="Sports & Physical Education">Sports & Physical Education</option>
                             <option value="ADMIN">ADMIN / Executive</option>
                         </select>
                     </div>
@@ -577,6 +587,7 @@ export const StrangeOpsDashboard = ({ onLogout }) => {
                                 users.map((u) => {
                                     const isPrincipal = u.role === 'principal';
                                     const isHOD = u.role === 'hod';
+                                    const isPT = u.role === 'pt';
                                     const isActive = !!u.is_active;
 
                                     return (
@@ -589,21 +600,21 @@ export const StrangeOpsDashboard = ({ onLogout }) => {
                                                     {u.name}
                                                 </div>
                                                 <div style={{ fontSize: '0.72rem', color: 'var(--text-sub)' }}>
-                                                    {u.designation || (isHOD ? 'Head of Department' : isPrincipal ? 'Principal' : 'Faculty Member')}
+                                                    {u.designation || (isHOD ? 'Head of Department' : isPrincipal ? 'Principal' : isPT ? 'Director of Physical Education' : 'Faculty Member')}
                                                 </div>
                                             </td>
                                             <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--blue)' }}>
                                                 {u.email}
                                             </td>
                                             <td>
-                                                <span className={`aero-pill ${isPrincipal ? 'cyan' : isHOD ? 'green' : ''}`} style={{
+                                                <span className={`aero-pill ${isPrincipal ? 'cyan' : isHOD ? 'green' : isPT ? 'yellow' : ''}`} style={{
                                                     fontSize: '0.70rem',
                                                     textTransform: 'uppercase',
                                                     fontWeight: 700,
-                                                    background: isPrincipal ? '#F3E8FF' : isHOD ? 'var(--light-blue)' : '#F1F5F9',
-                                                    color: isPrincipal ? '#9333EA' : isHOD ? 'var(--blue)' : 'var(--dark-blue)'
+                                                    background: isPrincipal ? '#F3E8FF' : isHOD ? 'var(--light-blue)' : isPT ? '#FEF3C7' : '#F1F5F9',
+                                                    color: isPrincipal ? '#9333EA' : isHOD ? 'var(--blue)' : isPT ? '#D97706' : 'var(--dark-blue)'
                                                 }}>
-                                                    {u.role}
+                                                    {isPT ? 'PT / SPORTS' : u.role}
                                                 </span>
                                             </td>
                                             <td>
@@ -745,11 +756,17 @@ export const StrangeOpsDashboard = ({ onLogout }) => {
                                         className="fx-select"
                                         style={{ width: '100%', marginTop: '4px' }}
                                         value={formData.role}
-                                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                                        onChange={(e) => {
+                                            const role = e.target.value;
+                                            const dept = role === 'pt' ? 'Sports & Physical Education' : formData.department;
+                                            const desig = role === 'pt' ? 'DIRECTOR OF PHYSICAL EDUCATION' : formData.designation;
+                                            setFormData({ ...formData, role, department: dept, designation: desig });
+                                        }}
                                     >
                                         <option value="staff">Staff / Faculty</option>
                                         <option value="hod">HOD (Head of Department)</option>
                                         <option value="principal">Principal</option>
+                                        <option value="pt">PT (Physical Training / Sports Director)</option>
                                     </select>
                                 </div>
 
@@ -771,6 +788,7 @@ export const StrangeOpsDashboard = ({ onLogout }) => {
                                         <option value="CSBS">CSBS</option>
                                         <option value="MBA">MBA</option>
                                         <option value="MCA">MCA</option>
+                                        <option value="Sports & Physical Education">Sports & Physical Education</option>
                                         <option value="ADMIN">ADMIN</option>
                                     </select>
                                 </div>

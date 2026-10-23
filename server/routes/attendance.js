@@ -434,7 +434,7 @@ router.get('/student-timeline/:studentId', authenticate, async (req, res) => {
             date: today,
             timeline,
             movements,
-            totalPresent: attendance.filter(a => a.status === 'present').length
+            totalPresent: attendance.filter(a => a.status === 'present' || a.status === 'od').length
         });
     } catch (err) {
         console.error('Error fetching student timeline:', err);
@@ -500,10 +500,10 @@ router.get('/student-details/:studentId', authenticate, async (req, res) => {
             [studentId, yesterday]
         );
 
-        // Stats summary
+        // Stats summary: present and od both count towards attendance credit
         const [stats] = await pool.query(
             `SELECT COUNT(*) as total_periods, 
-                    SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_periods
+                    SUM(CASE WHEN status IN ('present', 'od') THEN 1 ELSE 0 END) as present_periods
              FROM attendance_records
              WHERE student_id = ?`,
             [studentId]
@@ -518,7 +518,7 @@ router.get('/student-details/:studentId', authenticate, async (req, res) => {
              FROM attendance_records ar
              LEFT JOIN rooms r ON ar.room_id = r.id
              LEFT JOIN buildings b ON r.building_id = b.id
-             WHERE ar.student_id = ? AND ar.status = 'present'
+             WHERE ar.student_id = ? AND ar.status IN ('present', 'od')
              GROUP BY ar.date
              ORDER BY ar.date DESC LIMIT 14`,
             [studentId]

@@ -31,6 +31,7 @@ router.get('/stats', verifyItOps, async (req, res) => {
                 SUM(CASE WHEN role = 'staff' AND is_active = 1 THEN 1 ELSE 0 END) as staffCount,
                 SUM(CASE WHEN role = 'hod' AND is_active = 1 THEN 1 ELSE 0 END) as hodCount,
                 SUM(CASE WHEN role = 'principal' AND is_active = 1 THEN 1 ELSE 0 END) as principalCount,
+                SUM(CASE WHEN role = 'pt' AND is_active = 1 THEN 1 ELSE 0 END) as ptCount,
                 SUM(CASE WHEN role = 'student' AND is_active = 1 THEN 1 ELSE 0 END) as studentCount,
                 SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) as inactiveCount,
                 COUNT(*) as totalUsers
@@ -40,7 +41,7 @@ router.get('/stats', verifyItOps, async (req, res) => {
         const [depts] = await pool.query(`
             SELECT department, COUNT(*) as count 
             FROM users 
-            WHERE role IN ('staff', 'hod') AND is_active = 1
+            WHERE role IN ('staff', 'hod', 'pt') AND is_active = 1
             GROUP BY department
             ORDER BY count DESC
         `);

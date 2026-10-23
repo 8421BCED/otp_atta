@@ -151,6 +151,9 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
         ],
         principal: [
             { name: 'Dr. V. Velmurugan (Principal)', email: 'principal@francisxavier.ac.in', dept: 'Executive' }
+        ],
+        pt: [
+            { name: 'Dr. K. Rathna Kumar (PT Director)', email: 'pe.director@francisxavier.ac.in', dept: 'Sports & Physical Education' }
         ]
     };
 
@@ -158,7 +161,8 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
         student: { label: 'Student Portal', path: '/students', hint: 'daniela.ug.24.it@francisxavier.ac.in' },
         staff: { label: 'Staff Portal', path: '/staffs', hint: 'staff.it@francisxavier.ac.in' },
         hod: { label: 'HOD Portal', path: '/hod', hint: 'ithod@francisxavier.ac.in' },
-        principal: { label: 'Principal Portal', path: '/principal', hint: 'principal@francisxavier.ac.in' }
+        principal: { label: 'Principal Portal', path: '/principal', hint: 'principal@francisxavier.ac.in' },
+        pt: { label: 'PT / Sports Portal', path: '/pt', hint: 'pe.director@francisxavier.ac.in' }
     };
 
     const activeMeta = routeTitles[currentRoute] || routeTitles.student;

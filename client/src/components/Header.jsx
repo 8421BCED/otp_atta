@@ -152,7 +152,7 @@ export const Header = ({
                                     <div className="dropdown-user-email">{currentUser?.email}</div>
                                     <div className="dropdown-badges-row">
                                         <span className="dropdown-role-badge">
-                                            {currentUser?.role?.toUpperCase()}
+                                            {currentUser?.role === 'pt' ? 'PT DIRECTOR' : currentUser?.role?.toUpperCase()}
                                         </span>
                                         <span className="dropdown-dept-badge">
                                             {currentUser?.department || 'IT'}

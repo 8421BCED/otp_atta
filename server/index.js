@@ -9,6 +9,7 @@ const hodRoutes = require('./routes/hod');
 const principalRoutes = require('./routes/principal');
 const holidayRoutes = require('./routes/holidays');
 const itOpsRoutes = require('./routes/itOps');
+const sportsRoutes = require('./routes/sports');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -25,6 +26,7 @@ app.use('/api/hod', hodRoutes);
 app.use('/api/principal', principalRoutes);
 app.use('/api/holidays', holidayRoutes);
 app.use('/api/it-ops', itOpsRoutes);
+app.use('/api/sports', sportsRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

@@ -195,7 +195,7 @@ export const StudentDashboard = ({
 
                 setTimeout(() => setStatusMessage(null), 4000);
             } else {
-                setErrorMessage(data.error || 'Invalid OTP code. Please check staff screen.');
+                setErrorMessage(data.message || data.error || 'Invalid OTP code. Please check staff screen.');
             }
         } catch (err) {
             console.error('OTP Submit error:', err);

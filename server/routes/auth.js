@@ -146,6 +146,12 @@ router.post('/demo-login', async (req, res) => {
                      VALUES (?, ?, ?, ?, 1)`,
                     [user.id, deviceInfo.deviceId, deviceInfo.fingerprint || 'demo_hash', deviceInfo.deviceName || 'Personal Phone']
                 );
+            } else {
+                // In demo-login mode, automatically sync device_id so testing in incognito or new tabs works seamlessly
+                await pool.query(
+                    `UPDATE device_locks SET device_id = ?, device_name = ?, last_verified_at = NOW() WHERE user_id = ?`,
+                    [deviceInfo.deviceId, deviceInfo.deviceName || 'Personal Phone', user.id]
+                );
             }
         }
 

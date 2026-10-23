@@ -11,10 +11,25 @@ export const StudentDashboard = ({
     deviceInfo, 
     simulatedTime 
 }) => {
-    // Dynamic classroom selection: initially null (no hardcoded defaults)
-    const [selectedBuilding, setSelectedBuilding] = useState(null);
-    const [selectedFloor, setSelectedFloor] = useState(null);
-    const [selectedRoom, setSelectedRoom] = useState(null);
+    // Dynamic classroom selection: persist across page refreshes
+    const [selectedBuilding, setSelectedBuilding] = useState(() => {
+        try {
+            const saved = localStorage.getItem(`fxec_student_room_${currentUser?.id}`);
+            return saved ? JSON.parse(saved).buildingId : null;
+        } catch (e) { return null; }
+    });
+    const [selectedFloor, setSelectedFloor] = useState(() => {
+        try {
+            const saved = localStorage.getItem(`fxec_student_room_${currentUser?.id}`);
+            return saved ? JSON.parse(saved).floorId : null;
+        } catch (e) { return null; }
+    });
+    const [selectedRoom, setSelectedRoom] = useState(() => {
+        try {
+            const saved = localStorage.getItem(`fxec_student_room_${currentUser?.id}`);
+            return saved ? JSON.parse(saved).roomId : null;
+        } catch (e) { return null; }
+    });
 
     // Modals
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
@@ -89,9 +104,21 @@ export const StudentDashboard = ({
     const isCurrentPeriod1 = currentPeriodInfo?.activePeriod?.period_number === 1;
     const isDayStartLocked = !activeSportsPass && isCurrentPeriod1 && isPastCutoff && !isPeriod1Marked;
 
+    // Determine current target period:
+    // 1. If currently in normal period (from server), use it
+    // 2. Otherwise (outside college hours / testing), use the first non-break period (Period 1)
+    const effectiveActivePeriod = currentPeriodInfo?.activePeriod 
+        || (timeline?.find(p => !p.is_break && p.isMarked))
+        || (timeline?.find(p => !p.is_break))
+        || (currentPeriodInfo?.allPeriods?.find(p => !p.is_break))
+        || null;
+
+    const activePeriodId = effectiveActivePeriod?.id || 1;
+    const activePeriodNumber = effectiveActivePeriod?.period_number || 1;
+
     // Check if current active period is already marked present
-    const activePeriodNumber = currentPeriodInfo?.activePeriod?.period_number;
-    const currentPeriodItem = activePeriodNumber ? timeline?.find(p => p.id === activePeriodNumber) : null;
+    // Match by exact primary key id (p.id === activePeriodId)
+    const currentPeriodItem = timeline?.find(p => p.id === activePeriodId);
     const isCurrentPeriodMarked = !!currentPeriodItem?.isMarked;
     const markedRoomId = currentPeriodItem?.attendance?.room_id;
     const markedRoomNumber = currentPeriodItem?.attendance?.room_number;
@@ -101,7 +128,7 @@ export const StudentDashboard = ({
 
     // If student was already marked in a room and has not manually selected another room, sync to current verified room
     useEffect(() => {
-        if (markedRoomId && !selectedRoom && hierarchy?.length > 0) {
+        if (markedRoomId && hierarchy?.length > 0) {
             for (const b of hierarchy) {
                 for (const f of b.floors || []) {
                     for (const r of f.rooms || []) {
@@ -109,18 +136,33 @@ export const StudentDashboard = ({
                             setSelectedBuilding(b.id);
                             setSelectedFloor(f.id);
                             setSelectedRoom(r.id);
+                            try {
+                                localStorage.setItem(`fxec_student_room_${currentUser?.id}`, JSON.stringify({
+                                    buildingId: b.id,
+                                    floorId: f.id,
+                                    roomId: r.id
+                                }));
+                            } catch (e) {}
                             return;
                         }
                     }
                 }
             }
         }
-    }, [markedRoomId, hierarchy, selectedRoom]);
+    }, [markedRoomId, hierarchy, currentUser?.id]);
 
     const handleRoomModalSelect = (bId, fId, rId) => {
         setSelectedBuilding(bId);
         setSelectedFloor(fId);
         setSelectedRoom(rId);
+
+        try {
+            localStorage.setItem(`fxec_student_room_${currentUser?.id}`, JSON.stringify({
+                buildingId: bId,
+                floorId: fId,
+                roomId: rId
+            }));
+        } catch (e) {}
 
         // Find room name for clean feedback
         const b = hierarchy?.find(x => x.id === Number(bId));
@@ -179,6 +221,36 @@ export const StudentDashboard = ({
             if (res.ok && data.success) {
                 setStatusMessage(data.message || 'Attendance verified successfully!');
                 setOtpInput('');
+
+                // Optimistically update timeline so verified banner displays immediately
+                const targetPId = data.periodId || activePeriodId;
+                setTimeline(prev => prev.map(p => {
+                    if (p.id === targetPId) {
+                        return {
+                            ...p,
+                            isMarked: true,
+                            status: 'present',
+                            attendance: {
+                                period_id: targetPId,
+                                room_id: selectedRoom,
+                                room_number: activeRoomObj?.room_number || String(selectedRoom),
+                                status: 'present'
+                            }
+                        };
+                    }
+                    return p;
+                }));
+                setTotalPresent(prev => prev + 1);
+
+                // Save selected room to localStorage so refresh keeps room intact
+                try {
+                    localStorage.setItem(`fxec_student_room_${currentUser?.id}`, JSON.stringify({
+                        buildingId: selectedBuilding,
+                        floorId: selectedFloor,
+                        roomId: selectedRoom
+                    }));
+                } catch (e) {}
+
                 loadTimeline();
 
                 // Trigger celebratory confetti

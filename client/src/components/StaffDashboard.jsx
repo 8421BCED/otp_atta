@@ -10,7 +10,11 @@ export const StaffDashboard = ({
     hierarchy, 
     currentPeriodInfo 
 }) => {
-    const [selectedRoomId, setSelectedRoomId] = useState(null); // Location unset initially
+    const [selectedRoomId, setSelectedRoomId] = useState(() => {
+        try {
+            return localStorage.getItem(`fxec_staff_room_${currentUser?.id}`) || null;
+        } catch (e) { return null; }
+    });
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
     const [inspectedStudentId, setInspectedStudentId] = useState(null);
 
@@ -85,15 +89,21 @@ export const StaffDashboard = ({
 
     useEffect(() => {
         if (selectedRoomId) {
+            try {
+                localStorage.setItem(`fxec_staff_room_${currentUser?.id}`, selectedRoomId);
+            } catch (e) {}
             generateNewOtp();
             fetchLiveRoster();
         } else {
+            try {
+                localStorage.removeItem(`fxec_staff_room_${currentUser?.id}`);
+            } catch (e) {}
             setCurrentOtp('------');
             setRoomInfo(null);
             setPresentCount(0);
             setRoomStudents([]);
         }
-    }, [selectedRoomId]);
+    }, [selectedRoomId, currentUser?.id]);
 
     // Live Room Roster Polling: Only active when room is selected
     const fetchLiveRoster = async () => {

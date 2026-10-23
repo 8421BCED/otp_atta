@@ -1,0 +1,162 @@
+Block,Floor,Room_Number,Room_Name,Type,Notes
+APJ Block,Ground Floor,AK 001,Dispensary,Medical,Health centre
+APJ Block,Ground Floor,AK 002,APJ Auditorium,Auditorium,Major campus auditorium
+APJ Block,Ground Floor,AK 003,Classroom,Classroom,Lecture hall
+APJ Block,Ground Floor,AK 005,Classroom,Classroom,Lecture hall
+APJ Block,Ground Floor,AK 006,Environmental Lab,Lab,DST FIST supported laboratory
+APJ Block,Ground Floor,AK 007,Applied Lab,Lab,Applied research lab
+APJ Block,Ground Floor,AK 008,Cyber Forensics Lab,Lab,Cyber security and forensics
+APJ Block,Ground Floor,AK 009,Prayer Hall,Facility,Quiet prayer space
+APJ Block,Ground Floor,AK 010,Classroom,Classroom,Lecture hall
+APJ Block,Ground Floor,CRD,Centre for Research & Development,Research,R&D Centre
+APJ Block,First Floor,AK 101,Classroom,Classroom,Lecture hall
+APJ Block,First Floor,AK 102,Data Science Applied Lab,Lab,Applied data science lab
+APJ Block,First Floor,AK 103,Project Lab,Lab,Student innovation and project lab
+APJ Block,First Floor,AK 104,Architecture and Design Applied Lab,Lab,Applied design lab
+APJ Block,First Floor,AK 105,Classroom,Classroom,Lecture hall
+APJ Block,First Floor,AK 106,Classroom,Classroom,Lecture hall
+APJ Block,First Floor,AK 107,Classroom,Classroom,Lecture hall
+APJ Block,First Floor,AK 109,Classroom,Classroom,Lecture hall
+APJ Block,First Floor,AK 110,Classroom,Classroom,Lecture hall
+APJ Block,First Floor,AK 111,HOD AI-ML Office / Classroom,Office,AI & ML HOD Chamber
+APJ Block,First Floor,AK 112,Entrepreneurship Development Cell,Office,ED Cell / Incubation
+APJ Block,First Floor,AK 113,Staff Room,Staff Room,Faculty room
+APJ Block,First Floor,AK 114,Staff Room,Staff Room,Faculty room
+APJ Block,Second Floor,AK 201,Classroom,Classroom,Lecture hall
+APJ Block,Second Floor,AK 202,Classroom,Classroom,Lecture hall
+APJ Block,Second Floor,AK 203,Classroom,Classroom,Lecture hall
+APJ Block,Second Floor,AK 204,Classroom,Classroom,Lecture hall
+APJ Block,Second Floor,AK 205,Classroom,Classroom,Lecture hall
+APJ Block,Second Floor,AK 206,Classroom,Classroom,Lecture hall
+APJ Block,Second Floor,IT-SR1,IT Staff Room - I,Staff Room,IT Department Faculty Room 1
+APJ Block,Second Floor,AK 207,IT 2nd Year Lecture Hall (Room 207),Classroom,Key lecture hall
+APJ Block,Second Floor,AK 208,Classroom,Classroom,Lecture hall
+APJ Block,Second Floor,AK 209,IT Staff Room - II,Staff Room,IT Department Faculty Room 2
+APJ Block,Second Floor,AK 210,IT HOD Room,Office,Head of Department - IT
+APJ Block,Second Floor,AK 211,IT Staff Room - III,Staff Room,IT Department Faculty Room 3
+APJ Block,Third Floor,AK 301,IT Staff Room - IV,Staff Room,IT Department Faculty Room 4
+APJ Block,Third Floor,AK 302,Classroom,Classroom,Lecture hall
+APJ Block,Third Floor,AK 303,Classroom,Classroom,Lecture hall
+APJ Block,Third Floor,AK 304,Classroom,Classroom,Lecture hall
+APJ Block,Third Floor,AK 305,IT Department Library,Library,Department library
+APJ Block,Third Floor,AK 306,Physics Lab,Lab,Science laboratory
+APJ Block,Third Floor,AK 307,Classroom,Classroom,Lecture hall (marked)
+APJ Block,Third Floor,AK 308,Chemistry Lab,Lab,Science laboratory
+APJ Block,Third Floor,AK 309,Classroom,Classroom,Lecture hall
+APJ Block,Third Floor,AK 310,Classroom,Classroom,Lecture hall
+APJ Block,Third Floor,AK 311,Classroom,Classroom,Lecture hall
+APJ Block,Third Floor,AK 312,Classroom,Classroom,Lecture hall
+APJ Block,Third Floor,AK 313,Classroom,Classroom,Lecture hall
+APJ Block,Third Floor,NSS,NSS Cell (Service Organizations),Office,National Service Scheme
+FX Block,Ground Floor,FX-PH,Presentation Hall,Auditorium,Interactive presentation hall
+FX Block,Ground Floor,FX 002,Electrical Store Room,Store,Equipment storage
+FX Block,Ground Floor,FX-DSL,Data Science Lab,Lab,Advanced computing lab
+FX Block,Ground Floor,FX-SH,Seminar Hall,Auditorium,Conference and seminar hall
+FX Block,Ground Floor,FX-ARVR,Augmented Reality and Virtual Reality Lab,Lab,AR/VR immersive technology
+FX Block,Ground Floor,FX-AA,Alumni Association,Office,Alumni relations
+FX Block,Ground Floor,FX-NGC,Next Generation Computing Lab,Lab,High performance computing
+FX Block,Ground Floor,FX 008,Office,Office,Administrative office
+FX Block,Ground Floor,FX 009,Classroom,Classroom,Lecture hall
+FX Block,Ground Floor,FX 010,Classroom,Classroom,Lecture hall
+FX Block,Ground Floor,FX-CC,Chairman's Chamber,Office,Executive chamber
+FX Block,Ground Floor,FX 012,Accounts Section,Office,Finance and fees section
+FX Block,Ground Floor,FX 013,Group Discussion Hall,Hall,GD and placement preparation
+FX Block,Ground Floor,FX 014,Centre for Training and Placement,Office,Placement & career cell
+FX Block,First Floor,FX-SR,Surveillance Room,Security,CCTV and campus monitoring
+FX Block,First Floor,FX 102,DSP Lab,Lab,Digital signal processing lab
+FX Block,First Floor,FX 103,VLSI Lab,Lab,Very large scale integration lab
+FX Block,First Floor,FX 104,Network Lab,Lab,Computer networks lab
+FX Block,First Floor,FX 105,OS Lab [IT L02],Lab,Operating systems lab 2
+FX Block,First Floor,FX 106,Research Lab [IT L01],Lab,IT research lab 1
+FX Block,First Floor,FX 107,UPS Room,Utility,Power backup control
+FX Block,First Floor,FX 108,Classroom,Classroom,Lecture hall
+FX Block,First Floor,FX 109,Classroom,Classroom,Lecture hall
+FX Block,First Floor,FX 101,Classroom,Classroom,Smart lecture hall
+FX Block,First Floor,FX 110,Classroom,Classroom,Lecture hall
+FX Block,First Floor,FX 111,Classroom,Classroom,Lecture hall
+FX Block,First Floor,FX 112,Classroom,Classroom,Lecture hall
+FX Block,First Floor,FX 113,Classroom,Classroom,Lecture hall
+FX Block,Second Floor,FX 201,Innovation Lab,Lab,Applied innovation space
+FX Block,Second Floor,FX 202,Classroom,Classroom,Lecture hall
+FX Block,Second Floor,FX 203,Classroom,Classroom,Lecture hall
+FX Block,Second Floor,FX 204,Classroom,Classroom,Lecture hall (marked)
+FX Block,Second Floor,FX 205,ECE Department Library,Library,Department library
+FX Block,Second Floor,FX 206,Classroom,Classroom,Lecture hall
+FX Block,Second Floor,FX 207,Centre for International Relations,Office,Global collaborations
+FX Block,Second Floor,FX 208,ECE Staff Room,Staff Room,Faculty chamber
+FX Block,Second Floor,FX 209,Classroom,Classroom,Lecture hall
+FX Block,Second Floor,FX 210,Classroom,Classroom,Lecture hall
+FX Block,Second Floor,FX 211,Classroom,Classroom,Lecture hall
+FX Block,Second Floor,FX 212,Staff Room,Staff Room,Faculty room
+FX Block,Second Floor,FX 213,Classroom,Classroom,Lecture hall
+FX Block,Second Floor,FX 215,Classroom,Classroom,Lecture hall
+FX Block,Third Floor,FX 302,Classroom,Classroom,Lecture hall
+FX Block,Third Floor,FX 303,Classroom,Classroom,Lecture hall
+FX Block,Third Floor,FX 304,Classroom,Classroom,Lecture hall
+FX Block,Third Floor,FX 305,Classroom,Classroom,Lecture hall (marked)
+FX Block,Third Floor,FX 306,Electronic Devices Lab,Lab,Electronics and hardware lab
+FX Block,Third Floor,FX 307,Classroom,Classroom,Lecture hall
+FX Block,Third Floor,FX 308,Microwave Lab,Lab,RF and microwave engineering lab
+FX Block,Third Floor,FX-CSEL,CSE Department Library,Library,Department library
+FX Block,Third Floor,FX 310,Classroom,Classroom,Lecture hall
+FX Block,Third Floor,FX 311,Classroom,Classroom,Lecture hall
+FX Block,Third Floor,FX 312,Classroom,Classroom,Lecture hall
+FX Block,Third Floor,FX 313,Classroom,Classroom,Lecture hall
+FX Block,Third Floor,FX 314,Classroom,Classroom,Lecture hall
+FX Block,Third Floor,FX 315,Communication Lab,Lab,Telecommunication and signals
+Mech Block,Ground Floor,ME-CX,CircuitX,Lab,Electronics and circuits testing
+Mech Block,Ground Floor,ME-FCW,Flow Craft and WoodX,Workshop,Carpentry and fluid workshop
+Mech Block,Ground Floor,ME 003,CAM Lab,Lab,Computer aided manufacturing
+Mech Block,Ground Floor,ME-QX,Quantax,Lab,Testing and measurement lab
+Mech Block,Ground Floor,ME 006,Manufacturing Tech-I (Lathe Shop),Workshop,Lathe machines workshop
+Mech Block,Ground Floor,ME 007,Manufacturing Tech-II (Special Machine Lab),Workshop,Special machines lab
+Mech Block,Ground Floor,ME 008,Strength of Materials Lab (R&D Lab),Lab,Material testing and R&D
+Mech Block,Ground Floor,ME 009,Engineering Practice Lab,Lab,Practical workshop
+Mech Block,Ground Floor,ME 010,Thermal Laboratory,Lab,Thermodynamics and heat transfer
+Mech Block,Ground Floor,ME 011,Innovation & Product Development Applied Lab,Lab,Product development lab
+Mech Block,Ground Floor,ME 012,Electrical AC Machines Laboratory,Lab,AC machinery and motors
+Mech Block,Ground Floor,ME 013,Electrical DC Machines Laboratory,Lab,DC machinery and drives
+Mech Block,Ground Floor,ME 014A,AICTE IDEA Lab (Centre for Product Design & Prototyping),Lab,Central prototyping hub
+Mech Block,Ground Floor,ME 015,Dept. of Physical Education,Office,Sports and fitness department
+Mech Block,First Floor,ME 101,Classroom,Classroom,Lecture hall
+Mech Block,First Floor,ME 102,Classroom,Classroom,Lecture hall
+Mech Block,First Floor,ME 103,Classroom,Classroom,Lecture hall
+Mech Block,First Floor,ME 104,Classroom (IV ECE B),Classroom,Lecture hall
+Mech Block,First Floor,ME 105,Staff Room,Staff Room,Mechanical faculty room
+Mech Block,First Floor,ME 106A,Industrial Safety Lab,Lab,Safety engineering lab
+Mech Block,First Floor,ME-NIL,NI Lab (National Instruments),Lab,LabVIEW & automated instrumentation
+Mech Block,First Floor,ME-SH,Seminar Hall,Auditorium,Mechanical seminar hall
+Mech Block,First Floor,ME 107B,Design and Analysis Applied Lab,Lab,CAD/CAE design lab
+Mech Block,Second Floor,ME 201,Classroom,Classroom,Lecture hall
+Mech Block,Second Floor,ME 202,Classroom,Classroom,Lecture hall
+Mech Block,Second Floor,ME 203,Classroom,Classroom,Lecture hall
+Mech Block,Second Floor,ME 204,Classroom,Classroom,Lecture hall
+Mech Block,Second Floor,ME 205,Classroom,Classroom,Lecture hall
+Mech Block,Second Floor,ME 206,Classroom,Classroom,Lecture hall
+Mech Block,Second Floor,ME 207A,Classroom 207A,Classroom,Lecture hall A
+Mech Block,Second Floor,ME 207B,Classroom 207B,Classroom,Lecture hall B
+Mech Block,Third Floor,ME 301,Classroom,Classroom,Lecture hall
+Mech Block,Third Floor,ME 302,Classroom,Classroom,Lecture hall
+Mech Block,Third Floor,ME 303,Classroom,Classroom,Lecture hall
+Mech Block,Third Floor,ME 304,Classroom,Classroom,Lecture hall
+Mech Block,Third Floor,ME 305,Classroom,Classroom,Lecture hall
+Mech Block,Third Floor,ME 306A,Classroom 306A,Classroom,Lecture hall A
+Mech Block,Third Floor,ME-ADL,Architecture and Design Applied Lab,Lab,Architecture design lab
+Mech Block,Third Floor,ME-EPL,Engineering Practice Laboratory,Lab,Engineering workshop
+Library Block,Ground Floor,LIB-GYM,FX Gym,Fitness,Campus fitness centre
+Library Block,Second Floor,LIB-SR,Staff Room,Staff Room,Faculty room
+Library Block,Second Floor,MCA 02,IoT Lab,Lab,Internet of Things lab
+Library Block,Second Floor,MCA 03,Classroom,Classroom,MCA Lecture hall
+Library Block,Second Floor,MCA 04,Classroom,Classroom,MCA Lecture hall
+Library Block,Second Floor,MCA 05,Classroom,Classroom,MCA Lecture hall
+Library Block,Second Floor,MCA 06,MCA Lab,Lab,Master of Computer Applications lab
+Library Block,Third Floor,LIB-MAL,Mobile App Lab,Lab,Mobile development lab
+Library Block,Third Floor,LIB-PCL,Programming and Coding Lab,Lab,Coding and software lab
+Campus Facilities,Ground Floor,CANTEEN,Campus Canteen,Dining,Main food court
+Campus Facilities,Ground Floor,AUDITORIUM,Main Auditorium,Auditorium,Grand institution auditorium
+Department of MBA,Ground Floor,MBA-SH,Seminar Hall,Auditorium,Management seminar hall
+Department of MBA,First Floor,MBA-LAB,MBA Laboratory,Lab,Management computing lab
+Department of MBA,First Floor,MBA-LIB,Library,Library,Management library
+Department of MBA,Second Floor,MBA-LH1,Lecture Hall I,Classroom,MBA Lecture hall 1
+Department of MBA,Second Floor,MBA-LH2,Lecture Hall II,Classroom,MBA Lecture hall 2
+Department of MBA,Second Floor,MBA-SR,Staff Room,Staff Room,MBA Faculty room

@@ -91,8 +91,8 @@ export const StudentDetailsModal = ({ isOpen, onClose, studentId }) => {
                                 </div>
                                 <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--dark-blue)', marginTop: '4px' }}>
                                     {yesterdayRecords.length > 0 
-                                        ? `Room ${yesterdayRecords[yesterdayRecords.length - 1].room_number || '207'}`
-                                        : 'Room 207 (IT Hall)'}
+                                        ? `${yesterdayRecords[yesterdayRecords.length - 1].room_number || 'AK 207'}`
+                                        : 'AK 207 (IT Hall)'}
                                 </div>
                                 <div style={{ fontSize: '0.72rem', color: 'var(--text-sub)' }}>
                                     {yesterdayRecords.length > 0 

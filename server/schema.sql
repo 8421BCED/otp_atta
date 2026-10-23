@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     floor_id INT NOT NULL,
     room_number VARCHAR(20) NOT NULL,
     name VARCHAR(100) NOT NULL,
-    room_type ENUM('classroom', 'lab', 'seminar_hall', 'staff_room') DEFAULT 'classroom',
+    room_type VARCHAR(50) DEFAULT 'classroom',
     capacity INT DEFAULT 60,
     department VARCHAR(50) DEFAULT 'ALL',
     FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE CASCADE,
@@ -166,31 +166,7 @@ INSERT IGNORE INTO periods (id, period_number, name, start_time, end_time, is_br
 (9, 0, 'Afternoon Break', '15:05:00', '15:20:00', 1),
 (10, 7, '7th Period', '15:20:00', '16:05:00', 0);
 
--- Buildings
-INSERT IGNORE INTO buildings (id, name, code, description) VALUES
-(1, 'Main Engineering Block', 'MEB', 'Central Administrative and Computer Engineering Building'),
-(2, 'Mechanical & Civil Block', 'MCB', 'Mechanical, Mechatronics, and Civil Labs'),
-(3, 'Science & Humanities Block', 'SHB', 'First Year & Applied Sciences Wing'),
-(4, 'Applied Labs & Innovation Centre', 'ALB', 'AI, Data Science, and Cisco Advanced Labs');
-
--- Floors
-INSERT IGNORE INTO floors (id, building_id, floor_number, name) VALUES
-(1, 1, 0, 'Ground Floor'),
-(2, 1, 1, 'First Floor'),
-(3, 1, 2, 'Second Floor'),
-(4, 1, 3, 'Third Floor'),
-(5, 4, 0, 'Ground Floor - Innovation Lab'),
-(6, 4, 1, 'First Floor - High Computing Labs');
-
--- Rooms (Including Room 207 on 2nd Floor!)
-INSERT IGNORE INTO rooms (id, building_id, floor_id, room_number, name, room_type, department) VALUES
-(1, 1, 1, '101', 'IT Smart Classroom 1', 'classroom', 'IT'),
-(2, 1, 1, '102', 'IT Smart Classroom 2', 'classroom', 'IT'),
-(3, 1, 3, '207', 'IT 2nd Year Lecture Hall (Room 207)', 'classroom', 'IT'),
-(4, 1, 3, '208', 'CSE Lecture Hall', 'classroom', 'CSE'),
-(5, 1, 4, '305', 'ECE Lecture Hall', 'classroom', 'ECE'),
-(6, 4, 5, 'AL-01', 'Applied AI & ML Lab', 'lab', 'IT'),
-(7, 4, 6, 'AL-02', 'Cloud Computing & Networks Lab', 'lab', 'IT');
+-- (Note: Official campus buildings, floors, and rooms are seeded dynamically from real college records via: node server/seed_college_rooms.js)
 
 -- Seed Users: Password@2525
 -- Hash: $2b$10$IUSLJbHugAeQNkISyAfrOuhH2QmebQs5adwlID6pHnUM1JpFhmApy

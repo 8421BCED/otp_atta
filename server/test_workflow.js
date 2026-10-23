@@ -83,16 +83,22 @@ async function runTests() {
     });
     console.log(`✓ 1. Staff Logged in: ${staff.user.name} (${staff.user.department})`);
 
-    // 2. Staff Generates 10-Second Rolling OTP for Room 207 (Room ID 3)
+    // Lookup Real Campus Room AK 207 dynamically
+    const locationData = await get('/locations/hierarchy');
+    const ak207 = locationData.allRooms.find(r => r.room_number === 'AK 207') || locationData.allRooms[0];
+    const otherRoom = locationData.allRooms.find(r => r.id !== ak207.id) || locationData.allRooms[1];
+    const targetRoomId = ak207.id;
+
+    // 2. Staff Generates 10-Second Rolling OTP for AK 207
     const otp = await post('/attendance/generate-otp', {
-        roomId: 3,
-        periodId: 1
+        roomId: targetRoomId,
+        periodId: 2
     }, staff.token);
-    console.log(`✓ 2. 10-Second OTP generated for Room 207: [${otp.otpCode}] (Expires in ${otp.expiresInSeconds}s)`);
+    console.log(`✓ 2. 10-Second OTP generated for ${ak207.room_number} (${ak207.name}): [${otp.otpCode}] (Expires in ${otp.expiresInSeconds}s)`);
 
     // 3. Check Live Room Roster before student check-in
-    const rosterBefore = await get('/attendance/room-live-roster/3', staff.token);
-    console.log(`✓ 3. Live Room 207 Count before check-in: ${rosterBefore.presentCount} students`);
+    const rosterBefore = await get(`/attendance/room-live-roster/${targetRoomId}`, staff.token);
+    console.log(`✓ 3. Live ${ak207.room_number} Count before check-in: ${rosterBefore.presentCount} students`);
 
     // 4. HOD Resets Device Lock for Daniel A (testing HOD reset power)
     const hod = await post('/auth/demo-login', {
@@ -114,11 +120,11 @@ async function runTests() {
     });
     console.log(`✓ 5. Student Logged in & Bound: ${student.user.name} (${student.user.roll_number}) on Samsung Galaxy A35`);
 
-    // 6. Student Submits OTP for Room 207
+    // 6. Student Submits OTP for AK 207
     const submit = await post('/attendance/submit-otp', {
-        roomId: 3,
+        roomId: targetRoomId,
         otpCode: otp.otpCode,
-        periodId: 1,
+        periodId: 2,
         deviceInfo: {
             deviceId: 'SAMSUNG-A35-OFFICIAL-123'
         }
@@ -126,8 +132,8 @@ async function runTests() {
     console.log(`✓ 6. Student OTP submission: ${submit.message}`);
 
     // 7. Check Live Room Roster after student check-in
-    const rosterAfter = await get('/attendance/room-live-roster/3', staff.token);
-    console.log(`✓ 7. Live Room 207 Count after check-in: ${rosterAfter.presentCount} student(s) present!`);
+    const rosterAfter = await get(`/attendance/room-live-roster/${targetRoomId}`, staff.token);
+    console.log(`✓ 7. Live ${ak207.room_number} Count after check-in: ${rosterAfter.presentCount} student(s) present!`);
     console.log(`     Present student in roster: ${rosterAfter.students[0].name} (${rosterAfter.students[0].roll_number})`);
 
     // 8. Anti-Proxy Check: Attempt to login to Daniel's account from a friend's phone
@@ -145,12 +151,12 @@ async function runTests() {
         console.log(`✓ 8. Anti-Proxy Protection Active: Blocked login from friend's phone! [Code: ${err.data.code}]`);
     }
 
-    // 9. Cross-Room OTP Check: Student selected Room 101 but enters Room 207 OTP
+    // 9. Cross-Room OTP Check: Student selected a different room but enters AK 207 OTP
     try {
         await post('/attendance/submit-otp', {
-            roomId: 1, // Room 101
+            roomId: otherRoom.id,
             otpCode: otp.otpCode,
-            periodId: 2,
+            periodId: 3,
             deviceInfo: { deviceId: 'SAMSUNG-A35-OFFICIAL-123' }
         }, student.token);
         console.log('✗ FAILED: Cross room was not blocked!');

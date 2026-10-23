@@ -1,12 +1,18 @@
 // Device Fingerprinting and Anti-Proxy Binding Utility
 export const getDeviceFingerprint = async () => {
     // 1. Persistent Unique Device ID (simulates hardware ID)
-    let deviceId = localStorage.getItem('fxec_device_id');
+    let deviceId = null;
+    try {
+        deviceId = localStorage.getItem('fxec_device_id');
+    } catch (e) {}
+
     if (!deviceId) {
         const randomPart = Math.random().toString(36).substring(2, 10).toUpperCase();
         const timePart = Date.now().toString(36).toUpperCase();
         deviceId = `FXEC-DEV-${timePart}-${randomPart}`;
-        localStorage.setItem('fxec_device_id', deviceId);
+        try {
+            localStorage.setItem('fxec_device_id', deviceId);
+        } catch (e) {}
     }
 
     // 2. Canvas Fingerprint Hash

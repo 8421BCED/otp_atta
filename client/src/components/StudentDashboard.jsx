@@ -49,6 +49,7 @@ export const StudentDashboard = ({
 
     // Check if student has an active Sports OD Pass
     const checkSportsPass = async () => {
+        if (!currentUser?.id) return;
         try {
             const res = await fetch(`/api/sports/student-active-pass/${currentUser.id}`);
             const data = await res.json();
@@ -63,12 +64,14 @@ export const StudentDashboard = ({
     };
 
     useEffect(() => {
+        if (!currentUser?.id) return;
         checkSportsPass();
         const interval = setInterval(checkSportsPass, 6000);
         return () => clearInterval(interval);
-    }, [currentUser.id]);
+    }, [currentUser?.id]);
 
     const loadTimeline = async () => {
+        if (!currentUser?.id) return;
         try {
             const token = localStorage.getItem('fxec_token');
             const res = await fetch(`/api/attendance/student-timeline/${currentUser.id}`, {
@@ -85,10 +88,11 @@ export const StudentDashboard = ({
     };
 
     useEffect(() => {
+        if (!currentUser?.id) return;
         loadTimeline();
         const interval = setInterval(loadTimeline, 3000);
         return () => clearInterval(interval);
-    }, [currentUser.id]);
+    }, [currentUser?.id]);
 
     // Lookup current building, floor, room from hierarchy if selected
     const activeBuildingObj = selectedBuilding ? hierarchy?.find(b => b.id === Number(selectedBuilding)) : null;

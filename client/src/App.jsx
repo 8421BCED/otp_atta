@@ -169,7 +169,14 @@ export function App() {
     const handleLogout = () => {
         localStorage.removeItem('fxec_token');
         localStorage.removeItem('fxec_user');
+        sessionStorage.removeItem('fxec_strange_auth');
         setCurrentUser(null);
+        if (currentRoute === 'strange') {
+            handleNavigateRoute('student');
+        } else {
+            const pathRole = getRoleFromPath() || 'student';
+            setCurrentRoute(pathRole);
+        }
     };
 
     const handleLoginSuccess = (user) => {
@@ -191,7 +198,7 @@ export function App() {
                     onOpenCalendar={() => setIsCalendarOpen(true)}
                 />
                 <main className="app-workspace">
-                    <StrangeOpsDashboard />
+                    <StrangeOpsDashboard onLogout={handleLogout} />
                 </main>
             </div>
         );

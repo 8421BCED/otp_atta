@@ -113,6 +113,19 @@ export const Header = ({
                     </select>
                 )}
 
+                {/* Direct Visible 1-Click Sign Out Button */}
+                {onLogout && (
+                    <button
+                        type="button"
+                        className="header-direct-logout-btn"
+                        onClick={onLogout}
+                        title="Sign Out of Portal"
+                    >
+                        <LogOut size={14} />
+                        <span>Sign Out</span>
+                    </button>
+                )}
+
                 {/* Top-Right Profile Icon & Dropdown Menu */}
                 <div className="profile-menu-container" ref={dropdownRef}>
                     <button
@@ -123,6 +136,7 @@ export const Header = ({
                         aria-label="User Profile"
                     >
                         <span className="avatar-initial">{userInitial}</span>
+                        <span className="header-avatar-name">{currentUser?.name?.split(' ')[0] || 'User'}</span>
                         <ChevronDown size={14} className={`dropdown-chevron ${isDropdownOpen ? 'rotated' : ''}`} />
                     </button>
 

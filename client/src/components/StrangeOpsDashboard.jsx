@@ -24,7 +24,7 @@ import {
 
 const MASTER_PASS = 'ItOperations@12345';
 
-export const StrangeOpsDashboard = () => {
+export const StrangeOpsDashboard = ({ onLogout }) => {
     // Authentication State
     const [isAuthenticated, setIsAuthenticated] = useState(() => {
         return sessionStorage.getItem('fxec_strange_auth') === MASTER_PASS;
@@ -77,6 +77,9 @@ export const StrangeOpsDashboard = () => {
         sessionStorage.removeItem('fxec_strange_auth');
         setIsAuthenticated(false);
         setPassInput('');
+        if (onLogout) {
+            onLogout();
+        }
     };
 
     // Load Stats and User Directory
@@ -342,6 +345,26 @@ export const StrangeOpsDashboard = () => {
                             <span>Unlock IT Console</span>
                         </button>
                     </form>
+
+                    {onLogout && (
+                        <div style={{ marginTop: '16px' }}>
+                            <button
+                                type="button"
+                                onClick={onLogout}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--blue)',
+                                    fontSize: '0.80rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline'
+                                }}
+                            >
+                                ← Exit to Student Attendance Portal
+                            </button>
+                        </div>
+                    )}
 
                     <div style={{ marginTop: '20px', fontSize: '0.72rem', color: 'var(--text-dim)' }}>
                         FXEC Autonomous • Campus IT Infrastructure Operations

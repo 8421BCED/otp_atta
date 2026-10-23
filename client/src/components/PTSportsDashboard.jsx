@@ -72,8 +72,8 @@ export const PTSportsDashboard = ({ currentUser }) => {
         setIsLoading(true);
         try {
             const [resStats, resPasses] = await Promise.all([
-                fetch('http://localhost:5000/api/sports/stats'),
-                fetch('http://localhost:5000/api/sports/passes')
+                fetch('/api/sports/stats'),
+                fetch('/api/sports/passes')
             ]);
             const dataStats = await resStats.json();
             const dataPasses = await resPasses.json();
@@ -107,7 +107,7 @@ export const PTSportsDashboard = ({ currentUser }) => {
                 if (searchStudentQuery) params.append('q', searchStudentQuery);
                 if (selectedDeptFilter !== 'all') params.append('department', selectedDeptFilter);
 
-                const res = await fetch(`http://localhost:5000/api/sports/students-search?${params.toString()}`);
+                const res = await fetch(`/api/sports/students-search?${params.toString()}`);
                 const data = await res.json();
                 if (res.ok) {
                     setSearchedStudents(data.students || []);
@@ -186,7 +186,7 @@ export const PTSportsDashboard = ({ currentUser }) => {
                 created_by: currentUser?.id || 1
             };
 
-            const res = await fetch('http://localhost:5000/api/sports/passes', {
+            const res = await fetch('/api/sports/passes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -228,7 +228,7 @@ export const PTSportsDashboard = ({ currentUser }) => {
         }
 
         try {
-            const res = await fetch(`http://localhost:5000/api/sports/passes/${passId}`, {
+            const res = await fetch(`/api/sports/passes/${passId}`, {
                 method: 'DELETE'
             });
             if (res.ok) {
@@ -244,7 +244,7 @@ export const PTSportsDashboard = ({ currentUser }) => {
     // View Pass Details & Squad
     const handleViewPass = async (pass) => {
         try {
-            const res = await fetch(`http://localhost:5000/api/sports/passes/${pass.id}`);
+            const res = await fetch(`/api/sports/passes/${pass.id}`);
             const data = await res.json();
             if (res.ok) {
                 setSelectedPass(data);

@@ -107,7 +107,7 @@ export function App() {
     useEffect(() => {
         const loadHierarchy = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/locations/hierarchy');
+                const res = await fetch('/api/locations/hierarchy');
                 const data = await res.json();
                 if (data.hierarchy) {
                     setHierarchy(data.hierarchy);
@@ -125,8 +125,8 @@ export function App() {
             try {
                 const query = simulatedTime ? `?simulateTime=${encodeURIComponent(simulatedTime)}` : '';
                 const [resPeriod, resHoliday] = await Promise.all([
-                    fetch(`http://localhost:5000/api/attendance/current-period${query}`),
-                    fetch(`http://localhost:5000/api/holidays/check?department=${currentUser?.department || 'IT'}`)
+                    fetch(`/api/attendance/current-period${query}`),
+                    fetch(`/api/holidays/check?department=${currentUser?.department || 'IT'}`)
                 ]);
 
                 const dataPeriod = await resPeriod.json();
@@ -148,7 +148,7 @@ export function App() {
     const handleQuickRoleSwitch = async (roleObj, overrideFp) => {
         try {
             const fp = overrideFp || deviceInfo || await getDeviceSecurityInfo();
-            const res = await fetch('http://localhost:5000/api/auth/demo-login', {
+            const res = await fetch('/api/auth/demo-login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

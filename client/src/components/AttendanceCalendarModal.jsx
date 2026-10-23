@@ -26,7 +26,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
         const fetchStudentReport = async () => {
             try {
                 const token = localStorage.getItem('fxec_token');
-                const res = await fetch(`http://localhost:5000/api/attendance/student-details/${activeStudent.id}`, {
+                const res = await fetch(`/api/attendance/student-details/${activeStudent.id}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {

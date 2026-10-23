@@ -12,7 +12,7 @@ export const StudentDetailsModal = ({ isOpen, onClose, studentId }) => {
             setIsLoading(true);
             try {
                 const token = localStorage.getItem('fxec_token');
-                const res = await fetch(`http://localhost:5000/api/attendance/student-details/${studentId}`, {
+                const res = await fetch(`/api/attendance/student-details/${studentId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const json = await res.json();

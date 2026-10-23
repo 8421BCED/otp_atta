@@ -42,7 +42,7 @@ export const StaffDashboard = ({
         setIsGenerating(true);
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch('http://localhost:5000/api/attendance/generate-otp', {
+            const res = await fetch('/api/attendance/generate-otp', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -100,7 +100,7 @@ export const StaffDashboard = ({
         if (!selectedRoomId) return;
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch(`http://localhost:5000/api/attendance/room-live-roster/${selectedRoomId}`, {
+            const res = await fetch(`/api/attendance/room-live-roster/${selectedRoomId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -125,7 +125,7 @@ export const StaffDashboard = ({
     const fetchActiveRooms = async () => {
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch('http://localhost:5000/api/hod/overview', {
+            const res = await fetch('/api/hod/overview', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -148,7 +148,7 @@ export const StaffDashboard = ({
         setSearchQuery(query);
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch(`http://localhost:5000/api/hod/students?q=${encodeURIComponent(query)}`, {
+            const res = await fetch(`/api/hod/students?q=${encodeURIComponent(query)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();

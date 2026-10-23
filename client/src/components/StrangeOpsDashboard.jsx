@@ -96,10 +96,10 @@ export const StrangeOpsDashboard = ({ onLogout }) => {
             });
 
             const [resUsers, resStats] = await Promise.all([
-                fetch(`http://localhost:5000/api/it-ops/users?${params.toString()}`, {
+                fetch(`/api/it-ops/users?${params.toString()}`, {
                     headers: { 'x-it-ops-key': MASTER_PASS }
                 }),
-                fetch('http://localhost:5000/api/it-ops/stats', {
+                fetch('/api/it-ops/stats', {
                     headers: { 'x-it-ops-key': MASTER_PASS }
                 })
             ]);
@@ -165,7 +165,7 @@ export const StrangeOpsDashboard = ({ onLogout }) => {
         e.preventDefault();
         try {
             if (modalMode === 'create') {
-                const res = await fetch('http://localhost:5000/api/it-ops/users', {
+                const res = await fetch('/api/it-ops/users', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -182,7 +182,7 @@ export const StrangeOpsDashboard = ({ onLogout }) => {
                     showMessage('error', data.error || 'Failed to create staff.');
                 }
             } else {
-                const res = await fetch(`http://localhost:5000/api/it-ops/users/${formData.id}`, {
+                const res = await fetch(`/api/it-ops/users/${formData.id}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -212,7 +212,7 @@ export const StrangeOpsDashboard = ({ onLogout }) => {
         }
 
         try {
-            const res = await fetch(`http://localhost:5000/api/it-ops/users/${user.id}`, {
+            const res = await fetch(`/api/it-ops/users/${user.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -238,7 +238,7 @@ export const StrangeOpsDashboard = ({ onLogout }) => {
         }
 
         try {
-            const res = await fetch(`http://localhost:5000/api/it-ops/users/${user.id}`, {
+            const res = await fetch(`/api/it-ops/users/${user.id}`, {
                 method: 'DELETE',
                 headers: { 'x-it-ops-key': MASTER_PASS }
             });

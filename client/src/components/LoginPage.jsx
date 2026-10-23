@@ -70,7 +70,7 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
 
         try {
             const dev = deviceInfo || await getDeviceSecurityInfo();
-            const res = await fetch('http://localhost:5000/api/auth/google', {
+            const res = await fetch('/api/auth/google', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -107,7 +107,7 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
 
         try {
             const dev = deviceInfo || await getDeviceSecurityInfo();
-            const res = await fetch('http://localhost:5000/api/auth/demo-login', {
+            const res = await fetch('/api/auth/demo-login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

@@ -35,7 +35,7 @@ export const StudentDashboard = ({
     // Check if student has an active Sports OD Pass
     const checkSportsPass = async () => {
         try {
-            const res = await fetch(`http://localhost:5000/api/sports/student-active-pass/${currentUser.id}`);
+            const res = await fetch(`/api/sports/student-active-pass/${currentUser.id}`);
             const data = await res.json();
             if (data.hasActivePass) {
                 setActiveSportsPass(data.pass);
@@ -56,7 +56,7 @@ export const StudentDashboard = ({
     const loadTimeline = async () => {
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch(`http://localhost:5000/api/attendance/student-timeline/${currentUser.id}`, {
+            const res = await fetch(`/api/attendance/student-timeline/${currentUser.id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -159,7 +159,7 @@ export const StudentDashboard = ({
         setIsSubmitting(true);
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch('http://localhost:5000/api/attendance/submit-otp', {
+            const res = await fetch('/api/attendance/submit-otp', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

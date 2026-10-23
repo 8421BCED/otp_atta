@@ -49,7 +49,7 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
         setIsGeneratingTeachingOtp(true);
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch('http://localhost:5000/api/attendance/generate-otp', {
+            const res = await fetch('/api/attendance/generate-otp', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -94,7 +94,7 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
         if (!teachingRoomId) return;
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch(`http://localhost:5000/api/attendance/room-live-roster/${teachingRoomId}`, {
+            const res = await fetch(`/api/attendance/room-live-roster/${teachingRoomId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -126,8 +126,8 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
         try {
             const token = localStorage.getItem('fxec_token');
             const [resOverview, resStudents] = await Promise.all([
-                fetch('http://localhost:5000/api/hod/overview', { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`http://localhost:5000/api/hod/students?q=${encodeURIComponent(searchQuery)}`, { headers: { 'Authorization': `Bearer ${token}` } })
+                fetch('/api/hod/overview', { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`/api/hod/students?q=${encodeURIComponent(searchQuery)}`, { headers: { 'Authorization': `Bearer ${token}` } })
             ]);
 
             const dataOverview = await resOverview.json();
@@ -151,7 +151,7 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
 
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch('http://localhost:5000/api/hod/reset-device-lock', {
+            const res = await fetch('/api/hod/reset-device-lock', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -178,7 +178,7 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
 
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch('http://localhost:5000/api/holidays/declare', {
+            const res = await fetch('/api/holidays/declare', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

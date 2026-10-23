@@ -13,7 +13,7 @@ export const RoomStudentsModal = ({ isOpen, onClose, roomId, roomName, buildingN
             setIsLoading(true);
             try {
                 const token = localStorage.getItem('fxec_token');
-                const res = await fetch(`http://localhost:5000/api/attendance/room-live-roster/${roomId}`, {
+                const res = await fetch(`/api/attendance/room-live-roster/${roomId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();

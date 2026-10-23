@@ -41,8 +41,8 @@ export const PrincipalDashboard = ({ currentUser, hierarchy = [], simulatedTime,
         try {
             const token = localStorage.getItem('fxec_token');
             const [resOverview, resHierarchy] = await Promise.all([
-                fetch('http://localhost:5000/api/principal/overview', { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch('http://localhost:5000/api/locations/hierarchy')
+                fetch('/api/principal/overview', { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch('/api/locations/hierarchy')
             ]);
             const dataO = await resOverview.json();
             const dataH = await resHierarchy.json();
@@ -66,7 +66,7 @@ export const PrincipalDashboard = ({ currentUser, hierarchy = [], simulatedTime,
         if (!bName || !bCode) return;
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch('http://localhost:5000/api/locations/buildings', {
+            const res = await fetch('/api/locations/buildings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ name: bName, code: bCode, description: bDesc })
@@ -89,7 +89,7 @@ export const PrincipalDashboard = ({ currentUser, hierarchy = [], simulatedTime,
         if (!fNumber || !fName) return;
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch('http://localhost:5000/api/locations/floors', {
+            const res = await fetch('/api/locations/floors', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ building_id: fBuildingId, floor_number: Number(fNumber), name: fName })
@@ -111,7 +111,7 @@ export const PrincipalDashboard = ({ currentUser, hierarchy = [], simulatedTime,
         if (!rNumber || !rName) return;
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch('http://localhost:5000/api/locations/rooms', {
+            const res = await fetch('/api/locations/rooms', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
@@ -139,7 +139,7 @@ export const PrincipalDashboard = ({ currentUser, hierarchy = [], simulatedTime,
         if (!window.confirm(`Delete Room ${roomNum}? This will remove it from campus locations.`)) return;
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch(`http://localhost:5000/api/locations/rooms/${roomId}`, {
+            const res = await fetch(`/api/locations/rooms/${roomId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -156,7 +156,7 @@ export const PrincipalDashboard = ({ currentUser, hierarchy = [], simulatedTime,
         if (!cHolTitle || !cHolDate) return;
         try {
             const token = localStorage.getItem('fxec_token');
-            const res = await fetch('http://localhost:5000/api/holidays/declare', {
+            const res = await fetch('/api/holidays/declare', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({

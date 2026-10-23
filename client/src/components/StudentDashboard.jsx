@@ -507,6 +507,10 @@ export const StudentDashboard = ({
                                     <div>
                                         {item.is_break ? (
                                             <span className="aero-status-tag break">Interval</span>
+                                        ) : (item.isMarked && (item.attendance?.status === 'od' || item.status === 'od' || activeSportsPass)) ? (
+                                            <span className="aero-status-tag present" style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #F59E0B', fontWeight: 800 }}>
+                                                🏆 On Duty (OD - Sports)
+                                            </span>
                                         ) : item.isMarked ? (
                                             <span className="aero-status-tag present">
                                                 ✓ Present ({item.attendance?.room_number ? `Rm ${item.attendance.room_number}` : 'Verified'})

@@ -206,7 +206,7 @@ router.post('/passes', async (req, res) => {
         // 3. Auto-populate / ensure attendance records with status = 'od'
         // For each date in the range [from_date, to_date]
         // Fetch a default room (e.g. Ground / Room 1) and periods
-        const [periods] = await conn.query('SELECT id, period_number FROM periods ORDER BY id ASC');
+        const [periods] = await conn.query('SELECT id, period_number, is_break FROM periods ORDER BY id ASC');
         const [defaultRoom] = await conn.query('SELECT id FROM rooms LIMIT 1');
         const roomId = defaultRoom.length > 0 ? defaultRoom[0].id : 1;
 
@@ -214,6 +214,7 @@ router.post('/passes', async (req, res) => {
         const endDate = new Date(to_date);
 
         const targetPeriods = periods.filter(p => {
+            if (p.is_break) return false;
             if (is_all_day) return true;
             return p.period_number >= from_period && p.period_number <= to_period;
         });

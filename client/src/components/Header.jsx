@@ -173,6 +173,63 @@ export const Header = ({
 
                             <div className="dropdown-divider" />
 
+                            <div style={{ padding: '4px 0 6px 0' }}>
+                                <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-sub)', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
+                                    Quick Switch Portal:
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
+                                    <button 
+                                        type="button" 
+                                        className="aero-glass-btn" 
+                                        style={{ width: '100%', justifyContent: 'flex-start', padding: '6px 10px', fontSize: '0.74rem', background: currentUser?.role === 'pt' ? '#FEF3C7' : '#FFFFFF', color: currentUser?.role === 'pt' ? '#B45309' : 'var(--dark-blue)', border: currentUser?.role === 'pt' ? '1px solid #F59E0B' : '1px solid #E2E8F0' }}
+                                        onClick={() => {
+                                            setIsDropdownOpen(false);
+                                            onRoleChange && onRoleChange({ id: 'pt', email: 'pe.director@francisxavier.ac.in' });
+                                        }}
+                                    >
+                                        🏆 <strong style={{ marginLeft: '4px' }}>PT / Sports Portal</strong> (Dr. K. Rathna Kumar)
+                                    </button>
+
+                                    <button 
+                                        type="button" 
+                                        className="aero-glass-btn" 
+                                        style={{ width: '100%', justifyContent: 'flex-start', padding: '6px 10px', fontSize: '0.74rem', background: currentUser?.role === 'student' ? '#EFF6FF' : '#FFFFFF', color: currentUser?.role === 'student' ? 'var(--blue)' : 'var(--dark-blue)', border: currentUser?.role === 'student' ? '1px solid var(--blue)' : '1px solid #E2E8F0' }}
+                                        onClick={() => {
+                                            setIsDropdownOpen(false);
+                                            onRoleChange && onRoleChange({ id: 'student', email: 'daniela.ug.24.it@francisxavier.ac.in' });
+                                        }}
+                                    >
+                                        🎓 <strong style={{ marginLeft: '4px' }}>Student Portal</strong> (Daniel A)
+                                    </button>
+
+                                    <button 
+                                        type="button" 
+                                        className="aero-glass-btn" 
+                                        style={{ width: '100%', justifyContent: 'flex-start', padding: '6px 10px', fontSize: '0.74rem', background: currentUser?.role === 'staff' ? '#EFF6FF' : '#FFFFFF', color: currentUser?.role === 'staff' ? 'var(--blue)' : 'var(--dark-blue)', border: currentUser?.role === 'staff' ? '1px solid var(--blue)' : '1px solid #E2E8F0' }}
+                                        onClick={() => {
+                                            setIsDropdownOpen(false);
+                                            onRoleChange && onRoleChange({ id: 'staff', email: 'staff.it@francisxavier.ac.in' });
+                                        }}
+                                    >
+                                        👨‍🏫 <strong style={{ marginLeft: '4px' }}>Faculty Portal</strong> (Prof. R. David)
+                                    </button>
+
+                                    <button 
+                                        type="button" 
+                                        className="aero-glass-btn" 
+                                        style={{ width: '100%', justifyContent: 'flex-start', padding: '6px 10px', fontSize: '0.74rem', background: currentUser?.role === 'hod' ? '#EFF6FF' : '#FFFFFF', color: currentUser?.role === 'hod' ? 'var(--blue)' : 'var(--dark-blue)', border: currentUser?.role === 'hod' ? '1px solid var(--blue)' : '1px solid #E2E8F0' }}
+                                        onClick={() => {
+                                            setIsDropdownOpen(false);
+                                            onRoleChange && onRoleChange({ id: 'hod', email: 'ithod@francisxavier.ac.in' });
+                                        }}
+                                    >
+                                        🏛️ <strong style={{ marginLeft: '4px' }}>HOD Portal</strong> (Dr. J. B. Shajilin Labbai)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="dropdown-divider" />
+
                             <button
                                 type="button"
                                 className="dropdown-logout-btn"

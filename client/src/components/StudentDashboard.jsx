@@ -11,25 +11,10 @@ export const StudentDashboard = ({
     deviceInfo, 
     simulatedTime 
 }) => {
-    // Dynamic classroom selection: persist across page refreshes
-    const [selectedBuilding, setSelectedBuilding] = useState(() => {
-        try {
-            const saved = localStorage.getItem(`fxec_student_room_${currentUser?.id}`);
-            return saved ? JSON.parse(saved).buildingId : null;
-        } catch (e) { return null; }
-    });
-    const [selectedFloor, setSelectedFloor] = useState(() => {
-        try {
-            const saved = localStorage.getItem(`fxec_student_room_${currentUser?.id}`);
-            return saved ? JSON.parse(saved).floorId : null;
-        } catch (e) { return null; }
-    });
-    const [selectedRoom, setSelectedRoom] = useState(() => {
-        try {
-            const saved = localStorage.getItem(`fxec_student_room_${currentUser?.id}`);
-            return saved ? JSON.parse(saved).roomId : null;
-        } catch (e) { return null; }
-    });
+    // Dynamic classroom selection: synced directly with database attendance records (no student localStorage reliance)
+    const [selectedBuilding, setSelectedBuilding] = useState(null);
+    const [selectedFloor, setSelectedFloor] = useState(null);
+    const [selectedRoom, setSelectedRoom] = useState(null);
 
     // Modals
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
@@ -130,7 +115,7 @@ export const StudentDashboard = ({
     // Detect if student has relocated to a different classroom or lab mid-period
     const isRelocating = isCurrentPeriodMarked && selectedRoom && markedRoomId && Number(selectedRoom) !== Number(markedRoomId);
 
-    // If student was already marked in a room and has not manually selected another room, sync to current verified room
+    // If student was already marked in a room, sync state to current verified room from database
     useEffect(() => {
         if (markedRoomId && hierarchy?.length > 0) {
             for (const b of hierarchy) {
@@ -140,33 +125,18 @@ export const StudentDashboard = ({
                             setSelectedBuilding(b.id);
                             setSelectedFloor(f.id);
                             setSelectedRoom(r.id);
-                            try {
-                                localStorage.setItem(`fxec_student_room_${currentUser?.id}`, JSON.stringify({
-                                    buildingId: b.id,
-                                    floorId: f.id,
-                                    roomId: r.id
-                                }));
-                            } catch (e) {}
                             return;
                         }
                     }
                 }
             }
         }
-    }, [markedRoomId, hierarchy, currentUser?.id]);
+    }, [markedRoomId, hierarchy]);
 
     const handleRoomModalSelect = (bId, fId, rId) => {
         setSelectedBuilding(bId);
         setSelectedFloor(fId);
         setSelectedRoom(rId);
-
-        try {
-            localStorage.setItem(`fxec_student_room_${currentUser?.id}`, JSON.stringify({
-                buildingId: bId,
-                floorId: fId,
-                roomId: rId
-            }));
-        } catch (e) {}
 
         // Find room name for clean feedback
         const b = hierarchy?.find(x => x.id === Number(bId));
@@ -245,15 +215,6 @@ export const StudentDashboard = ({
                     return p;
                 }));
                 setTotalPresent(prev => prev + 1);
-
-                // Save selected room to localStorage so refresh keeps room intact
-                try {
-                    localStorage.setItem(`fxec_student_room_${currentUser?.id}`, JSON.stringify({
-                        buildingId: selectedBuilding,
-                        floorId: selectedFloor,
-                        roomId: selectedRoom
-                    }));
-                } catch (e) {}
 
                 loadTimeline();
 
@@ -515,7 +476,7 @@ export const StudentDashboard = ({
                         <form onSubmit={handleSubmitOtp} className="student-otp-form">
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-sub)', fontSize: '0.82rem' }}>
                                 <KeyRound size={15} color="var(--blue)" />
-                                <span>Enter the 6-digit rolling OTP displayed by your staff in Room {activeRoomObj.room_number}:</span>
+                                <span>Enter the 6-digit rolling OTP displayed by your staff in Room {activeRoomObj ? activeRoomObj.room_number : (markedRoomNumber || selectedRoom || '')}:</span>
                             </div>
 
                             <input

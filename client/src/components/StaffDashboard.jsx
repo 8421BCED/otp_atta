@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Users, RefreshCw, QrCode, Search, Radio, CheckCircle2, DoorOpen, MapPin, Eye, Building2, Calendar, FileText, Filter } from 'lucide-react';
+import { Users, RefreshCw, QrCode, Search, Radio, CheckCircle2, DoorOpen, MapPin, Eye, Building2, Calendar, FileText, Filter, Camera, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { RoomSelectionModal } from './RoomSelectionModal';
 import { RoomStudentsModal } from './RoomStudentsModal';
 import { AttendanceCalendarModal } from './AttendanceCalendarModal';
 import { StudentDetailsModal } from './StudentDetailsModal';
+import { ClassroomHeadcountModal } from './ClassroomHeadcountModal';
 
 export const StaffDashboard = ({ 
     currentUser, 
@@ -40,6 +41,31 @@ export const StaffDashboard = ({
     // Student Search State
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
+
+    // AI Classroom Headcount (YOLO) State
+    const [isHeadcountModalOpen, setIsHeadcountModalOpen] = useState(false);
+    const [latestAudit, setLatestAudit] = useState(null);
+
+    const fetchLatestAudit = async (roomId) => {
+        if (!roomId) {
+            setLatestAudit(null);
+            return;
+        }
+        try {
+            const token = localStorage.getItem('fxec_token');
+            const res = await fetch(`/api/headcount/latest/${roomId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.hasAudit && data.audit) {
+                setLatestAudit(data.audit);
+            } else {
+                setLatestAudit(null);
+            }
+        } catch (e) {
+            console.error('Failed to fetch latest audit:', e);
+        }
+    };
 
     const generateNewOtp = async () => {
         if (!selectedRoomId) return;
@@ -94,6 +120,7 @@ export const StaffDashboard = ({
             } catch (e) {}
             generateNewOtp();
             fetchLiveRoster();
+            fetchLatestAudit(selectedRoomId);
         } else {
             try {
                 localStorage.removeItem(`fxec_staff_room_${currentUser?.id}`);
@@ -102,6 +129,7 @@ export const StaffDashboard = ({
             setRoomInfo(null);
             setPresentCount(0);
             setRoomStudents([]);
+            setLatestAudit(null);
         }
     }, [selectedRoomId, currentUser?.id]);
 
@@ -351,9 +379,37 @@ export const StaffDashboard = ({
                             <Users size={20} color="var(--blue)" />
                             Live Classroom Roster {roomInfo ? `(Room ${roomInfo.room_number})` : ''}
                         </div>
-                        <span className={`count-pill ${selectedRoomId ? 'green' : 'amber'}`}>
-                            {selectedRoomId ? 'Live Sync Active' : 'Location Required'}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {selectedRoomId && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsHeadcountModalOpen(true)}
+                                    className="aero-gloss-btn"
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        padding: '5px 12px',
+                                        fontSize: '0.76rem',
+                                        background: latestAudit 
+                                            ? (latestAudit.match_status === 'verified' ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)')
+                                            : 'linear-gradient(135deg, #136CFC 0%, #0B3064 100%)',
+                                        color: '#FFF',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontWeight: 700
+                                    }}
+                                    title="Capture/Upload classroom photo and run YOLO AI face headcount to detect proxy submissions"
+                                >
+                                    <Camera size={14} />
+                                    <span>{latestAudit ? 'AI Audit Active' : 'AI Headcount (YOLO)'}</span>
+                                </button>
+                            )}
+                            <span className={`count-pill ${selectedRoomId ? 'green' : 'amber'}`}>
+                                {selectedRoomId ? 'Live Sync Active' : 'Location Required'}
+                            </span>
+                        </div>
                     </div>
 
                     {selectedRoomId ? (
@@ -372,6 +428,76 @@ export const StaffDashboard = ({
                                     {presentCount}
                                 </div>
                             </div>
+
+                            {/* Active AI Headcount Audit Badge / Card (Valid 1 Hour) */}
+                            {latestAudit && (
+                                <div 
+                                    style={{
+                                        margin: '10px 0 14px 0',
+                                        padding: '12px 14px',
+                                        borderRadius: '10px',
+                                        background: latestAudit.match_status === 'verified' ? '#F0FDF4' : '#FEF2F2',
+                                        border: `1.5px solid ${latestAudit.match_status === 'verified' ? '#86EFAC' : '#FCA5A5'}`,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        flexWrap: 'wrap',
+                                        gap: '10px',
+                                        cursor: 'pointer',
+                                        transition: 'transform 0.15s ease'
+                                    }}
+                                    onClick={() => setIsHeadcountModalOpen(true)}
+                                    title="Click to view full YOLO face detection photo and box overlays"
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{
+                                            width: '36px',
+                                            height: '36px',
+                                            borderRadius: '8px',
+                                            background: latestAudit.match_status === 'verified' ? '#16A34A' : '#DC2626',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#FFF'
+                                        }}>
+                                            <Camera size={18} />
+                                        </div>
+                                        <div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: latestAudit.match_status === 'verified' ? '#15803D' : '#991B1B' }}>
+                                                    AI YOLO Audit Snapshot
+                                                </span>
+                                                <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: latestAudit.match_status === 'verified' ? '#DCFCE7' : '#FEE2E2', color: latestAudit.match_status === 'verified' ? '#166534' : '#991B1B', fontWeight: 800 }}>
+                                                    {latestAudit.match_status === 'verified' ? '✓ MATCH' : '⚠ DISCREPANCY'}
+                                                </span>
+                                            </div>
+                                            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: latestAudit.match_status === 'verified' ? '#14532D' : '#7F1D1D', marginTop: '2px' }}>
+                                                {latestAudit.visual_count} Seated Detected • {latestAudit.otp_count} OTPs Verified 
+                                                {latestAudit.match_status === 'verified' 
+                                                    ? ' (100% Fidelity)' 
+                                                    : ` (${Math.max(0, latestAudit.otp_count - latestAudit.visual_count)} Unaccounted OTPs!)`}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '0.70rem', color: 'var(--text-sub)' }}>
+                                            Valid 1 hour
+                                        </span>
+                                        <button 
+                                            type="button" 
+                                            className="fx-btn-outline" 
+                                            style={{ padding: '4px 10px', fontSize: '0.74rem' }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsHeadcountModalOpen(true);
+                                            }}
+                                        >
+                                            Inspect Photo
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Present Students Table */}
                             <div className="fx-table-container" style={{ maxHeight: '280px' }}>
@@ -579,6 +705,20 @@ export const StaffDashboard = ({
                 isOpen={!!inspectedStudentId}
                 onClose={() => setInspectedStudentId(null)}
                 studentId={inspectedStudentId}
+            />
+
+            {/* AI Classroom Headcount & Face Audit (YOLO) Modal */}
+            <ClassroomHeadcountModal 
+                isOpen={isHeadcountModalOpen}
+                onClose={() => setIsHeadcountModalOpen(false)}
+                roomId={selectedRoomId}
+                roomNumber={roomInfo?.room_number}
+                roomName={roomInfo?.name}
+                periodId={currentPeriodInfo?.activePeriod?.id || 1}
+                otpPresentCount={presentCount}
+                onAuditSaved={(saved) => {
+                    fetchLatestAudit(selectedRoomId);
+                }}
             />
 
         </div>

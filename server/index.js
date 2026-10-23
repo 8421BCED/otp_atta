@@ -10,13 +10,19 @@ const principalRoutes = require('./routes/principal');
 const holidayRoutes = require('./routes/holidays');
 const itOpsRoutes = require('./routes/itOps');
 const sportsRoutes = require('./routes/sports');
+const headcountRoutes = require('./routes/headcount');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+
+// Static uploads serving (for 1-hr audited headcount photos)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -27,6 +33,7 @@ app.use('/api/principal', principalRoutes);
 app.use('/api/holidays', holidayRoutes);
 app.use('/api/it-ops', itOpsRoutes);
 app.use('/api/sports', sportsRoutes);
+app.use('/api/headcount', headcountRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

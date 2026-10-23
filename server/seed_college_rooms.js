@@ -343,7 +343,7 @@ async function seedCollegeRooms() {
 
         // 6. Seed a clean initial active session for testing Daniel A in Room AK 207 (IT 2nd Year Lecture Hall)
         const [targetRoom] = await pool.query('SELECT * FROM rooms WHERE room_number = "AK 207" LIMIT 1');
-        const [studentUser] = await pool.query('SELECT * FROM users WHERE roll_number = "950724IT021" LIMIT 1');
+        const [studentUser] = await pool.query('SELECT * FROM users WHERE email = "daniela.ug.24.it@francisxavier.ac.in" LIMIT 1');
         const [staffUser] = await pool.query('SELECT * FROM users WHERE role = "staff" AND department = "IT" LIMIT 1');
 
         if (targetRoom.length > 0 && studentUser.length > 0 && staffUser.length > 0) {

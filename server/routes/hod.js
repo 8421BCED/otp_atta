@@ -75,9 +75,9 @@ router.get('/students', authenticate, authorizeRoles('hod', 'staff', 'principal'
                     (SELECT COUNT(*) FROM attendance_records ar WHERE ar.student_id = u.id AND ar.date = ? AND ar.status = "present") as periods_attended
              FROM users u
              LEFT JOIN device_locks dl ON u.id = dl.user_id
-             WHERE u.role = "student" AND u.department = ? AND (u.name LIKE ? OR u.roll_number LIKE ? OR u.email LIKE ?)
+             WHERE u.role = "student" AND u.department = ? AND (u.name LIKE ? OR u.email LIKE ?)
              ORDER BY u.name ASC`,
-            [today, today, today, department, search, search, search]
+            [today, today, today, department, search, search]
         );
 
         return res.json({ students });

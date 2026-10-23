@@ -66,8 +66,8 @@ router.get('/users', verifyItOps, async (req, res) => {
 
         if (q && q.trim()) {
             const search = `%${q.trim()}%`;
-            query += ' AND (name LIKE ? OR email LIKE ? OR designation LIKE ? OR roll_number LIKE ?)';
-            params.push(search, search, search, search);
+            query += ' AND (name LIKE ? OR email LIKE ? OR designation LIKE ?)';
+            params.push(search, search, search);
         }
 
         if (role && role !== 'all') {

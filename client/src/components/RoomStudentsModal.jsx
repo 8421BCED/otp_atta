@@ -68,7 +68,7 @@ export const RoomStudentsModal = ({ isOpen, onClose, roomId, roomName, buildingN
                             <table className="fx-table">
                                 <thead>
                                     <tr>
-                                        <th>Roll Number</th>
+                                        <th>Official Email</th>
                                         <th>Student Name</th>
                                         <th>Dept & Year</th>
                                         <th>Checked In</th>
@@ -79,7 +79,7 @@ export const RoomStudentsModal = ({ isOpen, onClose, roomId, roomName, buildingN
                                     {students.map((st, idx) => (
                                         <tr key={idx}>
                                             <td style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--blue)' }}>
-                                                {st.roll_number}
+                                                {st.email}
                                             </td>
                                             <td style={{ fontWeight: 700, color: 'var(--dark-blue)' }}>
                                                 {st.name}

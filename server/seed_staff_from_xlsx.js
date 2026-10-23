@@ -86,21 +86,21 @@ async function seed() {
 
     // Ensure our 4 core students exist
     const students = [
-        { name: 'Daniel A', email: 'daniela.ug.24.it@francisxavier.ac.in', roll: '950724IT021', dept: 'IT', year: '2nd Year' },
-        { name: 'Arun Kumar S', email: 'arun.ug.24.it@francisxavier.ac.in', roll: '950724IT005', dept: 'IT', year: '2nd Year' },
-        { name: 'Kavitha M', email: 'kavitha.ug.24.it@francisxavier.ac.in', roll: '950724IT032', dept: 'IT', year: '2nd Year' },
-        { name: 'Priya Dharshini R', email: 'priya.ug.24.it@francisxavier.ac.in', roll: '950724IT045', dept: 'IT', year: '2nd Year' }
+        { name: 'Daniel A', email: 'daniela.ug.24.it@francisxavier.ac.in', dept: 'IT', year: '2nd Year' },
+        { name: 'Arun Kumar S', email: 'arun.ug.24.it@francisxavier.ac.in', dept: 'IT', year: '2nd Year' },
+        { name: 'Kavitha M', email: 'kavitha.ug.24.it@francisxavier.ac.in', dept: 'IT', year: '2nd Year' },
+        { name: 'Priya Dharshini R', email: 'priya.ug.24.it@francisxavier.ac.in', dept: 'IT', year: '2nd Year' }
     ];
 
     for (const s of students) {
         await pool.query(
             `INSERT INTO users (name, email, password_hash, role, department, roll_number, year_of_study, is_active)
-             VALUES (?, ?, ?, 'student', ?, ?, ?, 1)
+             VALUES (?, ?, ?, 'student', ?, NULL, ?, 1)
              ON DUPLICATE KEY UPDATE 
                 name = VALUES(name),
-                roll_number = VALUES(roll_number),
+                roll_number = NULL,
                 year_of_study = VALUES(year_of_study)`,
-            [s.name, s.email, defaultPasswordHash, s.dept, s.roll, s.year]
+            [s.name, s.email, defaultPasswordHash, s.dept, s.year]
         );
     }
 

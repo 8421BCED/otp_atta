@@ -51,7 +51,7 @@ export const StudentDetailsModal = ({ isOpen, onClose, studentId }) => {
                                 {student?.name || 'Student Profile & Attendance History'}
                             </h2>
                             <p style={{ fontSize: '0.74rem', color: 'var(--text-sub)' }}>
-                                Roll No: <strong style={{ color: 'var(--blue)' }}>{student?.roll_number}</strong> • {student?.department} Dept • {student?.email}
+                                Official Email: <strong style={{ color: 'var(--blue)' }}>{student?.email}</strong> • {student?.department} Department
                             </p>
                         </div>
                     </div>

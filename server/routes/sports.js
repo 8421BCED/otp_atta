@@ -66,8 +66,8 @@ router.get('/students-search', async (req, res) => {
 
         if (q && q.trim()) {
             const search = `%${q.trim()}%`;
-            query += ' AND (name LIKE ? OR roll_number LIKE ? OR email LIKE ?)';
-            params.push(search, search, search);
+            query += ' AND (name LIKE ? OR email LIKE ?)';
+            params.push(search, search);
         }
 
         query += ' ORDER BY department ASC, name ASC LIMIT 60';

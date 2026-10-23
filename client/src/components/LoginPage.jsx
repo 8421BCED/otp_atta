@@ -135,10 +135,10 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
     // Quick accounts tailored for current endpoint
     const portalAccounts = {
         student: [
-            { name: 'Daniel A (IT)', email: 'daniela.ug.24.it@francisxavier.ac.in', roll: '950724IT021' },
-            { name: 'Arun Kumar S (IT)', email: 'arun.ug.24.it@francisxavier.ac.in', roll: '950724IT005' },
-            { name: 'Kavitha M (IT)', email: 'kavitha.ug.24.it@francisxavier.ac.in', roll: '950724IT032' },
-            { name: 'Priya Dharshini R (IT)', email: 'priya.ug.24.it@francisxavier.ac.in', roll: '950724IT045' }
+            { name: 'Daniel A (IT)', email: 'daniela.ug.24.it@francisxavier.ac.in' },
+            { name: 'Arun Kumar S (IT)', email: 'arun.ug.24.it@francisxavier.ac.in' },
+            { name: 'Kavitha M (IT)', email: 'kavitha.ug.24.it@francisxavier.ac.in' },
+            { name: 'Priya Dharshini R (IT)', email: 'priya.ug.24.it@francisxavier.ac.in' }
         ],
         staff: [
             { name: 'Prof. R. David', email: 'staff.it@francisxavier.ac.in', dept: 'IT' },

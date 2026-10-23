@@ -216,7 +216,7 @@ export const StudentDashboard = ({
                     </div>
                     <div>
                         <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--dark-blue)' }}>
-                            {currentUser?.name || 'Student'} • Roll No: {currentUser?.roll_number || '24IT021'}
+                            {currentUser?.name || 'Student'} • <span style={{ color: 'var(--blue)', fontWeight: 700 }}>{currentUser?.email}</span>
                         </div>
                         <div style={{ fontSize: '0.76rem', color: 'var(--text-sub)' }}>
                             Department of {currentUser?.department || 'Information Technology'} • 2nd Year

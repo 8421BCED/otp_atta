@@ -368,7 +368,7 @@ export const StaffDashboard = ({
                                 <table className="fx-table">
                                     <thead>
                                         <tr>
-                                            <th>Roll Number</th>
+                                            <th>Official Email</th>
                                             <th>Student Name</th>
                                             <th>Dept</th>
                                             <th>Time</th>
@@ -380,7 +380,7 @@ export const StaffDashboard = ({
                                             roomStudents.map((st, idx) => (
                                                 <tr key={idx}>
                                                     <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#93C5FD' }}>
-                                                        {st.roll_number}
+                                                        {st.email}
                                                     </td>
                                                     <td style={{ fontWeight: 600, color: '#FFF' }}>
                                                         {st.name}
@@ -468,7 +468,7 @@ export const StaffDashboard = ({
                                 type="text"
                                 className="fx-select"
                                 style={{ width: '100%' }}
-                                placeholder="Search by name or roll number (e.g. Daniel A or 950724IT021)..."
+                                placeholder="Search by student name or official email (e.g. Daniel A or daniela.ug...)..."
                                 value={searchQuery}
                                 onChange={(e) => handleSearchStudents(e.target.value)}
                             />
@@ -478,7 +478,7 @@ export const StaffDashboard = ({
                             <table className="fx-table">
                                 <thead>
                                     <tr>
-                                        <th>Roll Number</th>
+                                        <th>Official Email</th>
                                         <th>Student Name</th>
                                         <th>Current Room</th>
                                         <th>Building</th>
@@ -496,7 +496,7 @@ export const StaffDashboard = ({
                                                 title="Click to view full calendar, daily rooms & leave report"
                                             >
                                                 <td style={{ fontFamily: 'monospace', color: 'var(--blue)', fontWeight: 700 }}>
-                                                    {st.roll_number}
+                                                    {st.email}
                                                 </td>
                                                 <td style={{ fontWeight: 800, color: 'var(--dark-blue)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                     <span>{st.name}</span>

@@ -150,7 +150,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
     const currentMonthData = monthsData[monthIndex];
     const daysData = currentMonthData.days;
     const activeDayInfo = daysData.find(d => d.date === selectedDate) || daysData[0] || {};
-    const rollNo = activeStudent?.roll_number || '950724IT021';
+    const studentEmail = activeStudent?.email || 'daniela.ug.24.it@francisxavier.ac.in';
 
     // Movements list from report or fallback for active day
     const studentMovements = fullReport?.movements || [];
@@ -186,7 +186,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                                 </h2>
                             </div>
                             <div style={{ fontSize: '0.80rem', color: 'var(--text-sub)', marginTop: '3px' }}>
-                                Student: <strong style={{ color: 'var(--dark-blue)' }}>{activeStudent?.name || 'Daniel A'}</strong> • Roll No: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--blue)' }}>{rollNo}</span> • Dept: <strong>{activeStudent?.department || 'IT'}</strong>
+                                Student: <strong style={{ color: 'var(--dark-blue)' }}>{activeStudent?.name || 'Daniel A'}</strong> • Email: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--blue)' }}>{studentEmail}</span> • Dept: <strong>{activeStudent?.department || 'IT'}</strong>
                             </div>
                         </div>
                     </div>

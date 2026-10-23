@@ -665,7 +665,7 @@ export const PTSportsDashboard = ({ currentUser }) => {
                                             type="text" 
                                             className="fx-select"
                                             style={{ width: '100%', paddingLeft: '32px' }}
-                                            placeholder="Search students by name or roll number (e.g. Daniel, 24IT021)..."
+                                            placeholder="Search students by name or official email (e.g. Daniel, daniela.ug...)..."
                                             value={searchStudentQuery}
                                             onChange={(e) => setSearchStudentQuery(e.target.value)}
                                         />
@@ -718,7 +718,7 @@ export const PTSportsDashboard = ({ currentUser }) => {
                                                                 {st.name}
                                                             </div>
                                                             <div style={{ fontSize: '0.68rem', color: 'var(--text-sub)' }}>
-                                                                {st.department} • {st.roll_number || st.email.split('@')[0]}
+                                                                {st.department} • {st.email}
                                                             </div>
                                                         </div>
 
@@ -880,7 +880,7 @@ export const PTSportsDashboard = ({ currentUser }) => {
                                                     {st.name}
                                                 </div>
                                                 <div style={{ fontSize: '0.70rem', color: 'var(--text-sub)' }}>
-                                                    {st.department} • {st.roll_number || st.email}
+                                                    {st.department} • {st.email}
                                                 </div>
                                             </div>
                                         </div>

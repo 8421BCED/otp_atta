@@ -163,13 +163,6 @@ export const Header = ({
 
                             <div className="dropdown-divider" />
 
-                            {currentUser?.role === 'student' && currentUser?.roll_number && (
-                                <div className="dropdown-info-row">
-                                    <span className="info-label">Roll Number:</span>
-                                    <span className="info-value font-mono">{currentUser.roll_number}</span>
-                                </div>
-                            )}
-
                             <div className="dropdown-info-row">
                                 <span className="info-label">Anti-Proxy Lock:</span>
                                 <span className="info-value text-green">

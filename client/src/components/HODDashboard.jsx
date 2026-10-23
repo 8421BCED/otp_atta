@@ -368,7 +368,7 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                                     <table className="fx-table">
                                         <thead>
                                             <tr>
-                                                <th>Roll No</th>
+                                                <th>Official Email</th>
                                                 <th>Student Name</th>
                                                 <th>Time</th>
                                                 <th>Status</th>
@@ -379,7 +379,7 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                                                 teachingRoomStudents.map((st, idx) => (
                                                     <tr key={idx}>
                                                         <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#93C5FD' }}>
-                                                            {st.roll_number}
+                                                            {st.email}
                                                         </td>
                                                         <td style={{ fontWeight: 600, color: '#FFF' }}>
                                                             {st.name}
@@ -621,9 +621,8 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                     <table className="fx-table">
                         <thead>
                             <tr>
-                                <th>Roll Number</th>
                                 <th>Student Name</th>
-                                <th>Email</th>
+                                <th>Official College Email</th>
                                 <th>Registered Device</th>
                                 <th>Current Location</th>
                                 <th style={{ textAlign: 'center' }}>History</th>
@@ -640,13 +639,12 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                                         onClick={() => setSelectedStudentForCalendar(st)}
                                         title="Click to view full calendar & history"
                                     >
-                                        <td style={{ fontFamily: 'monospace', color: 'var(--blue)', fontWeight: 700 }}>
-                                            {st.roll_number}
-                                        </td>
                                         <td style={{ fontWeight: 800, color: 'var(--dark-blue)' }}>
                                             <span style={{ textDecoration: 'underline' }}>{st.name}</span>
                                         </td>
-                                        <td style={{ fontSize: '0.78rem', color: 'var(--text-sub)' }}>{st.email}</td>
+                                        <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--blue)', fontWeight: 700 }}>
+                                            {st.email}
+                                        </td>
                                         <td>
                                             {hasLock ? (
                                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--dark-blue)', fontWeight: 600 }}>

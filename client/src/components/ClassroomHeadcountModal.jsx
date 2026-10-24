@@ -29,6 +29,8 @@ export const ClassroomHeadcountModal = ({
     const [isSaving, setIsSaving] = useState(false);
     const [confidenceThreshold, setConfidenceThreshold] = useState(0.25);
     const [detectionWarning, setDetectionWarning] = useState(null);
+    const [detectionMode, setDetectionMode] = useState('face'); // 'face' (YOLOv8m-Face) or 'person' (YOLOv8m Person)
+    const [activeModelName, setActiveModelName] = useState('YOLOv8m-Face (Classroom High Precision)');
 
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
@@ -258,8 +260,8 @@ export const ClassroomHeadcountModal = ({
         reader.readAsDataURL(file);
     };
 
-    // 7. Call Real YOLOv8n ONNX Backend Detection (Zero Python)
-    const executeYoloDetection = async (dataUrl) => {
+    // 7. Call Real YOLOv8m ONNX Backend Detection (Zero Python)
+    const executeYoloDetection = async (dataUrl, modeToUse = detectionMode, threshToUse = confidenceThreshold) => {
         setIsProcessing(true);
         try {
             const token = localStorage.getItem('fxec_token');
@@ -271,7 +273,8 @@ export const ClassroomHeadcountModal = ({
                 },
                 body: JSON.stringify({
                     imageData: dataUrl,
-                    threshold: confidenceThreshold
+                    threshold: threshToUse,
+                    mode: modeToUse
                 })
             });
 
@@ -288,6 +291,7 @@ export const ClassroomHeadcountModal = ({
             if (data.success && Array.isArray(data.boxes)) {
                 setDetectedBoxes(data.boxes);
                 setVisualCount(data.count);
+                if (data.modelUsed) setActiveModelName(data.modelUsed);
                 renderAnnotatedCanvas(dataUrl, data.boxes);
             } else {
                 throw new Error(data.error || 'YOLO detection failed');
@@ -527,6 +531,60 @@ export const ClassroomHeadcountModal = ({
                                         : `${Math.abs(discrepancy)} seated without OTP`)}
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Model Mode & Power Selector */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '8px 14px', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Sparkles size={16} color="#136CFC" />
+                        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--dark-blue)' }}>AI Headcount Engine:</span>
+                        <div style={{ display: 'flex', gap: '4px', background: '#E2E8F0', padding: '3px', borderRadius: '8px' }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setDetectionMode('face');
+                                    if (capturedImage) executeYoloDetection(capturedImage, 'face');
+                                }}
+                                style={{
+                                    padding: '5px 12px',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    background: detectionMode === 'face' ? '#136CFC' : 'transparent',
+                                    color: detectionMode === 'face' ? '#FFF' : '#475569',
+                                    boxShadow: detectionMode === 'face' ? '0 2px 6px rgba(19, 108, 252, 0.3)' : 'none'
+                                }}
+                            >
+                                👤 YOLOv8m-Face (103MB High Precision)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setDetectionMode('person');
+                                    if (capturedImage) executeYoloDetection(capturedImage, 'person');
+                                }}
+                                style={{
+                                    padding: '5px 12px',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    background: detectionMode === 'person' ? '#136CFC' : 'transparent',
+                                    color: detectionMode === 'person' ? '#FFF' : '#475569',
+                                    boxShadow: detectionMode === 'person' ? '0 2px 6px rgba(19, 108, 252, 0.3)' : 'none'
+                                }}
+                            >
+                                🧍 YOLOv8m-Person (Full Body)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                        Active Model: <strong style={{ color: '#0F172A' }}>{activeModelName}</strong>
                     </div>
                 </div>
 

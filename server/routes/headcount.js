@@ -8,57 +8,63 @@ const pool = require('../db');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
 
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'headcounts');
-const MODEL_PATH = path.join(__dirname, '..', 'models', 'yolov8n.onnx');
+const FACE_MODEL_PATH = path.join(__dirname, '..', 'models', 'yolov8m-face.onnx');
+const PERSON_MODEL_PATH = path.join(__dirname, '..', 'models', 'yolov8m.onnx');
 
-let yoloSession = null;
-const getYoloSession = async () => {
-    if (!yoloSession) {
-        if (fs.existsSync(MODEL_PATH)) {
-            yoloSession = await ort.InferenceSession.create(MODEL_PATH);
-            console.log('✓ YOLOv8n ONNX model initialized successfully on Node.js');
-        } else {
-            console.warn('⚠️ YOLO model not found at:', MODEL_PATH);
-        }
+let faceSession = null;
+let personSession = null;
+
+const getFaceSession = async () => {
+    if (!faceSession && fs.existsSync(FACE_MODEL_PATH)) {
+        faceSession = await ort.InferenceSession.create(FACE_MODEL_PATH);
+        console.log('✓ YOLOv8m-Face (Medium Face Model) initialized on Node.js');
     }
-    return yoloSession;
+    return faceSession;
 };
 
-// Immediately initialize session
-getYoloSession().catch(err => console.error('Error loading YOLO model:', err));
+const getPersonSession = async () => {
+    if (!personSession && fs.existsSync(PERSON_MODEL_PATH)) {
+        personSession = await ort.InferenceSession.create(PERSON_MODEL_PATH);
+        console.log('✓ YOLOv8m (Medium Person Model) initialized on Node.js');
+    }
+    return personSession;
+};
 
-// High-speed YOLOv8 Detection Function for Student Headcount
-const detectStudentsYOLO = async (buffer, threshold = 0.25) => {
-    // 1. Check brightness using sharp
+// Initialize models immediately
+getFaceSession().catch(err => console.error('Error loading YOLO Face model:', err));
+getPersonSession().catch(err => console.error('Error loading YOLO Person model:', err));
+
+// High-precision YOLOv8m Detection Function for Classroom Headcount
+const detectStudentsYOLO = async (buffer, { threshold = 0.25, mode = 'face' } = {}) => {
+    // 1. Check brightness
     const stats = await sharp(buffer).stats();
     const avgBrightness = (stats.channels[0].mean + stats.channels[1].mean + stats.channels[2].mean) / 3;
 
-    // Pitch black or webcam privacy shutter closed (< 18 brightness)
+    // Reject pitch black / privacy shutter closed
     if (avgBrightness < 18) {
         return {
             isDark: true,
             avgBrightness: Number(avgBrightness.toFixed(1)),
             count: 0,
             boxes: [],
-            warning: 'Camera image is pitch black or camera privacy shutter is closed. Please check lighting and camera.'
+            warning: 'Camera image is pitch black or camera privacy shutter is closed. Please check lighting or open shutter.'
         };
-    }
-
-    const session = await getYoloSession();
-    if (!session) {
-        throw new Error('YOLOv8 model is not ready');
     }
 
     const meta = await sharp(buffer).metadata();
     const origWidth = meta.width || 640;
     const origHeight = meta.height || 480;
 
-    // 2. Preprocess: resize to 640x640 RGB float32
+    // 2. High-fidelity Letterbox: preserve exact aspect ratio with padding (no stretching/squashing)
     const { data } = await sharp(buffer)
-        .resize(640, 640, { fit: 'fill' })
+        .resize(640, 640, { fit: 'contain', background: { r: 114, g: 114, b: 114 } })
         .raw()
         .toBuffer({ resolveWithObject: true });
 
-    // Format: [1, 3, 640, 640] NCHW float32 normalized 0..1
+    const scale = Math.min(640 / origWidth, 640 / origHeight);
+    const padX = (640 - origWidth * scale) / 2;
+    const padY = (640 - origHeight * scale) / 2;
+
     const floatArr = new Float32Array(3 * 640 * 640);
     const channelSize = 640 * 640;
     for (let i = 0; i < channelSize; i++) {
@@ -66,90 +72,135 @@ const detectStudentsYOLO = async (buffer, threshold = 0.25) => {
         floatArr[channelSize + i] = data[i * 3 + 1] / 255.0; // G
         floatArr[channelSize * 2 + i] = data[i * 3 + 2] / 255.0; // B
     }
-
     const tensor = new ort.Tensor('float32', floatArr, [1, 3, 640, 640]);
-    const results = await session.run({ images: tensor });
-    const output = results[session.outputNames[0]].data; // Float32Array of 84 * 8400 elements
 
-    const scaleX = origWidth / 640;
-    const scaleY = origHeight / 640;
+    if (mode === 'person') {
+        // Full body / posture mode
+        const session = await getPersonSession();
+        if (!session) throw new Error('YOLOv8m person model is not available');
+        const results = await session.run({ images: tensor });
+        const output = results.output0.data;
 
-    const rawCandidates = [];
-    const numAnchors = 8400;
+        const candidates = [];
+        for (let i = 0; i < 8400; i++) {
+            const personScore = output[4 * 8400 + i]; // Class 0: person
+            if (personScore >= threshold) {
+                const cx = (output[0 * 8400 + i] - padX) / scale;
+                const cy = (output[1 * 8400 + i] - padY) / scale;
+                const w = output[2 * 8400 + i] / scale;
+                const h = output[3 * 8400 + i] / scale;
 
-    for (let i = 0; i < numAnchors; i++) {
-        const personScore = output[4 * numAnchors + i]; // Class 0: 'person'
-        if (personScore >= threshold) {
-            const cx = output[0 * numAnchors + i];
-            const cy = output[1 * numAnchors + i];
-            const w = output[2 * numAnchors + i];
-            const h = output[3 * numAnchors + i];
-
-            const origX = (cx - w / 2) * scaleX;
-            const origY = (cy - h / 2) * scaleY;
-            const origW = w * scaleX;
-            const origH = h * scaleY;
-
-            rawCandidates.push({
-                x: Math.max(0, Math.round(origX)),
-                y: Math.max(0, Math.round(origY)),
-                width: Math.min(origWidth, Math.round(origW)),
-                height: Math.min(origHeight, Math.round(origH)),
-                confidence: Number(personScore.toFixed(2))
-            });
-        }
-    }
-
-    // Sort descending by confidence
-    rawCandidates.sort((a, b) => b.confidence - a.confidence);
-
-    // Non-Maximum Suppression (NMS)
-    const finalBoxes = [];
-    const iouThreshold = 0.42;
-
-    const calculateIoU = (b1, b2) => {
-        const x1 = Math.max(b1.x, b2.x);
-        const y1 = Math.max(b1.y, b2.y);
-        const x2 = Math.min(b1.x + b1.width, b2.x + b2.width);
-        const y2 = Math.min(b1.y + b1.height, b2.y + b2.height);
-
-        const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
-        const a1 = b1.width * b1.height;
-        const a2 = b2.width * b2.height;
-        const union = a1 + a2 - inter;
-        return union > 0 ? inter / union : 0;
-    };
-
-    for (const cand of rawCandidates) {
-        let keep = true;
-        for (const existing of finalBoxes) {
-            if (calculateIoU(cand, existing) > iouThreshold) {
-                keep = false;
-                break;
+                candidates.push({
+                    x: Math.max(0, Math.round(cx - w / 2)),
+                    y: Math.max(0, Math.round(cy - h / 2)),
+                    width: Math.min(origWidth, Math.round(w)),
+                    height: Math.min(origHeight, Math.round(h)),
+                    confidence: Number(personScore.toFixed(2))
+                });
             }
         }
-        if (keep) {
-            finalBoxes.push(cand);
+
+        candidates.sort((a, b) => b.confidence - a.confidence);
+        const finalBoxes = [];
+        for (const cand of candidates) {
+            let keep = true;
+            for (const existing of finalBoxes) {
+                const x1 = Math.max(cand.x, existing.x);
+                const y1 = Math.max(cand.y, existing.y);
+                const x2 = Math.min(cand.x + cand.width, existing.x + existing.width);
+                const y2 = Math.min(cand.y + cand.height, existing.y + existing.height);
+                const interW = Math.max(0, x2 - x1);
+                const interH = Math.max(0, y2 - y1);
+                const inter = interW * interH;
+                if (inter > 0) {
+                    const a1 = cand.width * cand.height;
+                    const a2 = existing.width * existing.height;
+                    const union = a1 + a2 - inter;
+                    const iou = inter / union;
+                    const ios = inter / Math.min(a1, a2); // Containment suppression
+                    if (iou > 0.40 || ios > 0.65) {
+                        keep = false;
+                        break;
+                    }
+                }
+            }
+            if (keep) finalBoxes.push(cand);
         }
+
+        finalBoxes.sort((a, b) => {
+            const diff = Math.abs(a.y - b.y);
+            if (diff < 35) return a.x - b.x;
+            return a.y - b.y;
+        });
+        finalBoxes.forEach((b, i) => b.label = `#${i + 1}`);
+
+        return {
+            isDark: false,
+            avgBrightness: Number(avgBrightness.toFixed(1)),
+            count: finalBoxes.length,
+            boxes: finalBoxes,
+            modelUsed: 'YOLOv8m (Person Mode)'
+        };
+    } else {
+        // High-precision Classroom Face Detection (Default)
+        const session = await getFaceSession();
+        if (!session) throw new Error('YOLOv8m-Face model is not available');
+        const results = await session.run({ images: tensor });
+        const output = results.output0.data;
+
+        const candidates = [];
+        for (let i = 0; i < 8400; i++) {
+            const score = output[4 * 8400 + i]; // Face confidence score
+            if (score >= threshold) {
+                const cx = (output[0 * 8400 + i] - padX) / scale;
+                const cy = (output[1 * 8400 + i] - padY) / scale;
+                const w = output[2 * 8400 + i] / scale;
+                const h = output[3 * 8400 + i] / scale;
+
+                candidates.push({
+                    x: Math.max(0, Math.round(cx - w / 2)),
+                    y: Math.max(0, Math.round(cy - h / 2)),
+                    width: Math.min(origWidth, Math.round(w)),
+                    height: Math.min(origHeight, Math.round(h)),
+                    confidence: Number(score.toFixed(2))
+                });
+            }
+        }
+
+        candidates.sort((a, b) => b.confidence - a.confidence);
+        const finalBoxes = [];
+        for (const cand of candidates) {
+            let keep = true;
+            for (const existing of finalBoxes) {
+                const x1 = Math.max(cand.x, existing.x);
+                const y1 = Math.max(cand.y, existing.y);
+                const x2 = Math.min(cand.x + cand.width, existing.x + existing.width);
+                const y2 = Math.min(cand.y + cand.height, existing.y + existing.height);
+                const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+                const union = cand.width * cand.height + existing.width * existing.height - inter;
+                if (union > 0 && inter / union > 0.40) {
+                    keep = false;
+                    break;
+                }
+            }
+            if (keep) finalBoxes.push(cand);
+        }
+
+        finalBoxes.sort((a, b) => {
+            const diff = Math.abs(a.y - b.y);
+            if (diff < 35) return a.x - b.x;
+            return a.y - b.y;
+        });
+        finalBoxes.forEach((b, i) => b.label = `#${i + 1}`);
+
+        return {
+            isDark: false,
+            avgBrightness: Number(avgBrightness.toFixed(1)),
+            count: finalBoxes.length,
+            boxes: finalBoxes,
+            modelUsed: 'YOLOv8m-Face (Classroom High Precision)'
+        };
     }
-
-    // Sort row by row (top-to-bottom, left-to-right) for neat student numbering
-    finalBoxes.sort((a, b) => {
-        const rowDiff = Math.abs(a.y - b.y);
-        if (rowDiff < 35) return a.x - b.x;
-        return a.y - b.y;
-    });
-
-    finalBoxes.forEach((b, i) => {
-        b.label = `#${i + 1}`;
-    });
-
-    return {
-        isDark: false,
-        avgBrightness: Number(avgBrightness.toFixed(1)),
-        count: finalBoxes.length,
-        boxes: finalBoxes
-    };
 };
 
 // Helper to clean up expired audit files (> 1 hour old)
@@ -316,7 +367,10 @@ router.post('/detect', authenticate, async (req, res) => {
         const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
         const buffer = Buffer.from(base64Data, 'base64');
 
-        const result = await detectStudentsYOLO(buffer, threshold ? Number(threshold) : 0.25);
+        const result = await detectStudentsYOLO(buffer, {
+            threshold: threshold ? Number(threshold) : 0.25,
+            mode: req.body.mode || 'face'
+        });
         return res.json({
             success: true,
             ...result

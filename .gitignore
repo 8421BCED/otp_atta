@@ -4,3 +4,5 @@ dist/
 *.log
 plans/client_secret*.json
 client_secret*.json
+server/models/*.onnx
+*.onnx

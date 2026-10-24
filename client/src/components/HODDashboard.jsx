@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, RotateCcw, Calendar, CheckCircle2, Search, Building2, Clock, Lock, Unlock, Eye, Sparkles, QrCode, RefreshCw, DoorOpen, Radio } from 'lucide-react';
+import { Users, RotateCcw, Calendar, CheckCircle2, Search, Building2, Clock, Lock, Unlock, Eye, Sparkles, QrCode, RefreshCw, DoorOpen, Radio, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { RoomStudentsModal } from './RoomStudentsModal';
 import { AttendanceCalendarModal } from './AttendanceCalendarModal';
 import { StudentDetailsModal } from './StudentDetailsModal';
@@ -10,9 +10,11 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
 
     const [overview, setOverview] = useState(null);
     const [students, setStudents] = useState([]);
+    const [dayLockedStudents, setDayLockedStudents] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [lockedOnlyFilter, setLockedOnlyFilter] = useState(false);
+    const [filterTab, setFilterTab] = useState('all'); // 'all' | 'day_locked' | 'device_locked'
     const [resetNotice, setResetNotice] = useState(null);
+    const [unlockNotice, setUnlockNotice] = useState(null);
 
     // Active room popup state
     const [selectedActiveRoom, setSelectedActiveRoom] = useState(null);
@@ -125,16 +127,19 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
     const loadHODData = async () => {
         try {
             const token = localStorage.getItem('fxec_token');
-            const [resOverview, resStudents] = await Promise.all([
+            const [resOverview, resStudents, resLocked] = await Promise.all([
                 fetch('/api/hod/overview', { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`/api/hod/students?q=${encodeURIComponent(searchQuery)}`, { headers: { 'Authorization': `Bearer ${token}` } })
+                fetch(`/api/hod/students?q=${encodeURIComponent(searchQuery)}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch('/api/hod/locked-students', { headers: { 'Authorization': `Bearer ${token}` } })
             ]);
 
             const dataOverview = await resOverview.json();
             const dataStudents = await resStudents.json();
+            const dataLocked = await resLocked.json();
 
             setOverview(dataOverview);
             setStudents(dataStudents.students || []);
+            setDayLockedStudents(dataLocked.lockedStudents || []);
         } catch (e) {
             console.error('Failed to load HOD data:', e);
         }
@@ -167,6 +172,51 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
             }
         } catch (e) {
             console.error('Failed to reset device:', e);
+        }
+    };
+
+    const handleUnlockStudentDay = async (studentId, studentName) => {
+        try {
+            const token = localStorage.getItem('fxec_token');
+            const res = await fetch('/api/hod/unlock-student-day', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ studentId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setUnlockNotice(data.message || `Day attendance unlocked for ${studentName}!`);
+                loadHODData();
+                setTimeout(() => setUnlockNotice(null), 6000);
+            }
+        } catch (e) {
+            console.error('Failed to unlock student day:', e);
+        }
+    };
+
+    const handleRelockStudentDay = async (studentId, studentName) => {
+        if (!window.confirm(`Re-lock today's attendance for ${studentName}?`)) return;
+        try {
+            const token = localStorage.getItem('fxec_token');
+            const res = await fetch('/api/hod/relock-student-day', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ studentId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setUnlockNotice(`Day attendance re-locked for ${studentName}.`);
+                loadHODData();
+                setTimeout(() => setUnlockNotice(null), 6000);
+            }
+        } catch (e) {
+            console.error('Failed to relock student day:', e);
         }
     };
 
@@ -210,12 +260,18 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
         }
     };
 
-    // Filter students by locked devices if filter is active
-    const displayedStudents = lockedOnlyFilter 
-        ? students.filter(st => st.is_locked || st.device_name)
-        : students;
-
+    // Day lock lookup map and counts
+    const dayLockedMap = new Map(dayLockedStudents.map(st => [st.id, st]));
+    const dayLockedPendingCount = dayLockedStudents.filter(st => !st.isHodUnlocked).length;
     const lockedCount = students.filter(st => st.is_locked || st.device_name).length;
+
+    // Filter students by active tab
+    let displayedStudents = students;
+    if (filterTab === 'day_locked') {
+        displayedStudents = students.filter(st => dayLockedMap.has(st.id));
+    } else if (filterTab === 'device_locked') {
+        displayedStudents = students.filter(st => st.is_locked || st.device_name);
+    }
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
@@ -567,40 +623,99 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                 </div>
             </div>
 
+            {/* Day Attendance Lock Alert for Students Who Missed Period 1 */}
+            {dayLockedPendingCount > 0 && (
+                <div style={{
+                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(220, 38, 38, 0.12) 100%)',
+                    border: '1.5px solid #FCA5A5',
+                    borderRadius: '12px',
+                    padding: '14px 18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}>
+                            <AlertTriangle size={22} />
+                        </div>
+                        <div>
+                            <div style={{ fontWeight: 800, color: '#991B1B', fontSize: '0.95rem' }}>
+                                {dayLockedPendingCount} Student{dayLockedPendingCount > 1 ? 's' : ''} Missed Period 1 OTP (9:00 - 9:05 AM Cutoff)
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: '#7F1D1D', marginTop: '2px' }}>
+                                Day attendance is completely locked. They cannot choose classrooms or submit OTP for any subsequent periods without your authorization.
+                            </div>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        className="fx-btn-primary"
+                        style={{ background: '#DC2626', borderColor: '#DC2626', padding: '7px 16px', fontSize: '0.8rem', fontWeight: 700 }}
+                        onClick={() => setFilterTab('day_locked')}
+                    >
+                        Review & Unlock ({dayLockedPendingCount})
+                    </button>
+                </div>
+            )}
+
             {/* Device Lock Management & Student History Table */}
             <div className="fx-card">
                 <div className="fx-card-header" style={{ flexWrap: 'wrap', gap: '10px' }}>
                     <div>
                         <div className="fx-card-title">
                             <Users size={20} color="var(--blue)" />
-                            Student Device Locks & Full Attendance History
+                            Student Attendance Status & Hardware Locks
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-sub)', marginTop: '2px' }}>
-                            Search students, click any name to view calendar & location history, or release hardware device locks
+                            Search students, click any row to view calendar & location history, unlock Period 1 day locks, or release hardware device locks
                         </div>
                     </div>
 
-                    {/* Filter Tabs: All vs Locked Devices */}
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    {/* Filter Tabs: All vs Missed Period 1 vs Locked Devices */}
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         <button
                             type="button"
-                            className={`login-endpoint-tab ${!lockedOnlyFilter ? 'active' : ''}`}
+                            className={`login-endpoint-tab ${filterTab === 'all' ? 'active' : ''}`}
                             style={{ padding: '5px 12px', fontSize: '0.74rem' }}
-                            onClick={() => setLockedOnlyFilter(false)}
+                            onClick={() => setFilterTab('all')}
                         >
                             All Students ({students.length})
                         </button>
                         <button
                             type="button"
-                            className={`login-endpoint-tab ${lockedOnlyFilter ? 'active' : ''}`}
+                            className={`login-endpoint-tab ${filterTab === 'day_locked' ? 'active' : ''}`}
+                            style={{
+                                padding: '5px 12px',
+                                fontSize: '0.74rem',
+                                background: filterTab === 'day_locked' ? '#DC2626' : undefined,
+                                color: filterTab === 'day_locked' ? '#FFFFFF' : (dayLockedPendingCount > 0 ? '#DC2626' : undefined),
+                                fontWeight: dayLockedPendingCount > 0 ? 800 : 600
+                            }}
+                            onClick={() => setFilterTab('day_locked')}
+                        >
+                            <Lock size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                            Missed Period 1 ({dayLockedPendingCount})
+                        </button>
+                        <button
+                            type="button"
+                            className={`login-endpoint-tab ${filterTab === 'device_locked' ? 'active' : ''}`}
                             style={{ padding: '5px 12px', fontSize: '0.74rem' }}
-                            onClick={() => setLockedOnlyFilter(true)}
+                            onClick={() => setFilterTab('device_locked')}
                         >
                             <Lock size={12} style={{ display: 'inline', marginRight: '4px' }} />
                             Locked Devices ({lockedCount})
                         </button>
                     </div>
                 </div>
+
+                {unlockNotice && (
+                    <div className="aero-alert-success" style={{ fontWeight: 700 }}>
+                        <ShieldCheck size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                        {unlockNotice}
+                    </div>
+                )}
 
                 {resetNotice && (
                     <div className="aero-alert-success">{resetNotice}</div>
@@ -623,15 +738,17 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                             <tr>
                                 <th>Student Name</th>
                                 <th>Official College Email</th>
+                                <th>Day Status (Period 1)</th>
                                 <th>Registered Device</th>
                                 <th>Current Location</th>
                                 <th style={{ textAlign: 'center' }}>History</th>
-                                <th style={{ textAlign: 'center' }}>Device Lock Action</th>
+                                <th style={{ textAlign: 'center' }}>Attendance / Device Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {displayedStudents.map((st, i) => {
                                 const hasLock = !!(st.is_locked || st.device_name);
+                                const dayLockInfo = dayLockedMap.get(st.id);
                                 return (
                                     <tr 
                                         key={i}
@@ -644,6 +761,58 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                                         </td>
                                         <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--blue)', fontWeight: 700 }}>
                                             {st.email}
+                                        </td>
+                                        <td>
+                                            {dayLockInfo ? (
+                                                dayLockInfo.isHodUnlocked ? (
+                                                    <span style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        padding: '3px 8px',
+                                                        borderRadius: '6px',
+                                                        background: '#ECFDF5',
+                                                        color: '#059669',
+                                                        fontSize: '0.74rem',
+                                                        fontWeight: 700,
+                                                        border: '1px solid #A7F3D0'
+                                                    }}>
+                                                        <ShieldCheck size={12} />
+                                                        Unlocked by HOD
+                                                    </span>
+                                                ) : (
+                                                    <span style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        padding: '3px 8px',
+                                                        borderRadius: '6px',
+                                                        background: '#FEF2F2',
+                                                        color: '#DC2626',
+                                                        fontSize: '0.74rem',
+                                                        fontWeight: 700,
+                                                        border: '1px solid #FECACA'
+                                                    }}>
+                                                        <Lock size={12} />
+                                                        Day Locked (P1 Missed)
+                                                    </span>
+                                                )
+                                            ) : (
+                                                <span style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    padding: '3px 8px',
+                                                    borderRadius: '6px',
+                                                    background: '#F0FDF4',
+                                                    color: '#15803D',
+                                                    fontSize: '0.74rem',
+                                                    fontWeight: 700
+                                                }}>
+                                                    <CheckCircle2 size={12} />
+                                                    Period 1 OK
+                                                </span>
+                                            )}
                                         </td>
                                         <td>
                                             {hasLock ? (
@@ -679,26 +848,61 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                                                 View Calendar
                                             </button>
                                         </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            {hasLock ? (
-                                                <button 
-                                                    type="button"
-                                                    className="fx-btn-danger"
-                                                    style={{ padding: '4px 10px', fontSize: '0.72rem' }}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleResetDevice(st.id, st.name);
-                                                    }}
-                                                    title="Take lock back / Allow student to register a new phone"
-                                                >
-                                                    <RotateCcw size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-                                                    Take Lock Back
-                                                </button>
-                                            ) : (
-                                                <span style={{ fontSize: '0.74rem', color: '#16A34A', fontWeight: 700 }}>
-                                                    Unlocked
-                                                </span>
-                                            )}
+                                        <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                            <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                                {dayLockInfo && !dayLockInfo.isHodUnlocked && (
+                                                    <button
+                                                        type="button"
+                                                        className="fx-btn-primary"
+                                                        style={{
+                                                            padding: '4px 10px',
+                                                            fontSize: '0.72rem',
+                                                            fontWeight: 700,
+                                                            background: '#16A34A',
+                                                            borderColor: '#16A34A',
+                                                            color: '#FFFFFF'
+                                                        }}
+                                                        onClick={() => handleUnlockStudentDay(st.id, st.name)}
+                                                        title="Authorize student to enter classroom and take attendance today"
+                                                    >
+                                                        <Unlock size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                                                        Unlock Day
+                                                    </button>
+                                                )}
+                                                {dayLockInfo && dayLockInfo.isHodUnlocked && (
+                                                    <button
+                                                        type="button"
+                                                        className="fx-btn-outline"
+                                                        style={{
+                                                            padding: '3px 8px',
+                                                            fontSize: '0.70rem',
+                                                            color: '#DC2626',
+                                                            borderColor: '#FECACA'
+                                                        }}
+                                                        onClick={() => handleRelockStudentDay(st.id, st.name)}
+                                                        title="Revoke day unlock and re-lock student"
+                                                    >
+                                                        <Lock size={11} style={{ marginRight: '3px', verticalAlign: 'middle' }} />
+                                                        Relock
+                                                    </button>
+                                                )}
+                                                {hasLock ? (
+                                                    <button 
+                                                        type="button" 
+                                                        className="fx-btn-danger"
+                                                        style={{ padding: '4px 10px', fontSize: '0.72rem' }}
+                                                        onClick={() => handleResetDevice(st.id, st.name)}
+                                                        title="Take lock back / Allow student to register a new phone"
+                                                    >
+                                                        <RotateCcw size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                                                        Take Lock Back
+                                                    </button>
+                                                ) : (
+                                                    <span style={{ fontSize: '0.74rem', color: '#16A34A', fontWeight: 600, padding: '0 4px' }}>
+                                                        Clean
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 );

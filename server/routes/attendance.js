@@ -211,11 +211,34 @@ router.post('/submit-otp', authenticate, authorizeRoles('student'), async (req, 
 
         // B. Morning 9:00 - 9:05 AM Day-Start Lockout Check
         const [dayLock] = await pool.query('SELECT * FROM student_day_locks WHERE student_id = ? AND date = ?', [studentId, today]);
-        if (dayLock.length > 0 && dayLock[0].is_locked_out) {
+        const isExplicitlyLocked = dayLock.length > 0 && dayLock[0].is_locked_out;
+        const isHodUnlockedNow = dayLock.length > 0 && dayLock[0].reason === 'HOD_UNLOCKED';
+
+        // Check if student attended period 1
+        const [p1Record] = await pool.query(
+            'SELECT * FROM attendance_records WHERE student_id = ? AND date = ? AND period_id = 1 AND (status = "present" OR status = "od")',
+            [studentId, today]
+        );
+        const attendedPeriod1 = p1Record.length > 0;
+
+        // Check sports pass
+        const [sportsPass] = await pool.query(
+            `SELECT * FROM sports_od_students sos 
+             JOIN sports_od_passes sop ON sos.pass_id = sop.id 
+             WHERE sos.student_id = ? AND ? BETWEEN sop.from_date AND sop.to_date AND (sop.status = "active" OR sop.status = "approved")`,
+            [studentId, today]
+        );
+        const hasSportsPass = sportsPass.length > 0;
+
+        let nowTime = new Date();
+        const curTimeStr = req.body.currentTime || `${String(nowTime.getHours()).padStart(2, '0')}:${String(nowTime.getMinutes()).padStart(2, '0')}:${String(nowTime.getSeconds()).padStart(2, '0')}`;
+        const isPastCutoffTime = curTimeStr > '09:05:00';
+
+        if (isExplicitlyLocked || (!hasSportsPass && isPastCutoffTime && !attendedPeriod1 && !isHodUnlockedNow)) {
             return res.status(403).json({
                 code: 'DAY_LOCKED_OUT',
-                error: 'College Day Locked Out',
-                message: 'You failed to verify your morning attendance between 9:00 AM and 9:05 AM. In accordance with college policy, your access is locked for the remainder of the day.'
+                error: 'College Day Attendance Locked',
+                message: 'You failed to verify your morning attendance between 9:00 AM and 9:05 AM. In accordance with college policy, your day attendance is locked. Please report in person to your HOD to request an official unlock.'
             });
         }
 
@@ -430,11 +453,46 @@ router.get('/student-timeline/:studentId', authenticate, async (req, res) => {
             };
         });
 
+        // Check day lock status
+        const [dayLockRows] = await pool.query(
+            'SELECT * FROM student_day_locks WHERE student_id = ? AND date = ?',
+            [studentId, today]
+        );
+        const isExplicitlyLocked = dayLockRows.length > 0 && dayLockRows[0].is_locked_out;
+        const isHodUnlocked = dayLockRows.length > 0 && dayLockRows[0].reason === 'HOD_UNLOCKED';
+
+        // Check if student attended period 1
+        const period1Att = attendance.find(a => a.period_id === 1);
+        const isPeriod1Present = !!(period1Att && (period1Att.status === 'present' || period1Att.status === 'od'));
+
+        // Check active sports pass
+        const [sportsPasses] = await pool.query(
+            `SELECT * FROM sports_od_students sos 
+             JOIN sports_od_passes sop ON sos.pass_id = sop.id 
+             WHERE sos.student_id = ? AND ? BETWEEN sop.from_date AND sop.to_date AND (sop.status = "active" OR sop.status = "approved")`,
+            [studentId, today]
+        );
+        const hasSportsPass = sportsPasses.length > 0;
+
+        // Current time check
+        let now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const currentTimeStr = req.query.simulateTime || `${hours}:${minutes}:${seconds}`;
+
+        const isPastCutoff = currentTimeStr > '09:05:00';
+        const isDayLocked = isExplicitlyLocked || (!hasSportsPass && isPastCutoff && !isPeriod1Present && !isHodUnlocked);
+
         return res.json({
             date: today,
             timeline,
             movements,
-            totalPresent: attendance.filter(a => a.status === 'present' || a.status === 'od').length
+            totalPresent: attendance.filter(a => a.status === 'present' || a.status === 'od').length,
+            isDayLocked: !!isDayLocked,
+            isHodUnlocked: !!isHodUnlocked,
+            isPastCutoff,
+            isPeriod1Present
         });
     } catch (err) {
         console.error('Error fetching student timeline:', err);

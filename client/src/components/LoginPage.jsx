@@ -42,8 +42,7 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
             window.google.accounts.id.initialize({
                 client_id: GOOGLE_CLIENT_ID,
                 callback: handleGoogleCredentialResponse,
-                auto_select: false,
-                hosted_domain: 'francisxavier.ac.in'
+                auto_select: false
             });
 
             if (googleButtonRef.current) {
@@ -180,9 +179,6 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
                     <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--dark-blue)', letterSpacing: '-0.02em', marginTop: '12px' }}>
                         Francis Xavier Engineering College
                     </h1>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-sub)', marginTop: '3px' }}>
-                        Autonomous Institution • OTP & Anti-Proxy Attendance
-                    </p>
                 </div>
 
                 {/* Endpoint Navigation Tabs */}
@@ -197,12 +193,6 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
                             {info.label}
                         </button>
                     ))}
-                </div>
-
-                {/* Active Portal Header */}
-                <div className="portal-header-tag">
-                    <span className="tag-dot" />
-                    <span>{activeMeta.label} ({activeMeta.path})</span>
                 </div>
 
                 {/* Error Banner */}
@@ -273,24 +263,9 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
                     </div>
                 </div>
 
-                {/* Google Single Sign-On (Official SSO) */}
-                <div className="sso-divider-row">
-                    <span className="sso-divider-line" />
-                    <span className="sso-divider-text">OR OFFICIAL GOOGLE SSO</span>
-                    <span className="sso-divider-line" />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                    <div ref={googleButtonRef} style={{ minHeight: '44px', display: 'flex', justifyContent: 'center' }}></div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-sub)', textAlign: 'center' }}>
-                        Only <strong>@francisxavier.ac.in</strong> official accounts are authorized.
-                    </div>
-                </div>
-
-                {/* Anti-Proxy Device Pill */}
-                <div className="aero-device-security-pill" style={{ marginTop: '12px' }}>
-                    <ShieldCheck size={15} color="var(--blue)" />
-                    <span>Hardware 1-Device Lock: Active & Verified on this device.</span>
+                {/* Real Google SSO Button */}
+                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <div ref={googleButtonRef} style={{ minHeight: '44px', display: 'flex', justifyContent: 'center', width: '100%' }}></div>
                 </div>
 
             </div>

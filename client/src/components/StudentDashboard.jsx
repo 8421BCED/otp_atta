@@ -31,6 +31,8 @@ export const StudentDashboard = ({
     // Timeline data
     const [timeline, setTimeline] = useState([]);
     const [totalPresent, setTotalPresent] = useState(0);
+    const [isDayLockedServer, setIsDayLockedServer] = useState(false);
+    const [isHodUnlockedServer, setIsHodUnlockedServer] = useState(false);
 
     // Check if student has an active Sports OD Pass
     const checkSportsPass = async () => {
@@ -66,6 +68,8 @@ export const StudentDashboard = ({
             if (data.timeline) {
                 setTimeline(data.timeline);
                 setTotalPresent(data.totalPresent || 0);
+                setIsDayLockedServer(!!data.isDayLocked);
+                setIsHodUnlockedServer(!!data.isHodUnlocked);
             }
         } catch (e) {
             console.error('Failed to load timeline:', e);
@@ -90,8 +94,11 @@ export const StudentDashboard = ({
     const period1Item = timeline?.find(p => p.id === 1);
     const isPeriod1Marked = !!period1Item?.isMarked;
     const isPastCutoff = !!currentPeriodInfo?.isPastMorningCutoff;
-    const isCurrentPeriod1 = currentPeriodInfo?.activePeriod?.period_number === 1;
-    const isDayStartLocked = !activeSportsPass && isCurrentPeriod1 && isPastCutoff && !isPeriod1Marked;
+    const isHodUnlocked = isHodUnlockedServer;
+
+    // Day attendance is locked if past 9:05 AM, Period 1 missed, HOD hasn't unlocked, and no sports pass
+    const isDayLocked = !activeSportsPass && (isDayLockedServer || (isPastCutoff && !isPeriod1Marked && !isHodUnlocked));
+    const isDayStartLocked = isDayLocked;
 
     // Determine current target period:
     // 1. If currently in normal period (from server), use it
@@ -293,14 +300,21 @@ export const StudentDashboard = ({
                         </div>
 
                         {/* Move / Change Classroom button */}
-                        <button 
-                            type="button" 
-                            className="aero-glass-btn primary move-classroom-btn"
-                            onClick={() => setIsRoomModalOpen(true)}
-                        >
-                            <Navigation size={14} />
-                            <span>{activeRoomObj ? 'Move / Change Classroom' : 'Select Classroom'}</span>
-                        </button>
+                        {isDayLocked ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#FEF2F2', border: '1.5px solid #FCA5A5', padding: '6px 14px', borderRadius: '8px', color: '#991B1B', fontSize: '0.78rem', fontWeight: 800 }}>
+                                <Lock size={14} color="#DC2626" />
+                                <span>Day Locked (Period 1 Missed)</span>
+                            </div>
+                        ) : (
+                            <button 
+                                type="button" 
+                                className="aero-glass-btn primary move-classroom-btn"
+                                onClick={() => setIsRoomModalOpen(true)}
+                            >
+                                <Navigation size={14} />
+                                <span>{activeRoomObj ? 'Move / Change Classroom' : 'Select Classroom'}</span>
+                            </button>
+                        )}
                     </div>
 
                     {/* Timer Inside Green Circle (Denoting Period Duration) */}
@@ -432,6 +446,65 @@ export const StudentDashboard = ({
                                 </button>
                             </form>
                         </div>
+                    ) : isDayLocked ? (
+                        <div style={{
+                            width: '100%',
+                            maxWidth: '420px',
+                            margin: '0 auto',
+                            background: 'linear-gradient(135deg, #FEF2F2 0%, #FFF5F5 100%)',
+                            border: '2px solid #F87171',
+                            borderRadius: '16px',
+                            padding: '24px 20px',
+                            textAlign: 'center',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '12px',
+                            boxShadow: '0 8px 24px rgba(239, 68, 68, 0.12)'
+                        }}>
+                            <div style={{
+                                width: '56px',
+                                height: '56px',
+                                borderRadius: '50%',
+                                background: '#FEE2E2',
+                                border: '2px solid #FCA5A5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#DC2626'
+                            }}>
+                                <Lock size={28} />
+                            </div>
+                            <div>
+                                <div style={{ fontWeight: 800, fontSize: '1.15rem', color: '#991B1B' }}>
+                                    Day Attendance Locked
+                                </div>
+                                <div style={{ fontSize: '0.78rem', color: '#B91C1C', fontWeight: 700, marginTop: '2px' }}>
+                                    Period 1 Cutoff (09:05 AM) Missed
+                                </div>
+                            </div>
+                            <p style={{ fontSize: '0.82rem', color: '#7F1D1D', margin: 0, lineHeight: 1.5, maxWidth: '360px' }}>
+                                You did not enter your OTP between <strong>09:00 AM and 09:05 AM</strong> for the first period. In accordance with college anti-proxy rules, your classroom selection and OTP entry are locked for today.
+                            </p>
+                            <div style={{
+                                background: '#FFFFFF',
+                                border: '1.5px dashed #F87171',
+                                borderRadius: '10px',
+                                padding: '12px 14px',
+                                width: '100%',
+                                fontSize: '0.78rem',
+                                color: '#991B1B',
+                                fontWeight: 700,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '4px'
+                            }}>
+                                <div>🏛️ <strong>Action Required:</strong> Meet your HOD in person to unlock.</div>
+                                <div style={{ fontSize: '0.72rem', color: '#B91C1C', fontWeight: 600 }}>
+                                    Once authorized, your HOD will unlock your attendance from their dashboard.
+                                </div>
+                            </div>
+                        </div>
                     ) : isCurrentPeriodMarked ? (
                         <div className="aero-alert-success" style={{ width: '100%', maxWidth: '380px', margin: '0 auto', padding: '16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                             <CheckCircle2 size={28} color="#16A34A" />
@@ -447,6 +520,12 @@ export const StudentDashboard = ({
                         </div>
                     ) : !selectedRoom ? (
                         <div className="no-room-prompt-box">
+                            {isHodUnlocked && (
+                                <div style={{ background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: '8px', padding: '8px 12px', color: '#166534', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', width: '100%' }}>
+                                    <CheckCircle2 size={16} color="#16A34A" />
+                                    <span>Day Attendance Unlocked by HOD. Select your classroom below.</span>
+                                </div>
+                            )}
                             <DoorOpen size={28} color="var(--blue)" />
                             <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.96rem' }}>
                                 Classroom Selection Required
@@ -463,14 +542,6 @@ export const StudentDashboard = ({
                                 <Navigation size={14} style={{ marginRight: '6px' }} />
                                 <span>Choose Classroom Location</span>
                             </button>
-                        </div>
-                    ) : isDayStartLocked ? (
-                        <div className="aero-alert-error" style={{ width: '100%', maxWidth: '380px', margin: '0 auto', padding: '16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                            <Lock size={26} color="#DC2626" />
-                            <strong style={{ fontSize: '0.92rem', color: '#DC2626' }}>Morning Cutoff Window (9:05 AM) Closed</strong>
-                            <span style={{ fontSize: '0.78rem', color: 'var(--dark-blue)', lineHeight: '1.4' }}>
-                                College rules require students to check in between 9:00 AM – 9:05 AM. Because this window has passed, you are marked <strong>Absent for Period 1</strong> and OTP submission is locked for this period.
-                            </span>
                         </div>
                     ) : (
                         <form onSubmit={handleSubmitOtp} className="student-otp-form">

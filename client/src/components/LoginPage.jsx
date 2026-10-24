@@ -145,7 +145,7 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
             { name: 'Gomathi Selvi R', email: 'gomathiselvir@francisxavier.ac.in', dept: 'Faculty' }
         ],
         hod: [
-            { name: 'Dr. J. B. Shajilin Labbai (IT HOD)', email: 'ithod@francisxavier.ac.in', dept: 'IT' },
+            { name: 'Dr. M. Caroline Viola Stella Mary (IT HOD)', email: 'caroline@francisxavier.ac.in', dept: 'IT' },
             { name: 'Dr. Gomathy (CSE HOD)', email: 'csehod@francisxavier.ac.in', dept: 'CSE' }
         ],
         principal: [

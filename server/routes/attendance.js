@@ -582,9 +582,23 @@ router.get('/student-details/:studentId', authenticate, async (req, res) => {
             [studentId]
         );
 
-        // Full Student Movement Trail (Every classroom & lab transfer with timestamps)
+        // All student attendance records across the semester
+        const [allRecords] = await pool.query(
+            `SELECT ar.id, DATE_FORMAT(ar.date, '%Y-%m-%d') as date_str, ar.period_id, ar.status, ar.marked_at,
+                    p.name as period_name, p.start_time, p.end_time,
+                    r.room_number, r.name as room_name, b.name as building_name
+             FROM attendance_records ar
+             JOIN periods p ON ar.period_id = p.id
+             LEFT JOIN rooms r ON ar.room_id = r.id
+             LEFT JOIN buildings b ON r.building_id = b.id
+             WHERE ar.student_id = ?
+             ORDER BY ar.date DESC, p.id ASC`,
+            [studentId]
+        );
+
+        // All student movements with formatted date_str
         const [movements] = await pool.query(
-            `SELECT sm.*, 
+            `SELECT sm.id, DATE_FORMAT(sm.date, '%Y-%m-%d') as date_str, sm.timestamp, sm.note,
                     r_to.room_number as to_room, r_to.name as to_room_name, b_to.name as to_building,
                     r_from.room_number as from_room, r_from.name as from_room_name, b_from.name as from_building
              FROM student_movements sm
@@ -593,7 +607,21 @@ router.get('/student-details/:studentId', authenticate, async (req, res) => {
              LEFT JOIN rooms r_from ON sm.from_room_id = r_from.id
              LEFT JOIN buildings b_from ON r_from.building_id = b_from.id
              WHERE sm.student_id = ?
-             ORDER BY sm.timestamp DESC LIMIT 25`,
+             ORDER BY sm.timestamp DESC`,
+            [studentId]
+        );
+
+        // Holidays declared
+        const [holidays] = await pool.query(
+            `SELECT title, DATE_FORMAT(holiday_date, '%Y-%m-%d') as date_str, reason, scope, is_timed, start_time, end_time FROM holidays`
+        );
+
+        // Active/Approved sports OD passes for student
+        const [sportsPasses] = await pool.query(
+            `SELECT sop.event_name, DATE_FORMAT(sop.from_date, '%Y-%m-%d') as from_date_str, DATE_FORMAT(sop.to_date, '%Y-%m-%d') as to_date_str, sop.status
+             FROM sports_od_students sos
+             JOIN sports_od_passes sop ON sos.pass_id = sop.id
+             WHERE sos.student_id = ? AND (sop.status = 'active' OR sop.status = 'approved')`,
             [studentId]
         );
 
@@ -603,7 +631,10 @@ router.get('/student-details/:studentId', authenticate, async (req, res) => {
             deviceLock,
             todayRecords,
             yesterdayRecords,
+            allRecords,
             movements,
+            holidays,
+            sportsPasses,
             stats: {
                 totalPeriods: stats[0].total_periods || 0,
                 presentPeriods: stats[0].present_periods || 0,

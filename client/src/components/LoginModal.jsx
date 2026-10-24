@@ -141,9 +141,9 @@ export const LoginModal = ({ isOpen, onClose, onLoginSuccess, deviceInfo }) => {
                             type="button" 
                             className="role-btn" 
                             style={{ background: 'rgba(255,255,255,0.05)', fontSize: '0.75rem', justifyContent: 'center' }}
-                            onClick={() => { setEmail('hod.it@francisxavier.ac.in'); setPassword('Password@2525'); }}
+                            onClick={() => { setEmail('caroline@francisxavier.ac.in'); setPassword('Password@2525'); }}
                         >
-                            Dr. Shajilin (HOD)
+                            Dr. Caroline (HOD)
                         </button>
                         <button 
                             type="button" 

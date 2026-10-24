@@ -17,12 +17,16 @@ import {
 
 export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser }) => {
     const activeStudent = student || currentUser;
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
     const [monthIndex, setMonthIndex] = useState(1); // 0: September 2026, 1: October 2026, 2: November 2026
-    const [selectedDate, setSelectedDate] = useState('2026-10-22');
+    const [selectedDate, setSelectedDate] = useState(todayStr);
     const [fullReport, setFullReport] = useState(null);
 
     useEffect(() => {
         if (!isOpen || !activeStudent?.id) return;
+        setSelectedDate(todayStr);
         const fetchStudentReport = async () => {
             try {
                 const token = localStorage.getItem('fxec_token');
@@ -42,7 +46,115 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
 
     if (!isOpen) return null;
 
-    // Multi-Month Dataset allowing comparison between previous month (September), current (October), and upcoming (November)
+    const allRecords = fullReport?.allRecords || [];
+    const holidays = fullReport?.holidays || [];
+    const sportsPasses = fullReport?.sportsPasses || [];
+    const allMovements = fullReport?.movements || [];
+
+    // Dynamically build October 2026 from real database records
+    const octDays = Array.from({ length: 31 }, (_, i) => {
+        const d = i + 1;
+        const dateStr = `2026-10-${String(d).padStart(2, '0')}`;
+        // Day of week for 2026-10-01 (Thu): 4
+        const dayOfWeek = (4 + i) % 7; // 0=Sun, 1=Mon, ..., 6=Sat
+        const isSunday = dayOfWeek === 0;
+        const isSaturday = dayOfWeek === 6;
+        const isWeekend = isSunday || isSaturday;
+
+        const dayAtt = allRecords.filter(r => r.date_str === dateStr);
+        const attendedPeriods = dayAtt.filter(r => r.status === 'present' || r.status === 'od');
+        const attendedCount = attendedPeriods.length;
+        const isAttended = attendedCount > 0;
+        const dayRooms = [...new Set(dayAtt.map(r => r.room_number).filter(Boolean))].join(', ');
+
+        const isHoliday = holidays.some(h => h.date_str === dateStr);
+        const isSports = sportsPasses.some(s => dateStr >= s.from_date_str && dateStr <= s.to_date_str);
+
+        let status = 'upcoming';
+        let note = 'Upcoming College Day';
+
+        if (dateStr === todayStr) {
+            if (isAttended) {
+                status = 'present';
+                note = `${attendedCount}/7 Periods Attended (Today)`;
+            } else {
+                status = 'today';
+                note = 'Today (Live Session)';
+            }
+        } else if (dateStr > todayStr) {
+            status = 'upcoming';
+            note = isWeekend ? 'Scheduled Weekend' : 'Upcoming College Day';
+        } else {
+            // Past days
+            if (isSports) {
+                status = 'leave';
+                note = 'Approved Sports OD / Event Exemption';
+            } else if (isHoliday) {
+                status = 'weekend';
+                note = 'College / Department Holiday';
+            } else if (isWeekend) {
+                status = 'weekend';
+                note = isSunday ? 'Sunday Holiday' : 'Saturday Holiday';
+            } else if (isAttended) {
+                status = attendedCount >= 7 ? 'present' : 'partial';
+                note = `${attendedCount}/7 Periods Attended`;
+            } else {
+                status = 'absent';
+                note = 'Absent / Period 1 Cutoff Missed';
+            }
+        }
+
+        return {
+            day: d,
+            date: dateStr,
+            status,
+            periods: attendedCount,
+            total: 7,
+            room: dayRooms || (dateStr === todayStr && fullReport?.currentLocation?.room_number ? `Room ${fullReport.currentLocation.room_number}` : null),
+            note
+        };
+    });
+
+    // Real dynamic stats for October up to today
+    const pastAndTodayDays = octDays.filter(d => d.date <= todayStr);
+    const realPresentDays = pastAndTodayDays.filter(d => d.status === 'present' || d.status === 'partial' || (d.date === todayStr && d.periods > 0)).length;
+    const realLeaves = pastAndTodayDays.filter(d => d.status === 'absent').length;
+    const realEventExemptions = pastAndTodayDays.filter(d => d.status === 'leave').length;
+    const realCollegeHolidays = pastAndTodayDays.filter(d => d.status === 'weekend').length;
+    const realPeriodsAttended = allRecords.filter(r => r.date_str && r.date_str.startsWith('2026-10') && (r.status === 'present' || r.status === 'od')).length;
+    const realConductedPeriods = Math.max(realPeriodsAttended, (realPresentDays + realLeaves) * 7);
+    const realOverallPercentage = realConductedPeriods > 0 ? `${Math.round((realPeriodsAttended / realConductedPeriods) * 100)}%` : '100%';
+
+    // September 2026
+    const sepDays = Array.from({ length: 30 }, (_, i) => {
+        const d = i + 1;
+        const isWeekend = [5, 6, 12, 13, 19, 20, 26, 27].includes(d);
+        const dateStr = `2026-09-${String(d).padStart(2, '0')}`;
+        return {
+            day: d,
+            date: dateStr,
+            status: isWeekend ? 'weekend' : 'present',
+            periods: isWeekend ? 0 : 7,
+            total: isWeekend ? 0 : 7,
+            room: isWeekend ? null : (d % 3 === 0 ? 'AK 102 (Data Science Lab)' : 'AK 207'),
+            note: isWeekend ? (d % 2 === 1 ? 'Saturday Holiday' : 'Sunday Holiday') : 'Full Attendance (7/7 Periods)'
+        };
+    });
+
+    // November 2026
+    const novDays = Array.from({ length: 30 }, (_, i) => {
+        const d = i + 1;
+        const isWeekend = [1, 7, 8, 14, 15, 21, 22, 28, 29].includes(d);
+        return {
+            day: d,
+            date: `2026-11-${String(d).padStart(2, '0')}`,
+            status: isWeekend ? 'weekend' : 'upcoming',
+            periods: 0,
+            total: 7,
+            note: isWeekend ? 'Scheduled Weekend' : 'Upcoming College Day'
+        };
+    });
+
     const monthsData = [
         {
             name: 'September 2026',
@@ -57,67 +169,22 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                 periodsAttended: '154 / 154',
                 classesConducted: '154 Periods'
             },
-            days: Array.from({ length: 30 }, (_, i) => {
-                const d = i + 1;
-                const isWeekend = [5, 6, 12, 13, 19, 20, 26, 27].includes(d);
-                const dateStr = `2026-09-${String(d).padStart(2, '0')}`;
-                return {
-                    day: d,
-                    date: dateStr,
-                    status: isWeekend ? 'weekend' : 'present',
-                    periods: isWeekend ? 0 : 7,
-                    total: isWeekend ? 0 : 7,
-                    room: isWeekend ? null : (d % 3 === 0 ? 'AK 102 (Data Science Lab)' : 'AK 207'),
-                    note: isWeekend ? (d % 2 === 1 ? 'Saturday Holiday' : 'Sunday Holiday') : 'Full Attendance (7/7 Periods)'
-                };
-            })
+            days: sepDays
         },
         {
             name: 'October 2026',
-            emptyOffset: 4, // Thursday start (Sun=0, Mon=1, Tue=2, Wed=3, Thu=4)
+            emptyOffset: 4, // Thursday start
             daysCount: 31,
             stats: {
-                presentDays: 17,
-                leaves: 0,
-                eventExemption: 1,
-                collegeHolidays: 4,
-                overallAttendance: fullReport?.stats?.percentage !== undefined ? `${fullReport.stats.percentage}%` : '96.8%',
-                periodsAttended: fullReport?.stats?.presentPeriods !== undefined ? `${fullReport.stats.presentPeriods} / ${fullReport.stats.totalPeriods || 112}` : '108 / 112',
-                classesConducted: `${fullReport?.stats?.totalPeriods || 112} Periods`
+                presentDays: realPresentDays,
+                leaves: realLeaves,
+                eventExemption: realEventExemptions,
+                collegeHolidays: realCollegeHolidays,
+                overallAttendance: realOverallPercentage,
+                periodsAttended: `${realPeriodsAttended} / ${realConductedPeriods || 7}`,
+                classesConducted: `${realConductedPeriods || 7} Periods`
             },
-            days: [
-                { day: 1, date: '2026-10-01', status: 'present', periods: 7, total: 7, room: 'AK 207', note: 'Full Attendance' },
-                { day: 2, date: '2026-10-02', status: 'present', periods: 7, total: 7, room: 'AK 207', note: 'Full Attendance' },
-                { day: 3, date: '2026-10-03', status: 'weekend', periods: 0, total: 0, note: 'Saturday (College Holiday)' },
-                { day: 4, date: '2026-10-04', status: 'weekend', periods: 0, total: 0, note: 'Sunday (Weekly Holiday)' },
-                { day: 5, date: '2026-10-05', status: 'present', periods: 6, total: 7, room: 'AK 102 (Data Science Lab)', note: '6 Periods Attended' },
-                { day: 6, date: '2026-10-06', status: 'present', periods: 7, total: 7, room: 'AK 207', note: 'Full Attendance' },
-                { day: 7, date: '2026-10-07', status: 'present', periods: 7, total: 7, room: 'FX 104 (Network Lab)', note: 'Full Attendance' },
-                { day: 8, date: '2026-10-08', status: 'leave', periods: 7, total: 7, room: 'AK 002 (APJ Auditorium)', note: 'Smart India Hackathon (Approved Exemption)' },
-                { day: 9, date: '2026-10-09', status: 'present', periods: 7, total: 7, room: 'AK 207', note: 'Full Attendance' },
-                { day: 10, date: '2026-10-10', status: 'weekend', periods: 0, total: 0, note: 'Saturday (Institutional Holiday)' },
-                { day: 11, date: '2026-10-11', status: 'weekend', periods: 0, total: 0, note: 'Sunday (Weekly Holiday)' },
-                { day: 12, date: '2026-10-12', status: 'present', periods: 7, total: 7, room: 'AK 207', note: 'Full Attendance' },
-                { day: 13, date: '2026-10-13', status: 'present', periods: 7, total: 7, room: 'AK 102 (Data Science Lab)', note: 'Full Attendance' },
-                { day: 14, date: '2026-10-14', status: 'present', periods: 7, total: 7, room: 'AK 207', note: 'Full Attendance' },
-                { day: 15, date: '2026-10-15', status: 'present', periods: 7, total: 7, room: 'AK 207', note: 'Full Attendance' },
-                { day: 16, date: '2026-10-16', status: 'present', periods: 7, total: 7, room: 'FX 104 (Network Lab)', note: 'Full Attendance' },
-                { day: 17, date: '2026-10-17', status: 'weekend', periods: 0, total: 0, note: 'Saturday (Holiday)' },
-                { day: 18, date: '2026-10-18', status: 'weekend', periods: 0, total: 0, note: 'Sunday (Holiday)' },
-                { day: 19, date: '2026-10-19', status: 'present', periods: 7, total: 7, room: 'AK 207', note: 'Full Attendance' },
-                { day: 20, date: '2026-10-20', status: 'present', periods: 7, total: 7, room: 'AK 207', note: 'Full Attendance' },
-                { day: 21, date: '2026-10-21', status: 'present', periods: 7, total: 7, room: 'AK 207', note: 'Full Attendance' },
-                { day: 22, date: '2026-10-22', status: 'today', periods: fullReport?.todayRecords?.length || 1, total: 7, room: fullReport?.currentLocation?.room_number ? `${fullReport.currentLocation.room_number}` : 'AK 207', note: 'Today (Live Session)' },
-                { day: 23, date: '2026-10-23', status: 'upcoming', note: 'Upcoming College Day' },
-                { day: 24, date: '2026-10-24', status: 'upcoming', note: 'Upcoming College Day' },
-                { day: 25, date: '2026-10-25', status: 'upcoming', note: 'Upcoming Weekend' },
-                { day: 26, date: '2026-10-26', status: 'upcoming', note: 'Upcoming College Day' },
-                { day: 27, date: '2026-10-27', status: 'upcoming', note: 'Upcoming College Day' },
-                { day: 28, date: '2026-10-28', status: 'upcoming', note: 'Upcoming College Day' },
-                { day: 29, date: '2026-10-29', status: 'upcoming', note: 'Upcoming College Day' },
-                { day: 30, date: '2026-10-30', status: 'upcoming', note: 'Upcoming College Day' },
-                { day: 31, date: '2026-10-31', status: 'upcoming', note: 'Upcoming College Day' }
-            ]
+            days: octDays
         },
         {
             name: 'November 2026',
@@ -132,18 +199,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                 periodsAttended: '0 / 147',
                 classesConducted: '147 Periods Scheduled'
             },
-            days: Array.from({ length: 30 }, (_, i) => {
-                const d = i + 1;
-                const isWeekend = [1, 7, 8, 14, 15, 21, 22, 28, 29].includes(d);
-                return {
-                    day: d,
-                    date: `2026-11-${String(d).padStart(2, '0')}`,
-                    status: isWeekend ? 'weekend' : 'upcoming',
-                    periods: 0,
-                    total: 7,
-                    note: isWeekend ? 'Scheduled Weekend' : 'Upcoming College Day'
-                };
-            })
+            days: novDays
         }
     ];
 
@@ -152,8 +208,9 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
     const activeDayInfo = daysData.find(d => d.date === selectedDate) || daysData[0] || {};
     const studentEmail = activeStudent?.email || 'daniela.ug.24.it@francisxavier.ac.in';
 
-    // Movements list from report or fallback for active day
-    const studentMovements = fullReport?.movements || [];
+    // Filter real records & movements strictly for selectedDate
+    const selectedDayRecords = allRecords.filter(r => r.date_str === selectedDate);
+    const selectedDayMovements = allMovements.filter(m => m.date_str === selectedDate || (m.timestamp && m.timestamp.slice(0, 10) === selectedDate));
 
     const handlePrevMonth = () => {
         if (monthIndex > 0) {
@@ -195,7 +252,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                     </button>
                 </div>
 
-                {/* Overall Attendance Metrics Ribbon (Objective, Faculty Decision Compliant) */}
+                {/* Overall Attendance Metrics Ribbon */}
                 <div className="aero-metric-ribbon" style={{ marginBottom: '14px' }}>
                     <div className="ribbon-col">
                         <span className="lbl">Overall Attendance</span>
@@ -206,14 +263,14 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                         <span className="val">{currentMonthData.stats.periodsAttended}</span>
                     </div>
                     <div className="ribbon-col">
-                        <span className="lbl">Total Classes Conducted</span>
+                        <span className="lbl">Classes Conducted</span>
                         <span className="val" style={{ color: 'var(--blue)', fontWeight: 800 }}>
                             {currentMonthData.stats.classesConducted}
                         </span>
                     </div>
                 </div>
 
-                {/* Attendance & Leave Breakdown Cards for Selected Month */}
+                {/* Real-time Attendance & Leave Breakdown Cards */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginBottom: '14px' }}>
                     <div style={{ background: '#F8FAFC', border: '1px solid rgba(19, 108, 252, 0.15)', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
                         <div style={{ fontSize: '0.70rem', color: 'var(--text-sub)', textTransform: 'uppercase' }}>Present Days</div>
@@ -233,7 +290,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                     </div>
                 </div>
 
-                {/* Month Navigator Switcher (< Previous Month / Next Month >) */}
+                {/* Month Navigator Switcher */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 2px', marginBottom: '8px', background: 'rgba(19, 108, 252, 0.05)', borderRadius: '8px' }}>
                     <button 
                         type="button" 
@@ -291,8 +348,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                                 key={d.day}
                                 type="button"
                                 className={`calendar-day-cell ${d.status} ${isSelected ? 'selected' : ''}`}
-                                onClick={() => d.status !== 'upcoming' && d.status !== 'weekend' && setSelectedDate(d.date)}
-                                disabled={d.status === 'upcoming'}
+                                onClick={() => setSelectedDate(d.date)}
                                 title={`${d.date}: ${d.note || d.status}`}
                             >
                                 <span className="day-num">{d.day}</span>
@@ -300,6 +356,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                                 {d.status === 'leave' && <span className="aero-dot" style={{ background: '#9333EA' }}></span>}
                                 {d.status === 'partial' && <span className="aero-dot amber"></span>}
                                 {d.status === 'today' && <span className="aero-dot blue"></span>}
+                                {d.status === 'absent' && <span className="aero-dot red" style={{ background: '#DC2626' }}></span>}
                             </button>
                         );
                     })}
@@ -311,30 +368,49 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <CheckCircle2 size={18} color="var(--blue)" />
                             <strong style={{ color: 'var(--dark-blue)', fontSize: '0.90rem' }}>
-                                Details for {activeDayInfo.date} ({activeDayInfo.status === 'today' ? 'Today' : activeDayInfo.status === 'leave' ? 'Event Exemption' : 'Completed'})
+                                Details for {activeDayInfo.date} {activeDayInfo.date === todayStr ? '(Today)' : ''}
                             </strong>
                         </div>
-                        <span className={`aero-pill ${activeDayInfo.status === 'leave' ? 'cyan' : 'green'}`}>
-                            {activeDayInfo.status === 'leave' ? '★ Event Leave Exemption' : `${activeDayInfo.periods || 0} / 7 Periods Attended`}
+                        <span className={`aero-pill ${activeDayInfo.status === 'leave' ? 'cyan' : activeDayInfo.status === 'present' ? 'green' : activeDayInfo.status === 'absent' ? 'red' : 'blue'}`}>
+                            {activeDayInfo.status === 'leave' 
+                                ? '★ Event Leave Exemption' 
+                                : `${selectedDayRecords.length} / 7 Periods Attended`}
                         </span>
                     </div>
 
+                    {/* Actual marked periods for selected date */}
                     <div className="aero-timeline-mini" style={{ marginTop: '10px' }}>
-                        <div className="mini-trail-item">
-                            <Clock size={14} color="#136CFC" />
-                            <span>Periods 1 – 3 (09:00 AM – 11:50 AM):</span>
-                            <strong>{activeDayInfo.room || 'Room 101 (Main Block)'}</strong>
-                        </div>
-                        <div className="mini-trail-item">
-                            <Clock size={14} color="#136CFC" />
-                            <span>Periods 4 – 5 (11:50 AM – 02:15 PM):</span>
-                            <strong>{activeDayInfo.status === 'leave' ? 'Smart India Hackathon Venue' : 'Cloud Computing & Networks Lab (AL-02)'}</strong>
-                        </div>
-                        <div className="mini-trail-item">
-                            <Clock size={14} color="#136CFC" />
-                            <span>Periods 6 – 7 (02:15 PM – 04:05 PM Dismissal):</span>
-                            <strong>{activeDayInfo.room || 'Dr. APJ Block Rm 207'}</strong>
-                        </div>
+                        {selectedDayRecords.length > 0 ? (
+                            selectedDayRecords.map((rec, idx) => (
+                                <div key={idx} className="mini-trail-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFFFFF', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', marginBottom: '6px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                        <Clock size={14} color="#136CFC" />
+                                        <strong style={{ color: 'var(--dark-blue)', fontSize: '0.82rem' }}>
+                                            {rec.period_name || `Period ${rec.period_id}`} ({rec.start_time ? rec.start_time.slice(0, 5) : '09:00'} – {rec.end_time ? rec.end_time.slice(0, 5) : '09:50'}):
+                                        </strong>
+                                        <span style={{ fontWeight: 700, color: 'var(--blue)', fontSize: '0.80rem' }}>
+                                            Room {rec.room_number || '101'}
+                                        </span>
+                                        <span style={{ color: 'var(--text-sub)', fontSize: '0.76rem' }}>
+                                            ({rec.room_name || 'Classroom'} • {rec.building_name || 'FX Engineering Block'})
+                                        </span>
+                                    </div>
+                                    <span className="aero-status-tag present" style={{ fontSize: '0.70rem', padding: '2px 8px' }}>
+                                        ✓ OTP Verified
+                                    </span>
+                                </div>
+                            ))
+                        ) : (
+                            <div style={{ padding: '14px', textAlign: 'center', color: 'var(--text-sub)', fontSize: '0.80rem' }}>
+                                {activeDayInfo.status === 'upcoming' 
+                                    ? 'Upcoming schedule — no attendance records yet.' 
+                                    : activeDayInfo.status === 'weekend' 
+                                    ? 'Weekend / Holiday — no academic sessions scheduled.'
+                                    : activeDayInfo.status === 'leave'
+                                    ? 'Approved Event / Sports Exemption active for this day.'
+                                    : `No classroom attendance marked on ${selectedDate} (Absent / Period 1 Cutoff Missed).`}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -348,13 +424,13 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                             </span>
                         </div>
                         <span className="aero-pill green" style={{ fontSize: '0.68rem' }}>
-                            {studentMovements.length > 0 ? `${studentMovements.length} Movements Recorded` : 'Active Session'}
+                            {selectedDayMovements.length > 0 ? `${selectedDayMovements.length} Movements on this Date` : '0 Movements'}
                         </span>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {studentMovements.length > 0 ? (
-                            studentMovements.map((m, idx) => (
+                        {selectedDayMovements.length > 0 ? (
+                            selectedDayMovements.map((m, idx) => (
                                 <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFFFFF', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.78rem' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                         <Clock size={13} color="var(--text-sub)" />
@@ -366,10 +442,10 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                                         </span>
                                         <ArrowRight size={13} color="var(--blue)" />
                                         <span style={{ fontWeight: 800, color: 'var(--blue)' }}>
-                                            Room {m.to_room || m.to_room_id} ({m.to_room_name || 'Lab'})
+                                            Room {m.to_room || m.to_room_id} ({m.to_room_name || 'Classroom'})
                                         </span>
                                         <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-                                            • {m.to_building || 'Campus'}
+                                            • {m.to_building || 'FX Engineering Block'}
                                         </span>
                                     </div>
                                     <span className="aero-status-tag present" style={{ fontSize: '0.70rem', padding: '2px 8px' }}>
@@ -378,22 +454,8 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                                 </div>
                             ))
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFFFFF', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.78rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Clock size={13} color="var(--text-sub)" />
-                                        <span style={{ color: 'var(--text-sub)' }}>09:00 AM</span>
-                                        <span style={{ fontWeight: 700, color: 'var(--dark-blue)' }}>Room 101 (Main Block)</span>
-                                        <ArrowRight size={13} color="var(--blue)" />
-                                        <span style={{ fontWeight: 800, color: 'var(--blue)' }}>Room AL-02 (Cloud Computing Lab)</span>
-                                    </div>
-                                    <span className="aero-status-tag present" style={{ fontSize: '0.70rem', padding: '2px 8px' }}>
-                                        ✓ OTP Verified
-                                    </span>
-                                </div>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-sub)', textAlign: 'center', paddingTop: '4px' }}>
-                                    Live student movements update in real-time when students enter the lab faculty's 10-second OTP.
-                                </div>
+                            <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-sub)', fontSize: '0.80rem' }}>
+                                No classroom movements recorded on {selectedDate}.
                             </div>
                         )}
                     </div>
@@ -417,8 +479,8 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                             <div style={{ fontSize: '0.72rem', color: 'var(--text-sub)' }}>Live Campus Location</div>
                             <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--dark-blue)' }}>
                                 {fullReport?.currentLocation?.room_number 
-                                    ? `Room ${fullReport.currentLocation.room_number} (${fullReport.currentLocation.building_name || 'Main Block'})` 
-                                    : 'Room AL-02 (Applied Labs & Innovation Centre)'}
+                                    ? `Room ${fullReport.currentLocation.room_number} (${fullReport.currentLocation.building_name || 'FX Engineering Block'})` 
+                                    : 'Not currently checked-in to any room'}
                             </div>
                         </div>
                     </div>
@@ -428,7 +490,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                         <div>
                             <div style={{ fontSize: '0.72rem', color: 'var(--text-sub)' }}>Hardware Device Binding</div>
                             <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--dark-blue)' }}>
-                                {fullReport?.deviceLock?.device_name || 'Windows Workstation / Laptop (Bound)'}
+                                {fullReport?.deviceLock?.device_name || 'Device Unbound / Clean'}
                             </div>
                         </div>
                     </div>

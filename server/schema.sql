@@ -172,7 +172,7 @@ INSERT IGNORE INTO periods (id, period_number, name, start_time, end_time, is_br
 -- Hash: $2b$10$IUSLJbHugAeQNkISyAfrOuhH2QmebQs5adwlID6pHnUM1JpFhmApy
 INSERT IGNORE INTO users (id, name, email, password_hash, role, department, roll_number, year_of_study) VALUES
 (1, 'Dr. V. Velmurugan', 'principal@francisxavier.ac.in', '$2b$10$IUSLJbHugAeQNkISyAfrOuhH2QmebQs5adwlID6pHnUM1JpFhmApy', 'principal', 'ADMIN', 'FX-PRIN-01', NULL),
-(2, 'Dr. J. B. Shajilin Labbai', 'hod.it@francisxavier.ac.in', '$2b$10$IUSLJbHugAeQNkISyAfrOuhH2QmebQs5adwlID6pHnUM1JpFhmApy', 'hod', 'IT', 'FX-HOD-IT', NULL),
+(2, 'Dr. M. Caroline Viola Stella Mary', 'caroline@francisxavier.ac.in', '$2b$10$IUSLJbHugAeQNkISyAfrOuhH2QmebQs5adwlID6pHnUM1JpFhmApy', 'hod', 'IT', 'FX-HOD-IT', NULL),
 (3, 'Prof. R. David', 'staff.it@francisxavier.ac.in', '$2b$10$IUSLJbHugAeQNkISyAfrOuhH2QmebQs5adwlID6pHnUM1JpFhmApy', 'staff', 'IT', 'FX-FAC-IT01', NULL),
 (4, 'Prof. S. Anita', 'staff.lab@francisxavier.ac.in', '$2b$10$IUSLJbHugAeQNkISyAfrOuhH2QmebQs5adwlID6pHnUM1JpFhmApy', 'staff', 'IT', 'FX-FAC-IT02', NULL),
 (5, 'Daniel A', 'daniela.ug.24.it@francisxavier.ac.in', '$2b$10$IUSLJbHugAeQNkISyAfrOuhH2QmebQs5adwlID6pHnUM1JpFhmApy', 'student', 'IT', '950724IT021', '2nd Year'),

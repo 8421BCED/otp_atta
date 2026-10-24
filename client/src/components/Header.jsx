@@ -220,10 +220,10 @@ export const Header = ({
                                         style={{ width: '100%', justifyContent: 'flex-start', padding: '6px 10px', fontSize: '0.74rem', background: currentUser?.role === 'hod' ? '#EFF6FF' : '#FFFFFF', color: currentUser?.role === 'hod' ? 'var(--blue)' : 'var(--dark-blue)', border: currentUser?.role === 'hod' ? '1px solid var(--blue)' : '1px solid #E2E8F0' }}
                                         onClick={() => {
                                             setIsDropdownOpen(false);
-                                            onRoleChange && onRoleChange({ id: 'hod', email: 'ithod@francisxavier.ac.in' });
+                                            onRoleChange && onRoleChange({ id: 'hod', email: 'caroline@francisxavier.ac.in' });
                                         }}
                                     >
-                                        🏛️ <strong style={{ marginLeft: '4px' }}>HOD Portal</strong> (Dr. J. B. Shajilin Labbai)
+                                        🏛️ <strong style={{ marginLeft: '4px' }}>HOD Portal</strong> (Dr. M. Caroline Viola Stella Mary)
                                     </button>
                                 </div>
                             </div>

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Users, RotateCcw, Calendar, CheckCircle2, Search, Building2, Clock, Lock, Unlock, Eye, Sparkles, QrCode, RefreshCw, DoorOpen, Radio, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Users, RotateCcw, Calendar, CheckCircle2, Search, Building2, Clock, Lock, Unlock, Eye, Sparkles, QrCode, RefreshCw, DoorOpen, Radio, AlertTriangle, ShieldCheck, Camera } from 'lucide-react';
 import { RoomStudentsModal } from './RoomStudentsModal';
 import { AttendanceCalendarModal } from './AttendanceCalendarModal';
 import { StudentDetailsModal } from './StudentDetailsModal';
 import { RoomSelectionModal } from './RoomSelectionModal';
+import { ClassroomHeadcountModal } from './ClassroomHeadcountModal';
 
 export const HODDashboard = ({ currentUser, hierarchy }) => {
     const department = currentUser?.department || 'IT';
@@ -35,6 +36,8 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
     const [teachingRoomInfo, setTeachingRoomInfo] = useState(null);
     const [teachingPresentCount, setTeachingPresentCount] = useState(0);
     const [teachingRoomStudents, setTeachingRoomStudents] = useState([]);
+    const [isHeadcountModalOpen, setIsHeadcountModalOpen] = useState(false);
+    const [latestAudit, setLatestAudit] = useState(null);
 
     // Holiday & Timed Event Exemption declaration state
     const [holidayTitle, setHolidayTitle] = useState('');
@@ -110,17 +113,43 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
         }
     };
 
+    const fetchLatestAudit = async (roomId) => {
+        if (!roomId) {
+            setLatestAudit(null);
+            return;
+        }
+        try {
+            const token = localStorage.getItem('fxec_token');
+            const res = await fetch(`/api/attendance/latest-room-audit/${roomId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.hasAudit && data.audit) {
+                setLatestAudit(data.audit);
+            } else {
+                setLatestAudit(null);
+            }
+        } catch (e) {
+            console.error('Failed to fetch latest audit for HOD room:', e);
+        }
+    };
+
     useEffect(() => {
         if (teachingRoomId) {
             generateTeachingOtp();
             fetchTeachingRoster();
-            const poll = setInterval(fetchTeachingRoster, 2000);
+            fetchLatestAudit(teachingRoomId);
+            const poll = setInterval(() => {
+                fetchTeachingRoster();
+                fetchLatestAudit(teachingRoomId);
+            }, 2000);
             return () => clearInterval(poll);
         } else {
             setTeachingOtp('------');
             setTeachingRoomInfo(null);
             setTeachingPresentCount(0);
             setTeachingRoomStudents([]);
+            setLatestAudit(null);
         }
     }, [teachingRoomId]);
 
@@ -411,14 +440,89 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
 
                             {/* Live Students Roster */}
                             <div className="fx-card" style={{ background: '#F8FAFC', padding: '16px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
                                     <span style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.88rem' }}>
                                         Live Classroom Roster ({teachingPresentCount} Checked-in)
                                     </span>
-                                    <span className="aero-pill green" style={{ fontSize: '0.68rem', padding: '2px 8px' }}>
-                                        Room {teachingRoomInfo ? teachingRoomInfo.room_number : teachingRoomId}
-                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsHeadcountModalOpen(true)}
+                                            className="aero-gloss-btn"
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                padding: '5px 12px',
+                                                fontSize: '0.74rem',
+                                                background: latestAudit 
+                                                    ? (latestAudit.match_status === 'verified' ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)')
+                                                    : 'linear-gradient(135deg, #136CFC 0%, #0B3064 100%)',
+                                                color: '#FFF',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                fontWeight: 700
+                                            }}
+                                            title="Capture/Upload classroom photo and run YOLO AI face headcount to detect proxy submissions"
+                                        >
+                                            <Camera size={14} />
+                                            <span>{latestAudit ? 'AI Audit Active' : 'AI Headcount (YOLO)'}</span>
+                                        </button>
+                                        <span className="aero-pill green" style={{ fontSize: '0.68rem', padding: '2px 8px' }}>
+                                            Room {teachingRoomInfo ? teachingRoomInfo.room_number : teachingRoomId}
+                                        </span>
+                                    </div>
                                 </div>
+
+                                {latestAudit && (
+                                    <div 
+                                        style={{
+                                            margin: '4px 0 10px 0',
+                                            padding: '8px 12px',
+                                            borderRadius: '8px',
+                                            background: latestAudit.match_status === 'verified' ? '#F0FDF4' : '#FEF2F2',
+                                            border: `1.5px solid ${latestAudit.match_status === 'verified' ? '#86EFAC' : '#FCA5A5'}`,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            flexWrap: 'wrap',
+                                            gap: '8px',
+                                            cursor: 'pointer'
+                                        }}
+                                        onClick={() => setIsHeadcountModalOpen(true)}
+                                        title="Click to view full YOLO face detection photo and box overlays"
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div style={{
+                                                width: '28px',
+                                                height: '28px',
+                                                borderRadius: '6px',
+                                                background: latestAudit.match_status === 'verified' ? '#16A34A' : '#DC2626',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: '#FFF'
+                                            }}>
+                                                <Camera size={14} />
+                                            </div>
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', color: latestAudit.match_status === 'verified' ? '#15803D' : '#991B1B' }}>
+                                                        AI YOLO Snapshot
+                                                    </span>
+                                                    <span style={{ fontSize: '0.64rem', padding: '1px 5px', borderRadius: '4px', background: latestAudit.match_status === 'verified' ? '#DCFCE7' : '#FEE2E2', color: latestAudit.match_status === 'verified' ? '#166534' : '#991B1B', fontWeight: 800 }}>
+                                                        {latestAudit.match_status === 'verified' ? '✓ MATCH' : '⚠ DISCREPANCY'}
+                                                    </span>
+                                                </div>
+                                                <div style={{ fontSize: '0.76rem', fontWeight: 700, color: latestAudit.match_status === 'verified' ? '#14532D' : '#7F1D1D' }}>
+                                                    {latestAudit.visual_count} Seated Detected vs {latestAudit.otp_count} OTPs Verified
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span style={{ fontSize: '0.66rem', color: 'var(--text-sub)' }}>Valid 1 hour</span>
+                                    </div>
+                                )}
 
                                 <div className="fx-table-container" style={{ maxHeight: '230px' }}>
                                     <table className="fx-table">
@@ -750,14 +854,13 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                                 const hasLock = !!(st.is_locked || st.device_name);
                                 const dayLockInfo = dayLockedMap.get(st.id);
                                 return (
-                                    <tr 
-                                        key={i}
-                                        style={{ cursor: 'pointer' }}
-                                        onClick={() => setSelectedStudentForCalendar(st)}
-                                        title="Click to view full calendar & history"
-                                    >
-                                        <td style={{ fontWeight: 800, color: 'var(--dark-blue)' }}>
-                                            <span style={{ textDecoration: 'underline' }}>{st.name}</span>
+                                    <tr key={i}>
+                                        <td 
+                                            style={{ fontWeight: 800, color: 'var(--dark-blue)', cursor: 'pointer' }}
+                                            onClick={() => setSelectedStudentForCalendar(st)}
+                                            title={`Click to view attendance calendar for ${st.name}`}
+                                        >
+                                            <span style={{ textDecoration: 'underline', color: 'var(--blue)' }}>{st.name}</span>
                                         </td>
                                         <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--blue)', fontWeight: 700 }}>
                                             {st.email}
@@ -945,6 +1048,18 @@ export const HODDashboard = ({ currentUser, hierarchy }) => {
                     setIsTeachingRoomModalOpen(false);
                 }}
                 currentRoomId={teachingRoomId}
+            />
+
+            {/* Modal: HOD AI Classroom Headcount & Face Audit (YOLO) */}
+            <ClassroomHeadcountModal 
+                isOpen={isHeadcountModalOpen}
+                onClose={() => setIsHeadcountModalOpen(false)}
+                roomId={teachingRoomId}
+                roomName={teachingRoomInfo ? `Room ${teachingRoomInfo.room_number} – ${teachingRoomInfo.name}` : `Room ${teachingRoomId}`}
+                currentOtpCount={teachingPresentCount}
+                onAuditSaved={() => {
+                    fetchLatestAudit(teachingRoomId);
+                }}
             />
 
         </div>

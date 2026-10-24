@@ -112,12 +112,49 @@ export const ClassroomHeadcountModal = ({
                 constraints = { video: true, audio: false };
             }
 
+            // Robust check for mediaDevices API (handles HTTP on LAN, legacy webviews, and Android browsers)
+            const hasMediaDevices = typeof navigator !== 'undefined' && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function';
+            const hasLegacyGetUserMedia = typeof navigator !== 'undefined' && (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia);
+
+            if (!hasMediaDevices && !hasLegacyGetUserMedia) {
+                const isSecure = typeof window !== 'undefined' && (window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+                console.warn('getUserMedia is not available in this browser context (Secure context:', isSecure, ')');
+                
+                // Prompt user and seamlessly trigger file input with direct camera capture
+                const useFilePicker = window.confirm(
+                    `Live webcam streaming requires a Secure Origin (HTTPS or localhost).\n\nSince your browser is connected over HTTP, would you like to take a photo using your device's native camera directly?`
+                );
+                if (useFilePicker && fileInputRef.current) {
+                    fileInputRef.current.click();
+                }
+                return;
+            }
+
             let stream;
             try {
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                if (hasMediaDevices) {
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                } else {
+                    // Fallback to legacy vendor-prefixed getUserMedia
+                    const legacyGUM = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+                    stream = await new Promise((resolve, reject) => {
+                        legacyGUM.call(navigator, constraints, resolve, reject);
+                    });
+                }
             } catch (err1) {
                 console.warn('Initial camera constraints failed, attempting fallback to basic { video: true }:', err1);
-                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                try {
+                    if (hasMediaDevices) {
+                        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    } else {
+                        const legacyGUM = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+                        stream = await new Promise((resolve, reject) => {
+                            legacyGUM.call(navigator, { video: true, audio: false }, resolve, reject);
+                        });
+                    }
+                } catch (err2) {
+                    throw err2;
+                }
             }
 
             streamRef.current = stream;
@@ -140,12 +177,14 @@ export const ClassroomHeadcountModal = ({
 
             // Enumerate devices now that user has explicitly granted camera access
             try {
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const videoInputs = devices.filter(d => d.kind === 'videoinput');
-                setAvailableCameras(videoInputs);
+                if (navigator?.mediaDevices?.enumerateDevices) {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const videoInputs = devices.filter(d => d.kind === 'videoinput');
+                    setAvailableCameras(videoInputs);
+                }
 
                 // Set selected device ID if available
-                const currentTrack = stream.getVideoTracks()[0];
+                const currentTrack = stream?.getVideoTracks?.()?.[0];
                 if (currentTrack) {
                     const settings = currentTrack.getSettings ? currentTrack.getSettings() : {};
                     if (settings.deviceId) {
@@ -157,7 +196,12 @@ export const ClassroomHeadcountModal = ({
             }
         } catch (err) {
             console.error('Camera access error:', err);
-            alert('Unable to open camera: ' + (err.message || 'Please check device camera permissions'));
+            const userWantsUpload = window.confirm(
+                'Unable to start live camera feed (' + (err.message || 'Permission denied') + ').\n\nWould you like to take or upload a photo using your phone camera/gallery instead?'
+            );
+            if (userWantsUpload && fileInputRef.current) {
+                fileInputRef.current.click();
+            }
         }
     };
 

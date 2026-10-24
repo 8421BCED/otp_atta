@@ -27,10 +27,10 @@ export const ClassroomHeadcountModal = ({
     const [auditStatus, setAuditStatus] = useState(null);
     const [existingAudit, setExistingAudit] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [confidenceThreshold, setConfidenceThreshold] = useState(0.25);
+    const [confidenceThreshold, setConfidenceThreshold] = useState(0.18);
     const [detectionWarning, setDetectionWarning] = useState(null);
-    const [detectionMode, setDetectionMode] = useState('face'); // 'face' (YOLOv8m-Face) or 'person' (YOLOv8m Person)
-    const [activeModelName, setActiveModelName] = useState('YOLOv8m-Face (Classroom High Precision)');
+    const [detectionMode, setDetectionMode] = useState('hybrid'); // 'hybrid', 'face', 'person'
+    const [activeModelName, setActiveModelName] = useState('YOLOv8m Dual-Engine (Face + Occlusion Recovery)');
 
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
@@ -538,16 +538,36 @@ export const ClassroomHeadcountModal = ({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '8px 14px', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Sparkles size={16} color="#136CFC" />
-                        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--dark-blue)' }}>AI Headcount Engine:</span>
-                        <div style={{ display: 'flex', gap: '4px', background: '#E2E8F0', padding: '3px', borderRadius: '8px' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--dark-blue)' }}>AI Engine:</span>
+                        <div style={{ display: 'flex', gap: '4px', background: '#E2E8F0', padding: '3px', borderRadius: '8px', flexWrap: 'wrap' }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setDetectionMode('hybrid');
+                                    if (capturedImage) executeYoloDetection(capturedImage, 'hybrid', confidenceThreshold);
+                                }}
+                                style={{
+                                    padding: '5px 10px',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    background: detectionMode === 'hybrid' ? '#136CFC' : 'transparent',
+                                    color: detectionMode === 'hybrid' ? '#FFF' : '#475569',
+                                    boxShadow: detectionMode === 'hybrid' ? '0 2px 6px rgba(19, 108, 252, 0.3)' : 'none'
+                                }}
+                            >
+                                ⚡ Dual-Engine (Face + Occluded)
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => {
                                     setDetectionMode('face');
-                                    if (capturedImage) executeYoloDetection(capturedImage, 'face');
+                                    if (capturedImage) executeYoloDetection(capturedImage, 'face', confidenceThreshold);
                                 }}
                                 style={{
-                                    padding: '5px 12px',
+                                    padding: '5px 10px',
                                     fontSize: '0.74rem',
                                     fontWeight: 700,
                                     borderRadius: '6px',
@@ -558,16 +578,16 @@ export const ClassroomHeadcountModal = ({
                                     boxShadow: detectionMode === 'face' ? '0 2px 6px rgba(19, 108, 252, 0.3)' : 'none'
                                 }}
                             >
-                                👤 YOLOv8m-Face (103MB High Precision)
+                                👤 YOLOv8m-Face
                             </button>
                             <button
                                 type="button"
                                 onClick={() => {
                                     setDetectionMode('person');
-                                    if (capturedImage) executeYoloDetection(capturedImage, 'person');
+                                    if (capturedImage) executeYoloDetection(capturedImage, 'person', confidenceThreshold);
                                 }}
                                 style={{
-                                    padding: '5px 12px',
+                                    padding: '5px 10px',
                                     fontSize: '0.74rem',
                                     fontWeight: 700,
                                     borderRadius: '6px',
@@ -578,13 +598,35 @@ export const ClassroomHeadcountModal = ({
                                     boxShadow: detectionMode === 'person' ? '0 2px 6px rgba(19, 108, 252, 0.3)' : 'none'
                                 }}
                             >
-                                🧍 YOLOv8m-Person (Full Body)
+                                🧍 YOLOv8m-Person
                             </button>
                         </div>
                     </div>
 
-                    <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                        Active Model: <strong style={{ color: '#0F172A' }}>{activeModelName}</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569' }}>Sensitivity:</span>
+                            <input 
+                                type="range" 
+                                min="0.12" 
+                                max="0.35" 
+                                step="0.02" 
+                                value={confidenceThreshold}
+                                onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    setConfidenceThreshold(val);
+                                    if (capturedImage) executeYoloDetection(capturedImage, detectionMode, val);
+                                }}
+                                style={{ width: '85px', accentColor: '#136CFC', cursor: 'pointer' }}
+                                title={`Threshold: ${confidenceThreshold} (Lower = More Sensitive for Far Rows)`}
+                            />
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#136CFC', minWidth: '28px' }}>
+                                {confidenceThreshold}
+                            </span>
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                            Engine: <strong style={{ color: '#0F172A' }}>{activeModelName}</strong>
+                        </div>
                     </div>
                 </div>
 

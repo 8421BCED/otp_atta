@@ -14,28 +14,85 @@ const PERSON_MODEL_PATH = path.join(__dirname, '..', 'models', 'yolov8m.onnx');
 let faceSession = null;
 let personSession = null;
 
+const sessionOptions = {
+    executionMode: 'sequential',
+    interOpNumThreads: 2,
+    intraOpNumThreads: 2
+};
+
 const getFaceSession = async () => {
     if (!faceSession && fs.existsSync(FACE_MODEL_PATH)) {
-        faceSession = await ort.InferenceSession.create(FACE_MODEL_PATH);
-        console.log('✓ YOLOv8m-Face (Medium Face Model) initialized on Node.js');
+        faceSession = await ort.InferenceSession.create(FACE_MODEL_PATH, sessionOptions);
+        console.log('✓ YOLOv8m-Face (103MB Face Model) initialized on Node.js (CPU capped to 2 threads)');
     }
     return faceSession;
 };
 
 const getPersonSession = async () => {
     if (!personSession && fs.existsSync(PERSON_MODEL_PATH)) {
-        personSession = await ort.InferenceSession.create(PERSON_MODEL_PATH);
-        console.log('✓ YOLOv8m (Medium Person Model) initialized on Node.js');
+        personSession = await ort.InferenceSession.create(PERSON_MODEL_PATH, sessionOptions);
+        console.log('✓ YOLOv8m (103MB Person Model) initialized on Node.js (CPU capped to 2 threads)');
     }
     return personSession;
 };
 
-// Initialize models immediately
+// Initialize models immediately with safety catch
 getFaceSession().catch(err => console.error('Error loading YOLO Face model:', err));
 getPersonSession().catch(err => console.error('Error loading YOLO Person model:', err));
 
-// High-precision YOLOv8m Detection Function for Classroom Headcount
-const detectStudentsYOLO = async (buffer, { threshold = 0.25, mode = 'face' } = {}) => {
+// Helper: Extract NMS & Containment filtered boxes from model output
+const extractBoxes = (output, origWidth, origHeight, scale, padX, padY, threshold, isPerson = false) => {
+    const candidates = [];
+    const classOffset = isPerson ? 4 : 4; // Face uses index 4, Person class 0 uses index 4
+    for (let i = 0; i < 8400; i++) {
+        const score = output[classOffset * 8400 + i];
+        if (score >= threshold) {
+            const cx = (output[0 * 8400 + i] - padX) / scale;
+            const cy = (output[1 * 8400 + i] - padY) / scale;
+            const w = output[2 * 8400 + i] / scale;
+            const h = output[3 * 8400 + i] / scale;
+
+            candidates.push({
+                x: Math.max(0, Math.round(cx - w / 2)),
+                y: Math.max(0, Math.round(cy - h / 2)),
+                width: Math.min(origWidth, Math.round(w)),
+                height: Math.min(origHeight, Math.round(h)),
+                confidence: Number(score.toFixed(2))
+            });
+        }
+    }
+
+    candidates.sort((a, b) => b.confidence - a.confidence);
+    const nms = [];
+    for (const cand of candidates) {
+        let keep = true;
+        for (const existing of nms) {
+            const x1 = Math.max(cand.x, existing.x);
+            const y1 = Math.max(cand.y, existing.y);
+            const x2 = Math.min(cand.x + cand.width, existing.x + existing.width);
+            const y2 = Math.min(cand.y + cand.height, existing.y + existing.height);
+            const interW = Math.max(0, x2 - x1);
+            const interH = Math.max(0, y2 - y1);
+            const inter = interW * interH;
+            if (inter > 0) {
+                const a1 = cand.width * cand.height;
+                const a2 = existing.width * existing.height;
+                const union = a1 + a2 - inter;
+                const iou = inter / union;
+                const ios = inter / Math.min(a1, a2); // Containment suppression
+                if (iou > 0.40 || ios > (isPerson ? 0.60 : 0.65)) {
+                    keep = false;
+                    break;
+                }
+            }
+        }
+        if (keep) nms.push(cand);
+    }
+    return nms;
+};
+
+// High-precision YOLOv8m Dual-Engine Detection for Classroom Headcount
+const detectStudentsYOLO = async (buffer, { threshold, mode = 'hybrid' } = {}) => {
     // 1. Check brightness
     const stats = await sharp(buffer).stats();
     const avgBrightness = (stats.channels[0].mean + stats.channels[1].mean + stats.channels[2].mean) / 3;
@@ -76,56 +133,11 @@ const detectStudentsYOLO = async (buffer, { threshold = 0.25, mode = 'face' } = 
 
     if (mode === 'person') {
         // Full body / posture mode
+        const personThresh = threshold !== undefined ? Number(threshold) : 0.30;
         const session = await getPersonSession();
         if (!session) throw new Error('YOLOv8m person model is not available');
         const results = await session.run({ images: tensor });
-        const output = results.output0.data;
-
-        const candidates = [];
-        for (let i = 0; i < 8400; i++) {
-            const personScore = output[4 * 8400 + i]; // Class 0: person
-            if (personScore >= threshold) {
-                const cx = (output[0 * 8400 + i] - padX) / scale;
-                const cy = (output[1 * 8400 + i] - padY) / scale;
-                const w = output[2 * 8400 + i] / scale;
-                const h = output[3 * 8400 + i] / scale;
-
-                candidates.push({
-                    x: Math.max(0, Math.round(cx - w / 2)),
-                    y: Math.max(0, Math.round(cy - h / 2)),
-                    width: Math.min(origWidth, Math.round(w)),
-                    height: Math.min(origHeight, Math.round(h)),
-                    confidence: Number(personScore.toFixed(2))
-                });
-            }
-        }
-
-        candidates.sort((a, b) => b.confidence - a.confidence);
-        const finalBoxes = [];
-        for (const cand of candidates) {
-            let keep = true;
-            for (const existing of finalBoxes) {
-                const x1 = Math.max(cand.x, existing.x);
-                const y1 = Math.max(cand.y, existing.y);
-                const x2 = Math.min(cand.x + cand.width, existing.x + existing.width);
-                const y2 = Math.min(cand.y + cand.height, existing.y + existing.height);
-                const interW = Math.max(0, x2 - x1);
-                const interH = Math.max(0, y2 - y1);
-                const inter = interW * interH;
-                if (inter > 0) {
-                    const a1 = cand.width * cand.height;
-                    const a2 = existing.width * existing.height;
-                    const union = a1 + a2 - inter;
-                    const iou = inter / union;
-                    const ios = inter / Math.min(a1, a2); // Containment suppression
-                    if (iou > 0.40 || ios > 0.65) {
-                        keep = false;
-                        break;
-                    }
-                }
-            }
-            if (keep) finalBoxes.push(cand);
-        }
+        const finalBoxes = extractBoxes(results.output0.data, origWidth, origHeight, scale, padX, padY, personThresh, true);
 
         finalBoxes.sort((a, b) => {
             const diff = Math.abs(a.y - b.y);
@@ -141,50 +153,13 @@ const detectStudentsYOLO = async (buffer, { threshold = 0.25, mode = 'face' } = 
             boxes: finalBoxes,
             modelUsed: 'YOLOv8m (Person Mode)'
         };
-    } else {
-        // High-precision Classroom Face Detection (Default)
+    } else if (mode === 'face') {
+        // Face detection mode
+        const faceThresh = threshold !== undefined ? Number(threshold) : 0.18;
         const session = await getFaceSession();
         if (!session) throw new Error('YOLOv8m-Face model is not available');
         const results = await session.run({ images: tensor });
-        const output = results.output0.data;
-
-        const candidates = [];
-        for (let i = 0; i < 8400; i++) {
-            const score = output[4 * 8400 + i]; // Face confidence score
-            if (score >= threshold) {
-                const cx = (output[0 * 8400 + i] - padX) / scale;
-                const cy = (output[1 * 8400 + i] - padY) / scale;
-                const w = output[2 * 8400 + i] / scale;
-                const h = output[3 * 8400 + i] / scale;
-
-                candidates.push({
-                    x: Math.max(0, Math.round(cx - w / 2)),
-                    y: Math.max(0, Math.round(cy - h / 2)),
-                    width: Math.min(origWidth, Math.round(w)),
-                    height: Math.min(origHeight, Math.round(h)),
-                    confidence: Number(score.toFixed(2))
-                });
-            }
-        }
-
-        candidates.sort((a, b) => b.confidence - a.confidence);
-        const finalBoxes = [];
-        for (const cand of candidates) {
-            let keep = true;
-            for (const existing of finalBoxes) {
-                const x1 = Math.max(cand.x, existing.x);
-                const y1 = Math.max(cand.y, existing.y);
-                const x2 = Math.min(cand.x + cand.width, existing.x + existing.width);
-                const y2 = Math.min(cand.y + cand.height, existing.y + existing.height);
-                const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
-                const union = cand.width * cand.height + existing.width * existing.height - inter;
-                if (union > 0 && inter / union > 0.40) {
-                    keep = false;
-                    break;
-                }
-            }
-            if (keep) finalBoxes.push(cand);
-        }
+        const finalBoxes = extractBoxes(results.output0.data, origWidth, origHeight, scale, padX, padY, faceThresh, false);
 
         finalBoxes.sort((a, b) => {
             const diff = Math.abs(a.y - b.y);
@@ -199,6 +174,64 @@ const detectStudentsYOLO = async (buffer, { threshold = 0.25, mode = 'face' } = 
             count: finalBoxes.length,
             boxes: finalBoxes,
             modelUsed: 'YOLOv8m-Face (Classroom High Precision)'
+        };
+    } else {
+        // ⚡ HYBRID DUAL ENSEMBLE (Face + Head-Down Occlusion Recovery) - DEFAULT
+        const faceThresh = threshold !== undefined ? Number(threshold) : 0.18;
+        const faceSess = await getFaceSession();
+        const personSess = await getPersonSession();
+        if (!faceSess) throw new Error('YOLOv8m-Face model is not available');
+
+        // 1. Run Face Model
+        const faceResults = await faceSess.run({ images: tensor });
+        const faces = extractBoxes(faceResults.output0.data, origWidth, origHeight, scale, padX, padY, faceThresh, false);
+
+        let recovered = [];
+        // 2. Run Person Model to recover students looking straight down / head-down
+        if (personSess) {
+            const personResults = await personSess.run({ images: tensor });
+            const persons = extractBoxes(personResults.output0.data, origWidth, origHeight, scale, padX, padY, 0.35, true);
+
+            for (const p of persons) {
+                // Check if this person already has a detected face inside or near upper torso
+                const hasFace = faces.some(f => {
+                    const fcX = f.x + f.width / 2;
+                    const fcY = f.y + f.height / 2;
+                    return (
+                        fcX >= p.x - 10 && fcX <= p.x + p.width + 10 &&
+                        fcY >= p.y - 5 && fcY <= p.y + p.height * 0.55
+                    );
+                });
+
+                if (!hasFace) {
+                    // Recover student whose face is turned away or bent down into desk
+                    const headHeight = Math.min(p.height, Math.round(p.width * 0.75));
+                    recovered.push({
+                        x: p.x,
+                        y: p.y,
+                        width: p.width,
+                        height: headHeight,
+                        confidence: p.confidence,
+                        isRecovered: true
+                    });
+                }
+            }
+        }
+
+        const combined = [...faces, ...recovered];
+        combined.sort((a, b) => {
+            const diff = Math.abs(a.y - b.y);
+            if (diff < 35) return a.x - b.x;
+            return a.y - b.y;
+        });
+        combined.forEach((b, i) => b.label = `#${i + 1}`);
+
+        return {
+            isDark: false,
+            avgBrightness: Number(avgBrightness.toFixed(1)),
+            count: combined.length,
+            boxes: combined,
+            modelUsed: `YOLOv8m Dual-Engine (${faces.length} faces + ${recovered.length} occluded)`
         };
     }
 };
@@ -368,8 +401,8 @@ router.post('/detect', authenticate, async (req, res) => {
         const buffer = Buffer.from(base64Data, 'base64');
 
         const result = await detectStudentsYOLO(buffer, {
-            threshold: threshold ? Number(threshold) : 0.25,
-            mode: req.body.mode || 'face'
+            threshold: threshold !== undefined && threshold !== null ? Number(threshold) : undefined,
+            mode: req.body.mode || 'hybrid'
         });
         return res.json({
             success: true,

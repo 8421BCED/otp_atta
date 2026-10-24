@@ -41,56 +41,10 @@ export const ClassroomHeadcountModal = ({
                (navigator.maxTouchPoints > 1 && window.innerWidth < 1024);
     };
 
-    // 1. Enumerate and Auto-Detect Cameras on Open
+    // 1. Detect device type on mount
     useEffect(() => {
         if (!isOpen) return;
-        const mobileDetected = checkIsMobile();
-        setIsMobile(mobileDetected);
-
-        const initCameraDevices = async () => {
-            try {
-                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
-
-                // Request brief permission to populate human-readable labels
-                let testStream = null;
-                try {
-                    testStream = await navigator.mediaDevices.getUserMedia({ 
-                        video: mobileDetected ? { facingMode: { ideal: 'environment' } } : { facingMode: 'user' }, 
-                        audio: false 
-                    });
-                } catch (e) {
-                    testStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                }
-
-                if (testStream) {
-                    testStream.getTracks().forEach(t => t.stop());
-                }
-
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const videoDevices = devices.filter(d => d.kind === 'videoinput');
-                setAvailableCameras(videoDevices);
-
-                if (videoDevices.length > 0) {
-                    if (mobileDetected) {
-                        // On mobile: auto-detect rear/back camera for classroom audience
-                        const rearCam = videoDevices.find(d => 
-                            /back|rear|environment|wide|main/i.test(d.label)
-                        ) || videoDevices[videoDevices.length - 1]; // rear is typically last on mobile
-                        setSelectedDeviceId(rearCam.deviceId);
-                    } else {
-                        // On laptop: auto-detect integrated webcam or USB cam (never environment!)
-                        const webCam = videoDevices.find(d => 
-                            /integrated|webcam|front|user|facetime|usb/i.test(d.label)
-                        ) || videoDevices[0];
-                        setSelectedDeviceId(webCam.deviceId);
-                    }
-                }
-            } catch (err) {
-                console.warn('Camera auto-detection warning:', err);
-            }
-        };
-
-        initCameraDevices();
+        setIsMobile(checkIsMobile());
     }, [isOpen]);
 
     // 2. Fetch latest audit for this room on open
@@ -123,80 +77,85 @@ export const ClassroomHeadcountModal = ({
         fetchLatestAudit();
     }, [isOpen, roomId]);
 
-    // 3. Start Camera Stream (Safe auto-detection for Laptop & Mobile)
+    // 3. Keep videoRef.srcObject synced whenever stream or camera state changes
+    useEffect(() => {
+        if (isCameraActive && videoRef.current && streamRef.current) {
+            if (videoRef.current.srcObject !== streamRef.current) {
+                videoRef.current.srcObject = streamRef.current;
+            }
+            videoRef.current.play()
+                .then(() => setIsVideoReady(true))
+                .catch(e => console.warn('Play attempt:', e));
+        }
+    }, [isCameraActive, selectedDeviceId]);
+
+    // 4. Start Camera Stream (Bulletproof for Laptop and Mobile)
     const startCamera = async (deviceIdToUse) => {
         try {
             stopCamera();
             setIsVideoReady(false);
             setDetectionWarning(null);
 
-            const devId = deviceIdToUse || selectedDeviceId;
-            let constraints;
+            const mobile = checkIsMobile();
+            setIsMobile(mobile);
 
-            if (devId) {
-                constraints = {
-                    video: { 
-                        deviceId: { exact: devId },
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
-                    },
-                    audio: false
-                };
-            } else if (isMobile) {
-                // Mobile default: back camera
-                constraints = {
-                    video: { 
-                        facingMode: { ideal: 'environment' },
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
-                    },
-                    audio: false
-                };
+            let constraints;
+            if (deviceIdToUse) {
+                constraints = { video: { deviceId: { exact: deviceIdToUse } }, audio: false };
+            } else if (mobile) {
+                // Mobile default: back / environment camera
+                constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
             } else {
-                // Laptop default: standard webcam (facingMode 'user', NEVER 'environment' which causes black frames on laptop)
-                constraints = {
-                    video: { 
-                        facingMode: 'user',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    },
-                    audio: false
-                };
+                // Laptop default: simplest, most universal constraint for webcams
+                constraints = { video: true, audio: false };
             }
 
             let stream;
             try {
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
-            } catch (constrErr) {
-                console.warn('Overconstrained error, falling back to basic camera request:', constrErr);
-                // Fallback to basic video constraint without deviceId restrictions
+            } catch (err1) {
+                console.warn('Initial camera constraints failed, attempting fallback to basic { video: true }:', err1);
                 stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
             }
 
             streamRef.current = stream;
 
+            // Immediately attach to video element
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
-                videoRef.current.setAttribute('playsinline', 'true');
-                videoRef.current.setAttribute('muted', 'true');
                 videoRef.current.muted = true;
-                
-                videoRef.current.onloadedmetadata = () => {
-                    videoRef.current.play().catch(e => console.error('Play error:', e));
+                try {
+                    await videoRef.current.play();
                     setIsVideoReady(true);
-                };
-
-                videoRef.current.onplaying = () => {
-                    setIsVideoReady(true);
-                };
+                } catch (playErr) {
+                    console.warn('Direct video play error:', playErr);
+                }
             }
 
             setIsCameraActive(true);
             setCapturedImage(null);
             setDetectedBoxes([]);
+
+            // Enumerate devices now that user has explicitly granted camera access
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoInputs = devices.filter(d => d.kind === 'videoinput');
+                setAvailableCameras(videoInputs);
+
+                // Set selected device ID if available
+                const currentTrack = stream.getVideoTracks()[0];
+                if (currentTrack) {
+                    const settings = currentTrack.getSettings ? currentTrack.getSettings() : {};
+                    if (settings.deviceId) {
+                        setSelectedDeviceId(settings.deviceId);
+                    }
+                }
+            } catch (enumErr) {
+                console.warn('Error enumerating devices after stream start:', enumErr);
+            }
         } catch (err) {
             console.error('Camera access error:', err);
-            alert('Unable to open camera. Please check camera permissions, or use "Upload Classroom Photo" button below.');
+            alert('Unable to open camera: ' + (err.message || 'Please check device camera permissions'));
         }
     };
 
@@ -204,6 +163,9 @@ export const ClassroomHeadcountModal = ({
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
+        }
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
         }
         setIsCameraActive(false);
         setIsVideoReady(false);
@@ -225,21 +187,26 @@ export const ClassroomHeadcountModal = ({
         startCamera(nextDev.deviceId);
     };
 
-    // 4. Capture & Run Real YOLO AI Detection
+    // 5. Capture & Run Real YOLO AI Detection
     const handleCaptureFromCamera = async () => {
         if (!videoRef.current) return;
         const video = videoRef.current;
 
-        if (video.videoWidth === 0 || video.videoHeight === 0) {
-            alert('Camera is initializing. Please wait 1 second for the video feed to load.');
+        // Ensure video is playing and ready
+        if (video.videoWidth === 0 || video.readyState < 2) {
+            await new Promise(resolve => setTimeout(resolve, 350));
+        }
+
+        const width = video.videoWidth || 640;
+        const height = video.videoHeight || 480;
+
+        if (width === 0 || height === 0) {
+            alert('Camera is still loading frames. Please ensure your webcam feed is visible on screen, then click capture.');
             return;
         }
 
         setIsProcessing(true);
         setDetectionWarning(null);
-
-        const width = video.videoWidth || 1280;
-        const height = video.videoHeight || 720;
 
         const offscreen = document.createElement('canvas');
         offscreen.width = width;
@@ -275,7 +242,7 @@ export const ClassroomHeadcountModal = ({
         await executeYoloDetection(dataUrl);
     };
 
-    // 5. Handle Uploaded Image File
+    // 6. Handle Uploaded Image File
     const handleImageUpload = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -291,7 +258,7 @@ export const ClassroomHeadcountModal = ({
         reader.readAsDataURL(file);
     };
 
-    // 6. Call Real YOLOv8n ONNX Backend Detection (Zero Python)
+    // 7. Call Real YOLOv8n ONNX Backend Detection (Zero Python)
     const executeYoloDetection = async (dataUrl) => {
         setIsProcessing(true);
         try {
@@ -327,7 +294,6 @@ export const ClassroomHeadcountModal = ({
             }
         } catch (err) {
             console.error('YOLO detection API failed:', err);
-            // Fallback: safe 0 count
             setDetectedBoxes([]);
             setVisualCount(0);
             renderAnnotatedCanvas(dataUrl, []);
@@ -336,7 +302,7 @@ export const ClassroomHeadcountModal = ({
         }
     };
 
-    // 7. Render Crisp Neon Green Square Bounding Boxes on Canvas (#00FF66)
+    // 8. Render Crisp Neon Green Square Bounding Boxes on Canvas (#00FF66)
     const renderAnnotatedCanvas = (imageSrc, boxes) => {
         if (!canvasRef.current || !imageSrc) return;
         const canvas = canvasRef.current;
@@ -350,30 +316,24 @@ export const ClassroomHeadcountModal = ({
 
             // Draw crisp neon green boxes with drop shadow
             boxes.forEach((box, index) => {
-                // Outer glow shadow
                 ctx.shadowColor = 'rgba(0, 255, 102, 0.7)';
                 ctx.shadowBlur = 8;
                 ctx.strokeStyle = '#00FF66'; // Neon Green YOLO Square
                 ctx.lineWidth = Math.max(2.5, img.width * 0.0035);
 
-                // Draw bounding box
                 ctx.strokeRect(box.x, box.y, box.width, box.height);
 
-                // Reset shadow for label text
                 ctx.shadowBlur = 0;
 
-                // Label pill badge (#1, #2, ...)
                 const fontSize = Math.max(12, Math.floor(box.width * 0.32));
                 ctx.font = `bold ${fontSize}px sans-serif`;
                 const text = `#${index + 1}`;
                 const textWidth = ctx.measureText(text).width;
                 const pad = 4;
 
-                // Pill background
                 ctx.fillStyle = '#00FF66';
                 ctx.fillRect(box.x, Math.max(0, box.y - fontSize - pad * 2), textWidth + pad * 2, fontSize + pad * 2);
 
-                // Text inside pill
                 ctx.fillStyle = '#0B3064';
                 ctx.fillText(text, box.x + pad, Math.max(fontSize, box.y - pad));
             });
@@ -387,7 +347,7 @@ export const ClassroomHeadcountModal = ({
         }
     }, [capturedImage, detectedBoxes]);
 
-    // 8. Interactive Manual Correction: Click Canvas to Add or Remove Student Box
+    // 9. Interactive Manual Correction: Click Canvas to Add or Remove Student Box
     const handleCanvasClick = (e) => {
         if (!canvasRef.current || isCameraActive) return;
         const rect = canvasRef.current.getBoundingClientRect();
@@ -397,7 +357,6 @@ export const ClassroomHeadcountModal = ({
         const clickX = (e.clientX - rect.left) * scaleX;
         const clickY = (e.clientY - rect.top) * scaleY;
 
-        // Check if clicked inside existing box -> delete it
         const clickedIndex = detectedBoxes.findIndex(box => 
             clickX >= box.x && clickX <= box.x + box.width &&
             clickY >= box.y && clickY <= box.y + box.height
@@ -409,7 +368,6 @@ export const ClassroomHeadcountModal = ({
             setDetectedBoxes(updated);
             setVisualCount(updated.length);
         } else {
-            // Add new box at click location
             const boxSize = Math.max(32, canvasRef.current.width * 0.045);
             const newBox = {
                 x: Math.round(clickX - boxSize / 2),
@@ -425,7 +383,7 @@ export const ClassroomHeadcountModal = ({
         }
     };
 
-    // 9. Save Audit to Backend (1-Hour Retention)
+    // 10. Save Audit to Backend (1-Hour Retention)
     const handleSaveAudit = async () => {
         if (!capturedImage || !canvasRef.current) return;
         setIsSaving(true);
@@ -503,7 +461,6 @@ export const ClassroomHeadcountModal = ({
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        {/* Camera Auto-detect info pill */}
                         <span style={{ fontSize: '0.72rem', color: '#0369A1', background: '#E0F2FE', padding: '4px 8px', borderRadius: '6px', fontWeight: 700 }}>
                             {isMobile ? '📱 Mobile Mode (Back Camera Priority)' : '💻 Laptop Mode (Webcam Priority)'}
                         </span>
@@ -584,33 +541,42 @@ export const ClassroomHeadcountModal = ({
                 {/* Camera / Image Display Viewport */}
                 <div style={{ position: 'relative', width: '100%', minHeight: '380px', background: '#0F172A', borderRadius: '14px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     
-                    {/* Active Live Video Stream */}
+                    {/* ALWAYS-MOUNTED Video Element (Ensures ref.current is NEVER null) */}
+                    <video 
+                        ref={videoRef} 
+                        autoPlay 
+                        playsInline 
+                        muted
+                        onLoadedMetadata={() => setIsVideoReady(true)}
+                        onCanPlay={() => setIsVideoReady(true)}
+                        onPlaying={() => setIsVideoReady(true)}
+                        style={{ 
+                            display: isCameraActive ? 'block' : 'none', 
+                            width: '100%', 
+                            maxHeight: '480px', 
+                            objectFit: 'contain' 
+                        }}
+                    />
+
+                    {/* Camera Active Overlays */}
                     {isCameraActive && (
-                        <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <video 
-                                ref={videoRef} 
-                                autoPlay 
-                                playsInline 
-                                muted
-                                style={{ width: '100%', maxHeight: '480px', objectFit: 'contain' }}
-                            />
-                            
-                            {/* Camera Status Badge */}
-                            <div style={{ position: 'absolute', top: '15px', left: '15px', color: '#00FF66', fontSize: '0.78rem', background: 'rgba(0,0,0,0.7)', padding: '5px 12px', borderRadius: '6px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <>
+                            {/* Live Badge */}
+                            <div style={{ position: 'absolute', top: '15px', left: '15px', color: '#00FF66', fontSize: '0.78rem', background: 'rgba(0,0,0,0.75)', padding: '5px 12px', borderRadius: '6px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
                                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1s infinite' }} />
                                 LIVE CAMERA ACTIVE
                             </div>
 
-                            {/* Camera Selection Dropdown & Flip on Video Viewport */}
-                            {availableCameras.length > 1 && (
-                                <div style={{ position: 'absolute', top: '15px', right: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {/* Camera Switcher Bar */}
+                            <div style={{ position: 'absolute', top: '15px', right: '15px', display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
+                                {availableCameras.length > 1 && (
                                     <select
                                         value={selectedDeviceId}
                                         onChange={(e) => {
                                             setSelectedDeviceId(e.target.value);
                                             startCamera(e.target.value);
                                         }}
-                                        style={{ background: 'rgba(0,0,0,0.75)', color: '#FFF', border: '1px solid #475569', borderRadius: '6px', padding: '5px 10px', fontSize: '0.74rem', cursor: 'pointer' }}
+                                        style={{ background: 'rgba(0,0,0,0.8)', color: '#FFF', border: '1px solid #38BDF8', borderRadius: '6px', padding: '5px 10px', fontSize: '0.74rem', cursor: 'pointer', fontWeight: 600 }}
                                     >
                                         {availableCameras.map((cam, idx) => (
                                             <option key={cam.deviceId || idx} value={cam.deviceId}>
@@ -618,17 +584,21 @@ export const ClassroomHeadcountModal = ({
                                             </option>
                                         ))}
                                     </select>
+                                )}
+
+                                {availableCameras.length > 1 && (
                                     <button
                                         type="button"
                                         onClick={handleSwitchCamera}
-                                        style={{ background: 'rgba(0,0,0,0.75)', color: '#FFF', border: '1px solid #475569', borderRadius: '6px', padding: '6px', cursor: 'pointer' }}
+                                        style={{ background: 'rgba(0,0,0,0.8)', color: '#38BDF8', border: '1px solid #38BDF8', borderRadius: '6px', padding: '5px 10px', fontSize: '0.74rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                                         title="Switch to next camera"
                                     >
-                                        <SwitchCamera size={15} color="#38BDF8" />
+                                        <SwitchCamera size={14} />
+                                        <span>Switch Cam</span>
                                     </button>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </div>
+                        </>
                     )}
 
                     {/* Processed Canvas Display with Green Bounding Boxes */}
@@ -689,7 +659,7 @@ export const ClassroomHeadcountModal = ({
 
                     {/* Processing Overlay */}
                     {isProcessing && (
-                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(11, 48, 100, 0.88)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', color: '#FFF', zIndex: 10 }}>
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(11, 48, 100, 0.88)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', color: '#FFF', zIndex: 20 }}>
                             <RefreshCw size={36} className="fa-spin" color="#00FF66" />
                             <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#00FF66' }}>
                                 YOLOv8 AI Face Detection in Progress...

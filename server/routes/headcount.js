@@ -113,7 +113,9 @@ const detectStudentsYOLO = async (buffer, { threshold, mode = 'hybrid' } = {}) =
     const origHeight = meta.height || 480;
 
     // 2. High-fidelity Letterbox: preserve exact aspect ratio with padding (no stretching/squashing)
+    // Strip alpha channel to guarantee exact 3-channel RGB for PNGs and RGBA images
     const { data } = await sharp(buffer)
+        .removeAlpha()
         .resize(640, 640, { fit: 'contain', background: { r: 114, g: 114, b: 114 } })
         .raw()
         .toBuffer({ resolveWithObject: true });

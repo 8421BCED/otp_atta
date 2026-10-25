@@ -15,7 +15,7 @@ import {
     ArrowRight
 } from 'lucide-react';
 
-export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser }) => {
+export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser, isInlinePage = false }) => {
     const activeStudent = student || currentUser;
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -25,7 +25,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
     const [fullReport, setFullReport] = useState(null);
 
     useEffect(() => {
-        if (!isOpen || !activeStudent?.id) return;
+        if ((!isOpen && !isInlinePage) || !activeStudent?.id) return;
         setSelectedDate(todayStr);
         const fetchStudentReport = async () => {
             try {
@@ -42,9 +42,9 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
             }
         };
         fetchStudentReport();
-    }, [isOpen, activeStudent?.id]);
+    }, [isOpen, isInlinePage, activeStudent?.id]);
 
-    if (!isOpen) return null;
+    if (!isOpen && !isInlinePage) return null;
 
     const allRecords = fullReport?.allRecords || [];
     const holidays = fullReport?.holidays || [];
@@ -226,29 +226,33 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
         }
     };
 
-    return (
-        <div className="aero-modal-backdrop" onClick={onClose}>
-            <div className="aero-modal-card fa-glass-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '680px', width: '94%', maxHeight: '92vh', overflowY: 'auto' }}>
-                
-                {/* Header */}
-                <div className="aero-modal-header" style={{ paddingBottom: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="clean-app-icon" style={{ width: '36px', height: '36px', fontSize: '1rem' }}>
-                            <FileText size={18} />
-                        </div>
-                        <div>
-                            <h2 style={{ fontSize: '1.10rem', fontWeight: 800, color: 'var(--dark-blue)', margin: 0 }}>
-                                Attendance & History
-                            </h2>
-                            <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)', marginTop: '2px' }}>
-                                <strong>{activeStudent?.name || 'Daniel A'}</strong> • <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--blue)' }}>{studentEmail}</span>
-                            </div>
+    const content = (
+        <div 
+            className={`fa-glass-card ${isInlinePage ? 'attendance-history-page-card' : 'aero-modal-card'}`} 
+            onClick={e => e.stopPropagation()} 
+            style={isInlinePage ? { width: '100%', maxWidth: '820px', margin: '0 auto 80px', padding: '18px 20px', border: '1px solid var(--border-card)', borderRadius: '18px', background: '#FFFFFF', boxShadow: '0 4px 20px rgba(21, 38, 65, 0.05)' } : { maxWidth: '680px', width: '94%', maxHeight: '92vh', overflowY: 'auto' }}
+        >
+            {/* Header */}
+            <div className="aero-modal-header" style={{ paddingBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="clean-app-icon" style={{ width: '38px', height: '38px', fontSize: '1.1rem' }}>
+                        <FileText size={20} />
+                    </div>
+                    <div>
+                        <h1 style={{ fontSize: '1.20rem', fontWeight: 800, color: 'var(--dark-blue)', margin: 0 }}>
+                            Attendance & History
+                        </h1>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)', marginTop: '2px' }}>
+                            <strong>{activeStudent?.name || 'Daniel A'}</strong> • <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--blue)' }}>{studentEmail}</span>
                         </div>
                     </div>
-                    <button type="button" className="aero-close-btn" onClick={onClose}>
+                </div>
+                {onClose && (
+                    <button type="button" className="aero-close-btn" onClick={onClose} title="Back">
                         <X size={16} />
                     </button>
-                </div>
+                )}
+            </div>
 
                 {/* Overall Attendance Metrics Ribbon */}
                 <div className="aero-metric-ribbon" style={{ marginBottom: '14px' }}>
@@ -495,6 +499,19 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
                 </div>
 
             </div>
+    );
+
+    if (isInlinePage) {
+        return (
+            <div className="attendance-history-page-wrapper">
+                {content}
+            </div>
+        );
+    }
+
+    return (
+        <div className="aero-modal-backdrop" onClick={onClose}>
+            {content}
         </div>
     );
 };

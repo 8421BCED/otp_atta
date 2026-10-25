@@ -10,6 +10,15 @@ export const ClassroomSelectionPage = ({
     const [selectedBuildingId, setSelectedBuildingId] = useState(null);
     const [selectedFloorId, setSelectedFloorId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedQuery, setDebouncedQuery] = useState('');
+
+    // Smooth debounce on search to keep typing at 60fps with zero stutter
+    React.useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedQuery(searchQuery);
+        }, 120);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     // Flatten all rooms across all buildings & floors for instant search
     const allRoomsList = useMemo(() => {
@@ -32,10 +41,10 @@ export const ClassroomSelectionPage = ({
         return rooms;
     }, [hierarchy]);
 
-    // Filtered rooms when user searches
+    // Filtered rooms using debounced search
     const searchResults = useMemo(() => {
-        if (!searchQuery.trim()) return [];
-        const q = searchQuery.trim().toLowerCase();
+        if (!debouncedQuery.trim()) return [];
+        const q = debouncedQuery.trim().toLowerCase();
         return allRoomsList.filter(r => 
             r.room_number?.toLowerCase().includes(q) ||
             r.name?.toLowerCase().includes(q) ||
@@ -43,7 +52,7 @@ export const ClassroomSelectionPage = ({
             r.buildingName?.toLowerCase().includes(q) ||
             r.buildingCode?.toLowerCase().includes(q)
         );
-    }, [allRoomsList, searchQuery]);
+    }, [allRoomsList, debouncedQuery]);
 
     const activeBuilding = hierarchy?.find(b => b.id === selectedBuildingId) || hierarchy?.[0];
     const availableFloors = activeBuilding?.floors || [];
@@ -119,25 +128,25 @@ export const ClassroomSelectionPage = ({
                                         className={`room-select-card ${isCurrent ? 'selected' : ''}`}
                                         onClick={() => handleRoomPick(r.buildingId, r.floorId, r.id)}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div className="room-card-main">
                                             <div className="room-icon-box">
                                                 <DoorOpen size={20} />
                                             </div>
-                                            <div style={{ textAlign: 'left' }}>
-                                                <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.90rem' }}>
-                                                    Room {r.room_number} • <span style={{ color: 'var(--blue)' }}>{r.name}</span>
+                                            <div className="room-text-details">
+                                                <div className="room-title-heading">
+                                                    Room {r.room_number} <span style={{ color: 'var(--blue)', fontWeight: 600 }}>• {r.name}</span>
                                                 </div>
-                                                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>
+                                                <div className="room-desc-subtitle">
                                                     {r.buildingName} • {r.floorName}
                                                 </div>
                                             </div>
                                         </div>
                                         {isCurrent ? (
-                                            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#16A34A', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <CheckCircle2 size={16} /> Selected
+                                            <span className="room-current-badge">
+                                                <CheckCircle2 size={15} /> Selected
                                             </span>
                                         ) : (
-                                            <ChevronRight size={18} color="#94A3B8" />
+                                            <ChevronRight size={18} color="#94A3B8" className="room-arrow-icon" />
                                         )}
                                     </button>
                                 );
@@ -207,25 +216,25 @@ export const ClassroomSelectionPage = ({
                                         className={`room-select-card ${isCurrent ? 'selected' : ''}`}
                                         onClick={() => handleRoomPick(activeBuilding.id, activeFloor.id, r.id)}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div className="room-card-main">
                                             <div className="room-icon-box">
                                                 <DoorOpen size={18} />
                                             </div>
-                                            <div style={{ textAlign: 'left' }}>
-                                                <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.88rem' }}>
+                                            <div className="room-text-details">
+                                                <div className="room-title-heading">
                                                     Room {r.room_number}
                                                 </div>
-                                                <div style={{ fontSize: '0.70rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
+                                                <div className="room-desc-subtitle" title={r.name}>
                                                     {r.name}
                                                 </div>
                                             </div>
                                         </div>
                                         {isCurrent ? (
-                                            <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#16A34A' }}>
+                                            <span className="room-current-badge">
                                                 ✓ Current
                                             </span>
                                         ) : (
-                                            <ChevronRight size={16} color="#CBD5E1" />
+                                            <ChevronRight size={16} color="#CBD5E1" className="room-arrow-icon" />
                                         )}
                                     </button>
                                 );

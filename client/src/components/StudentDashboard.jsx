@@ -343,7 +343,10 @@ export const StudentDashboard = ({
 
                             <form onSubmit={handleSubmitOtp} className="student-otp-form" style={{ width: '100%', gap: '8px' }}>
                                 <input
-                                    type="text"
+                                    type="tel"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    autoComplete="one-time-code"
                                     maxLength="6"
                                     placeholder="------"
                                     className="aero-otp-input"
@@ -482,7 +485,10 @@ export const StudentDashboard = ({
                             )}
                             <form onSubmit={handleSubmitOtp} className="student-otp-form" style={{ width: '100%' }}>
                                 <input
-                                    type="text"
+                                    type="tel"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    autoComplete="one-time-code"
                                     maxLength="6"
                                     placeholder="------"
                                     className="aero-otp-input"
@@ -516,7 +522,10 @@ export const StudentDashboard = ({
                             </div>
 
                             <input
-                                type="text"
+                                type="tel"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                autoComplete="one-time-code"
                                 maxLength="6"
                                 placeholder="------"
                                 className="aero-otp-input"

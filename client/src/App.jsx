@@ -241,15 +241,16 @@ export function App() {
                 }}
             />
 
-            {/* Attendance Calendar Modal (Keeps bottom navigation intact) */}
-            <AttendanceCalendarModal 
-                isOpen={isCalendarOpen || activeMobileTab === 'calendar'}
-                onClose={() => {
-                    setIsCalendarOpen(false);
-                    setActiveMobileTab('home');
-                }}
-                currentUser={currentUser}
-            />
+            {/* Attendance Calendar Modal (Only for non-mobile or top-bar explicit popups) */}
+            {isCalendarOpen && activeMobileTab !== 'calendar' && (
+                <AttendanceCalendarModal 
+                    isOpen={true}
+                    onClose={() => {
+                        setIsCalendarOpen(false);
+                    }}
+                    currentUser={currentUser}
+                />
+            )}
 
             {/* Main Content Workspace */}
             <main className="app-workspace">
@@ -263,6 +264,16 @@ export function App() {
                             <span style={{ marginLeft: '8px', opacity: 0.85 }}>({holidayStatus.scope === 'college' ? 'College-wide' : `${holidayStatus.department} Department`})</span>
                         </div>
                     </div>
+                )}
+
+                {/* Dedicated Attendance & History Detailed Page */}
+                {activeMobileTab === 'calendar' && (
+                    <AttendanceCalendarModal 
+                        isOpen={true}
+                        isInlinePage={true}
+                        onClose={() => setActiveMobileTab('home')}
+                        currentUser={currentUser}
+                    />
                 )}
 
                 {/* Dedicated Classroom Selection View (When tapped from bottom bar) */}
@@ -279,7 +290,7 @@ export function App() {
                 )}
 
                 {/* Active Dashboard View (When on Home tab) */}
-                {activeViewRole === 'student' && activeMobileTab !== 'classroom' && (
+                {activeViewRole === 'student' && activeMobileTab === 'home' && (
                     <StudentDashboard 
                         currentUser={currentUser}
                         hierarchy={hierarchy}
@@ -338,8 +349,8 @@ export function App() {
                         }
                     }}
                     onOpenCalendar={() => {
+                        setIsCalendarOpen(false);
                         setActiveMobileTab('calendar');
-                        setIsCalendarOpen(true);
                     }}
                     onOpenClassroom={() => {
                         setIsCalendarOpen(false);

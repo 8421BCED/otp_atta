@@ -816,8 +816,8 @@ html, body {
 
 .countdown-svg-wrap {
   position: relative;
-  width: 210px;
-  height: 210px;
+  width: 240px;
+  height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -825,20 +825,20 @@ html, body {
 
 .countdown-svg {
   transform: rotate(-90deg);
-  width: 210px;
-  height: 210px;
+  width: 240px;
+  height: 240px;
 }
 
 .countdown-circle-track {
   fill: none;
   stroke: var(--light-blue);
-  stroke-width: 10;
+  stroke-width: 12;
 }
 
 .countdown-circle-progress {
   fill: none;
   stroke: var(--green);
-  stroke-width: 10;
+  stroke-width: 12;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.8s ease-in-out;
 }
@@ -851,7 +851,7 @@ html, body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 16px;
+  padding: 20px;
   pointer-events: none;
 }
 
@@ -865,12 +865,12 @@ html, body {
 }
 
 .countdown-time-digits.long-digits {
-  font-size: 1.62rem;
+  font-size: 1.85rem;
   letter-spacing: 0.01em;
 }
 
 .countdown-time-digits.standard-digits {
-  font-size: 2.15rem;
+  font-size: 2.55rem;
   letter-spacing: -0.02em;
 }
 
@@ -2370,6 +2370,175 @@ html, body {
     border-radius: 0 0 3px 3px;
     background: #136CFC;
   }
+}
+
+/* Dedicated Classroom Selection View (Full clean page / view) */
+.classroom-page-container {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 8px 12px 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.classroom-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid var(--border-card);
+  box-shadow: 0 2px 10px rgba(21, 38, 65, 0.04);
+}
+
+.current-room-badge {
+  background: var(--light-blue);
+  color: var(--blue);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(19, 108, 252, 0.25);
+}
+
+.classroom-hierarchy-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.building-chips-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.building-chips-row::-webkit-scrollbar {
+  display: none;
+}
+
+.building-tab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 0 #CBD5E1;
+  transition: all 0.12s ease;
+}
+
+.building-tab-chip:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 #CBD5E1;
+}
+
+.building-tab-chip.active {
+  background: var(--blue);
+  color: #FFFFFF;
+  border-color: var(--blue);
+  box-shadow: 0 3px 0 #0D47A1;
+}
+
+.floor-pills-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 6px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.floor-pills-row::-webkit-scrollbar {
+  display: none;
+}
+
+.floor-pill-btn {
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.floor-pill-btn.active {
+  background: #152641;
+  color: #FFFFFF;
+  border-color: #152641;
+}
+
+.rooms-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.room-select-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 3px 0 #E2E8F0;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.room-select-card:hover {
+  border-color: #BFDBFE;
+}
+
+.room-select-card:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #CBD5E1;
+}
+
+.room-select-card.selected {
+  background: #F0FDF4;
+  border-color: #86EFAC;
+  box-shadow: 0 3px 0 #BBF7D0;
+}
+
+.room-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--blue);
+  flex-shrink: 0;
+}
+
+.classroom-search-results {
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid var(--border-card);
+  padding: 14px;
 }
 
 

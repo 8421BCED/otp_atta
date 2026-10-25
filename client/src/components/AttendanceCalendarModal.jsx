@@ -231,24 +231,22 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser 
             <div className="aero-modal-card fa-glass-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '680px', width: '94%', maxHeight: '92vh', overflowY: 'auto' }}>
                 
                 {/* Header */}
-                <div className="aero-modal-header" style={{ paddingBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div className="aero-icon-bubble" style={{ background: 'var(--blue)', color: '#FFF' }}>
-                            <FileText size={22} />
+                <div className="aero-modal-header" style={{ paddingBottom: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="clean-app-icon" style={{ width: '36px', height: '36px', fontSize: '1rem' }}>
+                            <FileText size={18} />
                         </div>
                         <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                <h2 style={{ fontSize: '1.20rem', fontWeight: 800, color: 'var(--dark-blue)', margin: 0 }}>
-                                    Student Attendance & Campus Movement History
-                                </h2>
-                            </div>
-                            <div style={{ fontSize: '0.80rem', color: 'var(--text-sub)', marginTop: '3px' }}>
-                                Student: <strong style={{ color: 'var(--dark-blue)' }}>{activeStudent?.name || 'Daniel A'}</strong> • Email: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--blue)' }}>{studentEmail}</span> • Dept: <strong>{activeStudent?.department || 'IT'}</strong>
+                            <h2 style={{ fontSize: '1.10rem', fontWeight: 800, color: 'var(--dark-blue)', margin: 0 }}>
+                                Attendance & History
+                            </h2>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)', marginTop: '2px' }}>
+                                <strong>{activeStudent?.name || 'Daniel A'}</strong> • <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--blue)' }}>{studentEmail}</span>
                             </div>
                         </div>
                     </div>
                     <button type="button" className="aero-close-btn" onClick={onClose}>
-                        <X size={18} />
+                        <X size={16} />
                     </button>
                 </div>
 

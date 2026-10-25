@@ -81,10 +81,10 @@ export const PeriodCountdownWheel = ({ currentPeriodInfo, timeline }) => {
         }
     }
 
-    // SVG Circular Geometry: 210x210 container, radius 80, stroke 10
-    const radius = 80;
-    const strokeWidth = 10;
-    const circumference = 2 * Math.PI * radius; // ≈ 502.65
+    // SVG Circular Geometry: 240x240 container, radius 95, stroke 12
+    const radius = 95;
+    const strokeWidth = 12;
+    const circumference = 2 * Math.PI * radius; // ≈ 596.9
     const strokeDashoffset = circumference - (circumference * progressPct) / 100;
 
     const isLongTime = displayTime.length >= 7; // e.g. "05:10:59"
@@ -94,12 +94,12 @@ export const PeriodCountdownWheel = ({ currentPeriodInfo, timeline }) => {
             {/* Circular Progress Wheel */}
             <div className="countdown-wheel-container">
                 <div className="countdown-svg-wrap">
-                    <svg className="countdown-svg" viewBox="0 0 210 210">
+                    <svg className="countdown-svg" viewBox="0 0 240 240">
                         {/* Background Light Blue Track */}
                         <circle
                             className="countdown-circle-track"
-                            cx="105"
-                            cy="105"
+                            cx="120"
+                            cy="120"
                             r={radius}
                             stroke="#E8F4FC"
                             strokeWidth={strokeWidth}
@@ -108,8 +108,8 @@ export const PeriodCountdownWheel = ({ currentPeriodInfo, timeline }) => {
                         {/* Light Green Live Border Arc Moving along to the Period */}
                         <circle
                             className="countdown-circle-progress"
-                            cx="105"
-                            cy="105"
+                            cx="120"
+                            cy="120"
                             r={radius}
                             stroke="#C3F84A"
                             strokeWidth={strokeWidth}

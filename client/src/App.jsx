@@ -7,6 +7,7 @@ import { PrincipalDashboard } from './components/PrincipalDashboard';
 import { StrangeOpsDashboard } from './components/StrangeOpsDashboard';
 import { PTSportsDashboard } from './components/PTSportsDashboard';
 import { LoginPage } from './components/LoginPage';
+import { ClassroomSelectionPage } from './components/ClassroomSelectionPage';
 import { AttendanceCalendarModal } from './components/AttendanceCalendarModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { getDeviceSecurityInfo } from './utils/deviceSecurity';
@@ -45,6 +46,8 @@ export function App() {
     });
     const [holidayStatus, setHolidayStatus] = useState(null);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [activeMobileTab, setActiveMobileTab] = useState('home'); // 'home' | 'classroom' | 'calendar'
+    const [selectedStudentRoom, setSelectedStudentRoom] = useState(null);
 
     // Active endpoint route (/students, /staffs, /hod, /principal)
     const [currentRoute, setCurrentRoute] = useState(() => getRoleFromPath() || 'student');
@@ -232,13 +235,19 @@ export function App() {
                 simulatedTime={simulatedTime}
                 setSimulatedTime={setSimulatedTime}
                 activePeriod={currentPeriodInfo?.activePeriod}
-                onOpenCalendar={() => setIsCalendarOpen(true)}
+                onOpenCalendar={() => {
+                    setActiveMobileTab('calendar');
+                    setIsCalendarOpen(true);
+                }}
             />
 
-            {/* Attendance Calendar Modal (Accessible from top navbar) */}
+            {/* Attendance Calendar Modal (Keeps bottom navigation intact) */}
             <AttendanceCalendarModal 
-                isOpen={isCalendarOpen}
-                onClose={() => setIsCalendarOpen(false)}
+                isOpen={isCalendarOpen || activeMobileTab === 'calendar'}
+                onClose={() => {
+                    setIsCalendarOpen(false);
+                    setActiveMobileTab('home');
+                }}
                 currentUser={currentUser}
             />
 
@@ -256,14 +265,29 @@ export function App() {
                     </div>
                 )}
 
-                {/* Active Dashboard View */}
-                {activeViewRole === 'student' && (
+                {/* Dedicated Classroom Selection View (When tapped from bottom bar) */}
+                {activeViewRole === 'student' && activeMobileTab === 'classroom' && (
+                    <ClassroomSelectionPage 
+                        hierarchy={hierarchy}
+                        currentRoomId={selectedStudentRoom}
+                        onSelectRoom={(_bId, _fId, rId) => {
+                            setSelectedStudentRoom(rId);
+                            setActiveMobileTab('home');
+                        }}
+                        onBackToHome={() => setActiveMobileTab('home')}
+                    />
+                )}
+
+                {/* Active Dashboard View (When on Home tab) */}
+                {activeViewRole === 'student' && activeMobileTab !== 'classroom' && (
                     <StudentDashboard 
                         currentUser={currentUser}
                         hierarchy={hierarchy}
                         currentPeriodInfo={currentPeriodInfo}
                         deviceInfo={deviceInfo}
                         simulatedTime={simulatedTime}
+                        selectedRoom={selectedStudentRoom}
+                        onSelectRoom={setSelectedStudentRoom}
                     />
                 )}
 
@@ -306,16 +330,20 @@ export function App() {
             {/* Mobile Bottom Navigation Bar (PWA Horizontal Menu Icons) */}
             {currentUser && (
                 <MobileBottomNav 
-                    activeTab={isCalendarOpen ? 'calendar' : 'home'}
+                    activeTab={activeMobileTab}
                     onTabChange={(tab) => {
-                        if (tab === 'home') setIsCalendarOpen(false);
+                        setActiveMobileTab(tab);
+                        if (tab !== 'calendar') {
+                            setIsCalendarOpen(false);
+                        }
                     }}
-                    onOpenCalendar={() => setIsCalendarOpen(true)}
+                    onOpenCalendar={() => {
+                        setActiveMobileTab('calendar');
+                        setIsCalendarOpen(true);
+                    }}
                     onOpenClassroom={() => {
                         setIsCalendarOpen(false);
-                        // Trigger room modal on student dashboard if available
-                        const roomBtn = document.querySelector('.move-classroom-btn') || document.querySelector('.no-room-prompt-box button');
-                        if (roomBtn) roomBtn.click();
+                        setActiveMobileTab('classroom');
                     }}
                     onLogout={handleLogout}
                     currentUser={currentUser}

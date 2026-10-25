@@ -9,12 +9,17 @@ export const StudentDashboard = ({
     hierarchy, 
     currentPeriodInfo, 
     deviceInfo, 
-    simulatedTime 
+    simulatedTime,
+    selectedRoom: propSelectedRoom,
+    onSelectRoom: propOnSelectRoom
 }) => {
     // Dynamic classroom selection: synced directly with database attendance records (no student localStorage reliance)
     const [selectedBuilding, setSelectedBuilding] = useState(null);
     const [selectedFloor, setSelectedFloor] = useState(null);
-    const [selectedRoom, setSelectedRoom] = useState(null);
+    const [localSelectedRoom, setLocalSelectedRoom] = useState(null);
+
+    const selectedRoom = propSelectedRoom !== undefined ? propSelectedRoom : localSelectedRoom;
+    const setSelectedRoom = propOnSelectRoom || setLocalSelectedRoom;
 
     // Modals
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
@@ -255,51 +260,16 @@ export const StudentDashboard = ({
             {/* Primary Attendance Hub: Room Header + Timer Circle + OTP Input under it */}
             <div className="student-main-col">
                 <div className="fa-glass-card attendance-hub-card">
-                    {/* Classroom Location & Move Classroom Button */}
-                    <div className="student-classroom-header-bar">
-                        <div className="location-info-block">
-                            {activeRoomObj ? (
-                                <>
-                                    <div className="building-title-row">
-                                        <MapPin size={16} color="var(--blue)" className="pin-icon" />
-                                        <span className="building-name">{activeBuildingObj?.name}</span>
-                                        <span className="room-badge">Room {activeRoomObj?.room_number}</span>
-                                    </div>
-                                    <div className="floor-room-sub">
-                                        {activeFloorObj?.name} • {activeRoomObj?.name}
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="building-title-row">
-                                        <MapPin size={16} color="var(--text-sub)" className="pin-icon" />
-                                        <span className="building-name" style={{ color: 'var(--text-sub)' }}>No Classroom Selected</span>
-                                    </div>
-                                    <div className="floor-room-sub">
-                                        Select classroom to unlock your 10s OTP verification
-                                    </div>
-                                </>
-                            )}
-                        </div>
-
-                        {/* Move / Change Classroom button */}
-                        {isDayLocked ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#FEF2F2', border: '1.5px solid #FCA5A5', padding: '6px 14px', borderRadius: '8px', color: '#991B1B', fontSize: '0.78rem', fontWeight: 800 }}>
-                                <Lock size={14} color="#DC2626" />
-                                <span>Day Locked (Period 1 Missed)</span>
+                    {/* Optional Subtle Room Indicator if room already selected */}
+                    {activeRoomObj && (
+                        <div className="student-classroom-header-bar" style={{ justifyContent: 'center', borderBottom: 'none', paddingBottom: 0 }}>
+                            <div className="building-title-row" style={{ justifyContent: 'center' }}>
+                                <MapPin size={16} color="var(--blue)" className="pin-icon" />
+                                <span className="building-name">{activeBuildingObj?.name}</span>
+                                <span className="room-badge">Room {activeRoomObj?.room_number}</span>
                             </div>
-                        ) : (
-                            <button 
-                                type="button" 
-                                className="clean-submit-btn move-classroom-btn"
-                                style={{ width: 'auto', padding: '8px 16px', fontSize: '0.80rem' }}
-                                onClick={() => setIsRoomModalOpen(true)}
-                            >
-                                <Navigation size={13} />
-                                <span>{activeRoomObj ? 'Change Classroom' : 'Select Classroom'}</span>
-                            </button>
-                        )}
-                    </div>
+                        </div>
+                    )}
 
                     {/* Timer Inside Green Circle (Denoting Period Duration) */}
                     <div style={{ padding: '8px 0', display: 'flex', justifyContent: 'center' }}>
@@ -503,33 +473,40 @@ export const StudentDashboard = ({
                             </div>
                         </div>
                     ) : !selectedRoom ? (
-                        <div className="no-room-prompt-box" style={{ padding: '20px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1.5px dashed #CBD5E1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center', width: '100%', maxWidth: '360px', margin: '0 auto' }}>
+                        <div className="student-otp-wrap" style={{ width: '100%', maxWidth: '340px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                             {isHodUnlocked && (
                                 <div style={{ background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: '8px', padding: '6px 10px', color: '#166534', fontSize: '0.74rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', width: '100%' }}>
                                     <CheckCircle2 size={15} color="#16A34A" />
                                     <span>Day Attendance Unlocked by HOD.</span>
                                 </div>
                             )}
-                            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#EFF6FF', border: '1.5px solid #BFDBFE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#136CFC' }}>
-                                <DoorOpen size={22} />
-                            </div>
-                            <div>
-                                <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.90rem' }}>
-                                    Classroom Selection Required
-                                </div>
-                                <p style={{ fontSize: '0.74rem', color: '#64748B', maxWidth: '300px', margin: '4px auto 0', lineHeight: 1.35 }}>
-                                    Pick your Building, Floor & Classroom to enter your faculty's rolling OTP.
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                className="clean-submit-btn"
-                                style={{ width: '100%', maxWidth: '240px', padding: '9px 18px', fontSize: '0.80rem', marginTop: '4px' }}
-                                onClick={() => setIsRoomModalOpen(true)}
-                            >
-                                <Navigation size={13} />
-                                <span>Choose Classroom</span>
-                            </button>
+                            <form onSubmit={handleSubmitOtp} className="student-otp-form" style={{ width: '100%' }}>
+                                <input
+                                    type="text"
+                                    maxLength="6"
+                                    placeholder="------"
+                                    className="aero-otp-input"
+                                    value={otpInput}
+                                    onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                                />
+                                {errorMessage && (
+                                    <div className="aero-alert-error" style={{ width: '100%', maxWidth: '340px' }}>
+                                        <AlertCircle size={16} />
+                                        <span>{errorMessage}</span>
+                                    </div>
+                                )}
+                                <button 
+                                    type="submit" 
+                                    className="aero-gloss-btn" 
+                                    style={{ width: '100%', maxWidth: '340px', padding: '11px 24px' }}
+                                    disabled={isSubmitting || otpInput.length !== 6}
+                                >
+                                    <span>{isSubmitting ? 'Verifying OTP...' : 'Verify & Mark Present'}</span>
+                                </button>
+                            </form>
+                            <span style={{ fontSize: '0.74rem', color: '#64748B', textAlign: 'center', marginTop: '2px' }}>
+                                Tap <strong>Classroom</strong> at the bottom to set your room
+                            </span>
                         </div>
                     ) : (
                         <form onSubmit={handleSubmitOtp} className="student-otp-form">

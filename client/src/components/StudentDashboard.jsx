@@ -576,14 +576,30 @@ export const StudentDashboard = ({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {timeline.map((item, idx) => {
                             const isP1CutoffAbsent = item.id === 1 && !item.isMarked && isPastCutoff;
+                            const isCurrentActive = currentPeriodInfo?.activePeriod?.id === item.id;
+                            const roomNum = item.attendance?.room_number || (item.isMarked && item.id === activePeriodId ? (activeRoomObj?.room_number || selectedRoom) : null);
+                            const roomBuilding = item.attendance?.building_name || (item.isMarked && item.id === activePeriodId ? activeBuildingObj?.name : null);
+
                             return (
                                 <div 
                                     key={idx}
-                                    className={`aero-schedule-row ${item.is_break ? 'is-break' : ''} ${item.isMarked ? 'is-marked' : ''} ${isP1CutoffAbsent ? 'is-absent' : ''}`}
+                                    className={`aero-schedule-row ${item.is_break ? 'is-break' : ''} ${item.isMarked ? 'is-marked' : ''} ${isP1CutoffAbsent ? 'is-absent' : ''} ${isCurrentActive ? 'is-active-now' : ''}`}
                                 >
-                                    <div>
-                                        <div className="row-p-title">{item.name}</div>
-                                        <div className="row-p-time">{item.start_time.slice(0, 5)} – {item.end_time.slice(0, 5)}</div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span className="row-p-title">{item.name}</span>
+                                            {isCurrentActive && (
+                                                <span className="period-now-badge">
+                                                    LIVE NOW
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="row-p-time">
+                                            {item.start_time.slice(0, 5)} – {item.end_time.slice(0, 5)}
+                                            {roomBuilding && (
+                                                <span style={{ color: 'var(--text-sub)', marginLeft: '6px' }}>• {roomBuilding}</span>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div>
@@ -591,18 +607,23 @@ export const StudentDashboard = ({
                                             <span className="aero-status-tag break">Interval</span>
                                         ) : (item.isMarked && (item.attendance?.status === 'od' || item.status === 'od' || activeSportsPass)) ? (
                                             <span className="aero-status-tag present" style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #F59E0B', fontWeight: 800 }}>
-                                                🏆 On Duty (OD - Sports)
+                                                🏆 Sports OD Exemption
                                             </span>
                                         ) : item.isMarked ? (
-                                            <span className="aero-status-tag present">
-                                                ✓ Present ({item.attendance?.room_number ? `Rm ${item.attendance.room_number}` : 'Verified'})
+                                            <span className="aero-status-tag present" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                                <CheckCircle2 size={13} color="#16A34A" />
+                                                <span>Present in Room {roomNum || '101'}</span>
                                             </span>
                                         ) : isP1CutoffAbsent ? (
                                             <span className="aero-status-tag absent" style={{ background: '#FEE2E2', color: '#DC2626', border: '1px solid #EF4444' }}>
                                                 ✗ Absent (Cutoff 9:05)
                                             </span>
+                                        ) : isCurrentActive ? (
+                                            <span className="aero-status-tag pending" style={{ background: '#EFF6FF', color: 'var(--blue)', border: '1px solid #93C5FD', fontWeight: 800 }}>
+                                                Awaiting OTP Verification
+                                            </span>
                                         ) : (
-                                            <span className="aero-status-tag pending">Pending</span>
+                                            <span className="aero-status-tag pending">Upcoming</span>
                                         )}
                                     </div>
                                 </div>

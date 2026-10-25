@@ -816,8 +816,8 @@ html, body {
 
 .countdown-svg-wrap {
   position: relative;
-  width: 270px;
-  height: 270px;
+  width: 290px;
+  height: 290px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -825,20 +825,20 @@ html, body {
 
 .countdown-svg {
   transform: rotate(-90deg);
-  width: 270px;
-  height: 270px;
+  width: 290px;
+  height: 290px;
 }
 
 .countdown-circle-track {
   fill: none;
   stroke: var(--light-blue);
-  stroke-width: 14;
+  stroke-width: 18;
 }
 
 .countdown-circle-progress {
   fill: none;
   stroke: var(--green);
-  stroke-width: 14;
+  stroke-width: 18;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.8s ease-in-out;
 }
@@ -851,7 +851,7 @@ html, body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 24px;
+  padding: 26px;
   pointer-events: none;
 }
 
@@ -865,12 +865,12 @@ html, body {
 }
 
 .countdown-time-digits.long-digits {
-  font-size: 2.05rem;
+  font-size: 2.15rem;
   letter-spacing: 0.01em;
 }
 
 .countdown-time-digits.standard-digits {
-  font-size: 2.85rem;
+  font-size: 3.10rem;
   letter-spacing: -0.02em;
 }
 
@@ -1146,8 +1146,25 @@ html, body {
 }
 
 .aero-schedule-row.is-marked {
-  border-color: var(--green);
-  background: rgba(195, 248, 74, 0.15);
+  border-color: #86EFAC;
+  background: #F0FDF4;
+}
+
+.aero-schedule-row.is-active-now {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px var(--blue);
+  background: #F4F8FF;
+}
+
+.period-now-badge {
+  background: var(--blue);
+  color: #FFFFFF;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  animation: pulse 2s infinite ease-in-out;
 }
 
 .row-p-title {
@@ -2168,23 +2185,23 @@ html, body {
 
   .countdown-svg-wrap,
   .countdown-svg {
-    width: 175px;
-    height: 175px;
+    width: 250px;
+    height: 250px;
   }
 
   .countdown-time-digits.long-digits {
-    font-size: 1.35rem;
+    font-size: 1.85rem;
     letter-spacing: 0em;
   }
 
   .countdown-time-digits.standard-digits {
-    font-size: 1.70rem;
+    font-size: 2.65rem;
     letter-spacing: -0.01em;
   }
 
   .countdown-label-sub {
-    font-size: 0.58rem;
-    max-width: 120px;
+    font-size: 0.64rem;
+    max-width: 140px;
   }
 
   .aero-student-grid {

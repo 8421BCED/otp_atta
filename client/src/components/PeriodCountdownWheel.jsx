@@ -149,6 +149,14 @@ export const PeriodCountdownWheel = ({ currentPeriodInfo, timeline }) => {
                     <span><strong>9:00 – 9:05 AM Day-Start Window:</strong> Submit 1st period OTP now.</span>
                 </div>
             )}
+
+            {/* Post-Lunch 1:30 - 1:35 PM Window Notification */}
+            {currentPeriodInfo?.isLunchWindow && (
+                <div className="alert-box-warning" style={{ marginTop: '8px', maxWidth: '360px', margin: '8px auto 0' }}>
+                    <AlertCircle size={16} />
+                    <span><strong>1:30 – 1:35 PM Post-Lunch Window:</strong> Submit 5th period OTP now.</span>
+                </div>
+            )}
         </div>
     );
 };

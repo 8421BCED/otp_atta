@@ -98,11 +98,20 @@ export const StudentDashboard = ({
     // Check morning day-start cutoff (9:00 AM - 9:05 AM)
     const period1Item = timeline?.find(p => p.id === 1);
     const isPeriod1Marked = !!period1Item?.isMarked;
-    const isPastCutoff = !!currentPeriodInfo?.isPastMorningCutoff;
+    const isPastMorningCutoff = !!currentPeriodInfo?.isPastMorningCutoff;
+
+    // Check post-lunch cutoff (1:30 PM - 1:35 PM / Period 5 id: 7)
+    const period5Item = timeline?.find(p => p.id === 7);
+    const isPeriod5Marked = !!period5Item?.isMarked;
+    const isPastLunchCutoff = !!currentPeriodInfo?.isPastLunchCutoff;
+
     const isHodUnlocked = isHodUnlockedServer;
 
-    // Day attendance is locked if past 9:05 AM, Period 1 missed, HOD hasn't unlocked, and no sports pass
-    const isDayLocked = !activeSportsPass && (isDayLockedServer || (isPastCutoff && !isPeriod1Marked && !isHodUnlocked));
+    const isMorningLocked = isPastMorningCutoff && !isPeriod1Marked && !isHodUnlocked;
+    const isLunchLocked = isPastLunchCutoff && !isPeriod5Marked && !isHodUnlocked;
+
+    // Day attendance is locked if either cutoff is violated and HOD hasn't unlocked
+    const isDayLocked = !activeSportsPass && (isDayLockedServer || isMorningLocked || isLunchLocked);
     const isDayStartLocked = isDayLocked;
 
     // Determine current target period:
@@ -434,14 +443,17 @@ export const StudentDashboard = ({
                             </div>
                             <div>
                                 <div style={{ fontWeight: 800, fontSize: '1.15rem', color: '#991B1B' }}>
-                                    Day Attendance Locked
+                                    {isLunchLocked ? 'Post-Lunch Attendance Locked' : 'Day Attendance Locked'}
                                 </div>
                                 <div style={{ fontSize: '0.78rem', color: '#B91C1C', fontWeight: 700, marginTop: '2px' }}>
-                                    Period 1 Cutoff (09:05 AM) Missed
+                                    {isLunchLocked ? 'Period 5 Cutoff (1:35 PM) Missed' : 'Period 1 Cutoff (09:05 AM) Missed'}
                                 </div>
                             </div>
                             <p style={{ fontSize: '0.82rem', color: '#7F1D1D', margin: 0, lineHeight: 1.5, maxWidth: '360px' }}>
-                                You did not enter your OTP between <strong>09:00 AM and 09:05 AM</strong> for the first period. In accordance with college anti-proxy rules, your classroom selection and OTP entry are locked for today.
+                                {isLunchLocked 
+                                    ? <>You did not enter your OTP between <strong>1:30 PM and 1:35 PM</strong> (within 5 minutes of lunch conclusion). In accordance with college anti-proxy rules, your afternoon attendance is locked.</>
+                                    : <>You did not enter your OTP between <strong>09:00 AM and 09:05 AM</strong> for the first period. In accordance with college anti-proxy rules, your day attendance is locked.</>
+                                }
                             </p>
                             <div style={{
                                 background: '#FFFFFF',

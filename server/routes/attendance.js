@@ -43,6 +43,10 @@ router.get('/current-period', async (req, res) => {
         const isMorningWindow = currentTimeStr >= '09:00:00' && currentTimeStr <= '09:05:00';
         const isPastMorningCutoff = currentTimeStr > '09:05:00';
 
+        // Critical 1:30 - 1:35 PM Post-Lunch Window Check (Lunch ends at 1:30 PM / 13:30)
+        const isLunchWindow = currentTimeStr >= '13:30:00' && currentTimeStr <= '13:35:00';
+        const isPastLunchCutoff = currentTimeStr > '13:35:00';
+
         return res.json({
             currentTime: currentTimeStr,
             activePeriod: activePeriod && !activePeriod.isBeforeCollege && !activePeriod.isAfterCollege ? activePeriod : null,
@@ -51,6 +55,8 @@ router.get('/current-period', async (req, res) => {
             isAfterCollege: !!(activePeriod && activePeriod.isAfterCollege),
             isMorningWindow,
             isPastMorningCutoff,
+            isLunchWindow,
+            isPastLunchCutoff,
             allPeriods: periods
         });
     } catch (err) {
@@ -214,12 +220,18 @@ router.post('/submit-otp', authenticate, authorizeRoles('student'), async (req, 
         const isExplicitlyLocked = dayLock.length > 0 && dayLock[0].is_locked_out;
         const isHodUnlockedNow = dayLock.length > 0 && dayLock[0].reason === 'HOD_UNLOCKED';
 
-        // Check if student attended period 1
+        // Check if student attended period 1 (morning) and period 7 (Period 5 - afternoon post lunch)
         const [p1Record] = await pool.query(
             'SELECT * FROM attendance_records WHERE student_id = ? AND date = ? AND period_id = 1 AND (status = "present" OR status = "od")',
             [studentId, today]
         );
         const attendedPeriod1 = p1Record.length > 0;
+
+        const [p5Record] = await pool.query(
+            'SELECT * FROM attendance_records WHERE student_id = ? AND date = ? AND period_id = 7 AND (status = "present" OR status = "od")',
+            [studentId, today]
+        );
+        const attendedPeriod5 = p5Record.length > 0;
 
         // Check sports pass
         const [sportsPass] = await pool.query(
@@ -233,12 +245,29 @@ router.post('/submit-otp', authenticate, authorizeRoles('student'), async (req, 
         let nowTime = new Date();
         const curTimeStr = req.body.currentTime || `${String(nowTime.getHours()).padStart(2, '0')}:${String(nowTime.getMinutes()).padStart(2, '0')}:${String(nowTime.getSeconds()).padStart(2, '0')}`;
         const isPastCutoffTime = curTimeStr > '09:05:00';
+        const isPastLunchCutoffTime = curTimeStr > '13:35:00';
 
-        if (isExplicitlyLocked || (!hasSportsPass && isPastCutoffTime && !attendedPeriod1 && !isHodUnlockedNow)) {
+        if (isExplicitlyLocked) {
             return res.status(403).json({
                 code: 'DAY_LOCKED_OUT',
                 error: 'College Day Attendance Locked',
-                message: 'You failed to verify your morning attendance between 9:00 AM and 9:05 AM. In accordance with college policy, your day attendance is locked. Please report in person to your HOD to request an official unlock.'
+                message: 'Your attendance is locked for today. Please report in person to your HOD to request an official unlock.'
+            });
+        }
+
+        if (!hasSportsPass && isPastCutoffTime && !attendedPeriod1 && !isHodUnlockedNow) {
+            return res.status(403).json({
+                code: 'DAY_LOCKED_OUT',
+                error: 'Morning Attendance Locked',
+                message: 'You failed to verify your morning attendance between 9:00 AM and 9:05 AM. In accordance with college policy, your attendance is locked. Please report in person to your HOD to request an official unlock.'
+            });
+        }
+
+        if (!hasSportsPass && isPastLunchCutoffTime && !attendedPeriod5 && !isHodUnlockedNow && (req.body.periodId === 7 || curTimeStr >= '13:30:00')) {
+            return res.status(403).json({
+                code: 'DAY_LOCKED_OUT',
+                error: 'Post-Lunch Attendance Locked',
+                message: 'You failed to verify your post-lunch attendance between 1:30 PM and 1:35 PM (5 mins after lunch). In accordance with college anti-proxy rules, your afternoon attendance is locked. Please report to your HOD.'
             });
         }
 
@@ -461,9 +490,12 @@ router.get('/student-timeline/:studentId', authenticate, async (req, res) => {
         const isExplicitlyLocked = dayLockRows.length > 0 && dayLockRows[0].is_locked_out;
         const isHodUnlocked = dayLockRows.length > 0 && dayLockRows[0].reason === 'HOD_UNLOCKED';
 
-        // Check if student attended period 1
+        // Check if student attended period 1 (morning) and period 7 (Period 5 post-lunch)
         const period1Att = attendance.find(a => a.period_id === 1);
         const isPeriod1Present = !!(period1Att && (period1Att.status === 'present' || period1Att.status === 'od'));
+
+        const period5Att = attendance.find(a => a.period_id === 7);
+        const isPeriod5Present = !!(period5Att && (period5Att.status === 'present' || period5Att.status === 'od'));
 
         // Check active sports pass
         const [sportsPasses] = await pool.query(
@@ -481,8 +513,13 @@ router.get('/student-timeline/:studentId', authenticate, async (req, res) => {
         const seconds = String(now.getSeconds()).padStart(2, '0');
         const currentTimeStr = req.query.simulateTime || `${hours}:${minutes}:${seconds}`;
 
-        const isPastCutoff = currentTimeStr > '09:05:00';
-        const isDayLocked = isExplicitlyLocked || (!hasSportsPass && isPastCutoff && !isPeriod1Present && !isHodUnlocked);
+        const isPastMorningCutoff = currentTimeStr > '09:05:00';
+        const isPastLunchCutoff = currentTimeStr > '13:35:00';
+
+        const isMorningLocked = !hasSportsPass && isPastMorningCutoff && !isPeriod1Present && !isHodUnlocked;
+        const isLunchLocked = !hasSportsPass && isPastLunchCutoff && !isPeriod5Present && !isHodUnlocked;
+
+        const isDayLocked = isExplicitlyLocked || isMorningLocked || isLunchLocked;
 
         return res.json({
             date: today,

@@ -252,24 +252,7 @@ export const StudentDashboard = ({
     return (
         <div className="aero-student-grid">
             
-            {/* Top Student Banner */}
-            <div className="aero-action-banner fa-glass-card" style={{ gridColumn: '1 / -1' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div className="aero-badge-circle" style={{ fontWeight: 800, color: 'var(--blue)', fontSize: '0.92rem' }}>
-                        FX
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--dark-blue)' }}>
-                            {currentUser?.name || 'Student'} • <span style={{ color: 'var(--blue)', fontWeight: 700 }}>{currentUser?.email}</span>
-                        </div>
-                        <div style={{ fontSize: '0.76rem', color: 'var(--text-sub)' }}>
-                            Department of {currentUser?.department || 'Information Technology'} • 2nd Year
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Left Column (Primary Attendance Hub): Room Header + Timer Circle + OTP Input under it */}
+            {/* Primary Attendance Hub: Room Header + Timer Circle + OTP Input under it */}
             <div className="student-main-col">
                 <div className="fa-glass-card attendance-hub-card">
                     {/* Classroom Location & Move Classroom Button */}
@@ -278,7 +261,7 @@ export const StudentDashboard = ({
                             {activeRoomObj ? (
                                 <>
                                     <div className="building-title-row">
-                                        <MapPin size={17} color="var(--blue)" className="pin-icon" />
+                                        <MapPin size={16} color="var(--blue)" className="pin-icon" />
                                         <span className="building-name">{activeBuildingObj?.name}</span>
                                         <span className="room-badge">Room {activeRoomObj?.room_number}</span>
                                     </div>
@@ -289,11 +272,11 @@ export const StudentDashboard = ({
                             ) : (
                                 <>
                                     <div className="building-title-row">
-                                        <MapPin size={17} color="var(--text-sub)" className="pin-icon" />
+                                        <MapPin size={16} color="var(--text-sub)" className="pin-icon" />
                                         <span className="building-name" style={{ color: 'var(--text-sub)' }}>No Classroom Selected</span>
                                     </div>
                                     <div className="floor-room-sub">
-                                        Select your campus building, floor and room to submit OTP
+                                        Select classroom to unlock your 10s OTP verification
                                     </div>
                                 </>
                             )}
@@ -308,11 +291,12 @@ export const StudentDashboard = ({
                         ) : (
                             <button 
                                 type="button" 
-                                className="aero-glass-btn primary move-classroom-btn"
+                                className="clean-submit-btn move-classroom-btn"
+                                style={{ width: 'auto', padding: '8px 16px', fontSize: '0.80rem' }}
                                 onClick={() => setIsRoomModalOpen(true)}
                             >
-                                <Navigation size={14} />
-                                <span>{activeRoomObj ? 'Move / Change Classroom' : 'Select Classroom'}</span>
+                                <Navigation size={13} />
+                                <span>{activeRoomObj ? 'Change Classroom' : 'Select Classroom'}</span>
                             </button>
                         )}
                     </div>
@@ -519,28 +503,32 @@ export const StudentDashboard = ({
                             </div>
                         </div>
                     ) : !selectedRoom ? (
-                        <div className="no-room-prompt-box">
+                        <div className="no-room-prompt-box" style={{ padding: '20px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1.5px dashed #CBD5E1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center', width: '100%', maxWidth: '360px', margin: '0 auto' }}>
                             {isHodUnlocked && (
-                                <div style={{ background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: '8px', padding: '8px 12px', color: '#166534', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', width: '100%' }}>
-                                    <CheckCircle2 size={16} color="#16A34A" />
-                                    <span>Day Attendance Unlocked by HOD. Select your classroom below.</span>
+                                <div style={{ background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: '8px', padding: '6px 10px', color: '#166534', fontSize: '0.74rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', width: '100%' }}>
+                                    <CheckCircle2 size={15} color="#16A34A" />
+                                    <span>Day Attendance Unlocked by HOD.</span>
                                 </div>
                             )}
-                            <DoorOpen size={28} color="var(--blue)" />
-                            <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.96rem' }}>
-                                Classroom Selection Required
+                            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#EFF6FF', border: '1.5px solid #BFDBFE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#136CFC' }}>
+                                <DoorOpen size={22} />
                             </div>
-                            <p style={{ fontSize: '0.78rem', color: 'var(--text-sub)', maxWidth: '340px', margin: 0, textAlign: 'center' }}>
-                                You must select your Building, Floor, and Classroom before you can enter the 6-digit OTP from your teacher.
-                            </p>
+                            <div>
+                                <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.90rem' }}>
+                                    Classroom Selection Required
+                                </div>
+                                <p style={{ fontSize: '0.74rem', color: '#64748B', maxWidth: '300px', margin: '4px auto 0', lineHeight: 1.35 }}>
+                                    Pick your Building, Floor & Classroom to enter your faculty's rolling OTP.
+                                </p>
+                            </div>
                             <button
                                 type="button"
-                                className="aero-gloss-btn"
-                                style={{ width: 'auto', padding: '10px 22px', marginTop: '6px' }}
+                                className="clean-submit-btn"
+                                style={{ width: '100%', maxWidth: '240px', padding: '9px 18px', fontSize: '0.80rem', marginTop: '4px' }}
                                 onClick={() => setIsRoomModalOpen(true)}
                             >
-                                <Navigation size={14} style={{ marginRight: '6px' }} />
-                                <span>Choose Classroom Location</span>
+                                <Navigation size={13} />
+                                <span>Choose Classroom</span>
                             </button>
                         </div>
                     ) : (

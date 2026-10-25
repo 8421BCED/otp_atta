@@ -1,16 +1,18 @@
 {
-  "short_name": "FXEC OTP",
+  "short_name": "FXEC Attendance",
   "name": "Francis Xavier Engineering College - OTP Attendance",
+  "description": "Real-Time 10s OTP & Anti-Proxy Attendance PWA for Students and Faculty.",
   "icons": [
     {
-      "src": "/vite.svg",
+      "src": "/favicon.svg",
       "type": "image/svg+xml",
-      "sizes": "192x192 512x512"
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": "/",
-  "background_color": "#0B3064",
-  "theme_color": "#0B3064",
+  "background_color": "#F8FAFC",
+  "theme_color": "#136CFC",
   "display": "standalone",
-  "orientation": "portrait-primary"
+  "orientation": "portrait"
 }

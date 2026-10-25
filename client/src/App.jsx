@@ -8,6 +8,7 @@ import { StrangeOpsDashboard } from './components/StrangeOpsDashboard';
 import { PTSportsDashboard } from './components/PTSportsDashboard';
 import { LoginPage } from './components/LoginPage';
 import { AttendanceCalendarModal } from './components/AttendanceCalendarModal';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { getDeviceSecurityInfo } from './utils/deviceSecurity';
 import { Calendar } from 'lucide-react';
 
@@ -301,6 +302,25 @@ export function App() {
                 )}
 
             </main>
+
+            {/* Mobile Bottom Navigation Bar (PWA Horizontal Menu Icons) */}
+            {currentUser && (
+                <MobileBottomNav 
+                    activeTab={isCalendarOpen ? 'calendar' : 'home'}
+                    onTabChange={(tab) => {
+                        if (tab === 'home') setIsCalendarOpen(false);
+                    }}
+                    onOpenCalendar={() => setIsCalendarOpen(true)}
+                    onOpenClassroom={() => {
+                        setIsCalendarOpen(false);
+                        // Trigger room modal on student dashboard if available
+                        const roomBtn = document.querySelector('.move-classroom-btn') || document.querySelector('.no-room-prompt-box button');
+                        if (roomBtn) roomBtn.click();
+                    }}
+                    onLogout={handleLogout}
+                    currentUser={currentUser}
+                />
+            )}
         </div>
     );
 }

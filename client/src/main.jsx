@@ -41,5 +41,14 @@ createRoot(document.getElementById('root')).render(
       <App />
     </ErrorBoundary>
   </StrictMode>,
-)
+);
+
+// Register Service Worker for PWA Add-to-Home-Screen installability
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((reg) => console.log('PWA ServiceWorker registered:', reg.scope))
+      .catch((err) => console.log('PWA ServiceWorker registration failed:', err));
+  });
+}
 

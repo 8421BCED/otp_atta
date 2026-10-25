@@ -2065,51 +2065,70 @@ html, body {
     gap: 12px;
   }
 
-  /* Header Optimization */
+  /* Clean Single-Row Mobile Header */
   .fxec-header-main {
-    padding: 10px 12px;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+    padding: 10px 14px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
   }
 
   .fxec-brand {
-    justify-content: space-between;
-    width: 100%;
+    gap: 8px;
+  }
+
+  .fxec-logo-symbol {
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
+    border-radius: 8px;
   }
 
   .fxec-brand-text h1 {
-    font-size: 0.90rem;
-    line-height: 1.2;
+    font-size: 0.88rem;
+    line-height: 1.1;
   }
 
-  .fxec-brand-text .fxec-badge-sub {
-    font-size: 0.65rem;
+  .fxec-brand-text p {
+    font-size: 0.64rem;
   }
 
   .fxec-nav-controls {
-    width: 100%;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
     gap: 6px;
+    width: auto;
   }
 
+  /* Hide redundant items from top header on mobile - they live in the Bottom Nav Bar! */
   .header-history-btn,
-  .header-time-pill {
-    padding: 6px 10px;
-    font-size: 0.72rem;
-    flex: 1 1 auto;
-    justify-content: center;
-    text-align: center;
+  .header-direct-logout-btn {
+    display: none !important;
   }
 
-  .role-switcher-container {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 2px;
+  .header-time-pill {
+    padding: 5px 10px;
+    font-size: 0.72rem;
+    background: #EFF6FF;
+    border-color: #BFDBFE;
+    color: #136CFC;
+    font-weight: 700;
+  }
+
+  .header-avatar-btn {
+    height: 32px;
+    padding: 2px 8px 2px 2px;
+  }
+
+  .avatar-initial {
+    width: 26px;
+    height: 26px;
+    font-size: 0.72rem;
+  }
+
+  .header-avatar-name {
+    font-size: 0.74rem;
   }
 
   /* Cards & Layout */
@@ -2262,4 +2281,95 @@ html, body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   Mobile Bottom Navigation Bar (PWA Experience)
+   ========================================================================== */
+
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Extra bottom padding on workspace so floating bottom bar never covers contents */
+  .app-workspace {
+    padding-bottom: 84px !important;
+  }
+
+  .mobile-bottom-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid #E2E8F0;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
+    z-index: 990;
+    padding: 0 8px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    flex: 1;
+    height: 100%;
+    background: transparent;
+    border: none;
+    color: #64748B;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.15s ease;
+    border-radius: 10px;
+    padding: 6px 0;
+    position: relative;
+  }
+
+  .mobile-nav-item:active {
+    transform: scale(0.92);
+  }
+
+  .mobile-nav-item.active {
+    color: #136CFC;
+  }
+
+  .mobile-nav-icon-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+  }
+
+  .mobile-nav-item.active .mobile-nav-icon-wrap {
+    color: #136CFC;
+  }
+
+  .mobile-nav-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  .mobile-nav-indicator {
+    position: absolute;
+    top: 0;
+    width: 24px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: #136CFC;
+  }
+}
+
 

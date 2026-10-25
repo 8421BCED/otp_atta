@@ -169,19 +169,23 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
 
     return (
         <div className="aero-login-wrapper">
-            <div className="aero-login-card fa-glass-card">
+            <div className="aero-login-card">
                 
-                {/* Logo & College Banner */}
+                {/* 3D Duolingo-Style Mascot / College Shield */}
                 <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div className="aero-login-badge">
                         <span className="logo-symbol">FX</span>
                     </div>
-                    <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--dark-blue)', letterSpacing: '-0.02em', marginTop: '12px' }}>
-                        Francis Xavier Engineering College
+                    <h1 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--dark-blue)', letterSpacing: '-0.02em', marginTop: '12px', marginBottom: '2px' }}>
+                        Francis Xavier Engineering
                     </h1>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', fontWeight: 800, color: 'var(--blue)', background: '#EFF6FF', padding: '2px 10px', borderRadius: '12px', border: '1.5px solid #BFDBFE' }}>
+                        <Sparkles size={11} color="var(--blue)" />
+                        <span>Autonomous • Anti-Proxy PWA</span>
+                    </div>
                 </div>
 
-                {/* Endpoint Navigation Tabs */}
+                {/* 3D Chunky Endpoint Navigation Tabs */}
                 <div className="login-endpoint-tabs">
                     {Object.entries(routeTitles).map(([key, info]) => (
                         <button
@@ -190,7 +194,7 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
                             className={`login-endpoint-tab ${currentRoute === key ? 'active' : ''}`}
                             onClick={() => onNavigateRoute && onNavigateRoute(key)}
                         >
-                            {info.label}
+                            {info.label.replace(' Portal', '')}
                         </button>
                     ))}
                 </div>
@@ -211,61 +215,82 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
                     }} 
                     className="login-email-form"
                 >
-                    <label className="login-form-label">
-                        <Mail size={14} color="var(--blue)" />
-                        <span>Enter Official College Email:</span>
-                    </label>
+                    <div className="login-form-label">
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <Mail size={13} color="var(--blue)" />
+                            <span>Official College Email</span>
+                        </span>
+                        <span style={{ fontSize: '0.66rem', color: '#64748B', fontWeight: 700 }}>
+                            {activeMeta.label}
+                        </span>
+                    </div>
 
                     <div className="login-input-group">
                         <input
-                            type="text"
+                            type="email"
+                            inputMode="email"
                             className="login-email-input"
                             placeholder={activeMeta.hint}
                             value={customEmail}
                             onChange={(e) => setCustomEmail(e.target.value)}
-                            autoFocus
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck="false"
                         />
                         <button
                             type="submit"
                             className="login-submit-btn"
                             disabled={isLoading}
                         >
-                            <span>{isLoading ? 'Verifying...' : 'Sign In'}</span>
+                            <span>{isLoading ? 'Verifying' : 'Sign In'}</span>
                             <ArrowRight size={15} />
                         </button>
                     </div>
                 </form>
 
-                {/* Quick-Click Accounts from Seeded Database */}
+                {/* Quick-Click Accounts with 3D Physics Feel */}
                 <div className="quick-accounts-section">
                     <div className="quick-accounts-title">
-                        One-Click Verified Test Accounts:
+                        <span>⚡ 1-Click Fast Pass</span>
+                        <span style={{ fontSize: '0.64rem', color: 'var(--blue)', fontWeight: 800 }}>INSTANT DEMO</span>
                     </div>
                     <div className="quick-accounts-grid">
-                        {activeAccounts.map((acc, idx) => (
-                            <button
-                                key={idx}
-                                type="button"
-                                className="quick-account-chip"
-                                onClick={() => {
-                                    setCustomEmail(acc.email);
-                                    handleLoginWithEmail(acc.email);
-                                }}
-                                disabled={isLoading}
-                            >
-                                <UserCheck size={14} color="var(--blue)" />
-                                <div className="chip-details">
-                                    <div className="chip-name">{acc.name}</div>
-                                    <div className="chip-email">{acc.email}</div>
-                                </div>
-                            </button>
-                        ))}
+                        {activeAccounts.map((acc, idx) => {
+                            const initials = acc.name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('');
+                            return (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    className="quick-account-chip"
+                                    onClick={() => {
+                                        setCustomEmail(acc.email);
+                                        handleLoginWithEmail(acc.email);
+                                    }}
+                                    disabled={isLoading}
+                                    title={`Login instantly as ${acc.name}`}
+                                >
+                                    <div className="chip-avatar">
+                                        {initials}
+                                    </div>
+                                    <div className="chip-details">
+                                        <div className="chip-name">{acc.name}</div>
+                                        <div className="chip-email">{acc.email.split('@')[0]}</div>
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
-                {/* Real Google SSO Button */}
-                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                {/* Real Google SSO Button Container */}
+                <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                     <div ref={googleButtonRef} style={{ minHeight: '44px', display: 'flex', justifyContent: 'center', width: '100%' }}></div>
+                </div>
+
+                {/* PWA Hardware Security & Device Binding Footer */}
+                <div className="pwa-security-footer">
+                    <ShieldCheck size={13} color="#10B981" />
+                    <span>Hardware 1-Device Fingerprint Active</span>
                 </div>
 
             </div>

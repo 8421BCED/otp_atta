@@ -171,65 +171,53 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
         <div className="aero-login-wrapper">
             <div className="aero-login-card">
                 
-                {/* 3D Duolingo-Style Mascot / College Shield */}
-                <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div className="aero-login-badge">
-                        <span className="logo-symbol">FX</span>
+                {/* Clean, Premium Header */}
+                <div className="clean-brand-header">
+                    <div className="clean-app-icon">
+                        <span>FX</span>
                     </div>
-                    <h1 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--dark-blue)', letterSpacing: '-0.02em', marginTop: '12px', marginBottom: '2px' }}>
-                        Francis Xavier Engineering
-                    </h1>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', fontWeight: 800, color: 'var(--blue)', background: '#EFF6FF', padding: '2px 10px', borderRadius: '12px', border: '1.5px solid #BFDBFE' }}>
-                        <Sparkles size={11} color="var(--blue)" />
-                        <span>Autonomous • Anti-Proxy PWA</span>
+                    <div className="clean-title-group">
+                        <h1 className="clean-app-title">FXEC Attendance</h1>
+                        <p className="clean-app-subtitle">Autonomous Institution • Live OTP Portal</p>
                     </div>
                 </div>
 
-                {/* 3D Chunky Endpoint Navigation Tabs */}
-                <div className="login-endpoint-tabs">
+                {/* Minimal Segmented Role Tabs */}
+                <div className="clean-role-nav">
                     {Object.entries(routeTitles).map(([key, info]) => (
                         <button
                             key={key}
                             type="button"
-                            className={`login-endpoint-tab ${currentRoute === key ? 'active' : ''}`}
+                            className={`clean-role-tab ${currentRoute === key ? 'active' : ''}`}
                             onClick={() => onNavigateRoute && onNavigateRoute(key)}
                         >
-                            {info.label.replace(' Portal', '')}
+                            {info.label.replace(' Portal', '').replace(' / Sports', '')}
                         </button>
                     ))}
                 </div>
 
-                {/* Error Banner */}
+                {/* Clean Alert */}
                 {errorMessage && (
-                    <div className="aero-alert-error">
-                        <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                    <div className="clean-alert-badge">
+                        <AlertCircle size={15} style={{ flexShrink: 0 }} />
                         <span>{errorMessage}</span>
                     </div>
                 )}
 
-                {/* Official Email Input Box for Direct Testing */}
+                {/* Modern Form */}
                 <form 
                     onSubmit={(e) => {
                         e.preventDefault();
                         handleLoginWithEmail();
                     }} 
-                    className="login-email-form"
+                    className="clean-login-form"
                 >
-                    <div className="login-form-label">
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                            <Mail size={13} color="var(--blue)" />
-                            <span>Official College Email</span>
-                        </span>
-                        <span style={{ fontSize: '0.66rem', color: '#64748B', fontWeight: 700 }}>
-                            {activeMeta.label}
-                        </span>
-                    </div>
-
-                    <div className="login-input-group">
+                    <div className="clean-input-box">
+                        <Mail size={16} className="clean-input-icon" />
                         <input
                             type="email"
                             inputMode="email"
-                            className="login-email-input"
+                            className="clean-text-input"
                             placeholder={activeMeta.hint}
                             value={customEmail}
                             onChange={(e) => setCustomEmail(e.target.value)}
@@ -237,60 +225,54 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
                             autoCorrect="off"
                             spellCheck="false"
                         />
-                        <button
-                            type="submit"
-                            className="login-submit-btn"
-                            disabled={isLoading}
-                        >
-                            <span>{isLoading ? 'Verifying' : 'Sign In'}</span>
-                            <ArrowRight size={15} />
-                        </button>
                     </div>
+
+                    <button
+                        type="submit"
+                        className="clean-submit-btn"
+                        disabled={isLoading}
+                    >
+                        <span>{isLoading ? 'Signing In...' : `Sign in to ${activeMeta.label.replace(' Portal', '')}`}</span>
+                        <ArrowRight size={16} />
+                    </button>
                 </form>
 
-                {/* Quick-Click Accounts with 3D Physics Feel */}
-                <div className="quick-accounts-section">
-                    <div className="quick-accounts-title">
-                        <span>⚡ 1-Click Fast Pass</span>
-                        <span style={{ fontSize: '0.64rem', color: 'var(--blue)', fontWeight: 800 }}>INSTANT DEMO</span>
-                    </div>
-                    <div className="quick-accounts-grid">
-                        {activeAccounts.map((acc, idx) => {
-                            const initials = acc.name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('');
-                            return (
-                                <button
-                                    key={idx}
-                                    type="button"
-                                    className="quick-account-chip"
-                                    onClick={() => {
-                                        setCustomEmail(acc.email);
-                                        handleLoginWithEmail(acc.email);
-                                    }}
-                                    disabled={isLoading}
-                                    title={`Login instantly as ${acc.name}`}
-                                >
-                                    <div className="chip-avatar">
-                                        {initials}
-                                    </div>
-                                    <div className="chip-details">
-                                        <div className="chip-name">{acc.name}</div>
-                                        <div className="chip-email">{acc.email.split('@')[0]}</div>
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
+                {/* Divider */}
+                <div className="clean-divider">
+                    <span>or quick test demo</span>
+                </div>
+
+                {/* 1-Tap Demo Quick Chips (Compact 2-Column Grid) */}
+                <div className="clean-demo-grid">
+                    {activeAccounts.slice(0, 4).map((acc, idx) => {
+                        const firstName = acc.name.split(' ')[0] + ' ' + (acc.name.split(' ')[1] || '');
+                        return (
+                            <button
+                                key={idx}
+                                type="button"
+                                className="clean-demo-chip"
+                                onClick={() => {
+                                    setCustomEmail(acc.email);
+                                    handleLoginWithEmail(acc.email);
+                                }}
+                                disabled={isLoading}
+                            >
+                                <span className="chip-dot"></span>
+                                <span className="chip-label">{firstName}</span>
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* Real Google SSO Button Container */}
-                <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                    <div ref={googleButtonRef} style={{ minHeight: '44px', display: 'flex', justifyContent: 'center', width: '100%' }}></div>
+                <div className="clean-sso-wrapper">
+                    <div ref={googleButtonRef} style={{ minHeight: '40px', width: '100%', display: 'flex', justifyContent: 'center' }}></div>
                 </div>
 
-                {/* PWA Hardware Security & Device Binding Footer */}
-                <div className="pwa-security-footer">
+                {/* Security Tag */}
+                <div className="clean-secure-footer">
                     <ShieldCheck size={13} color="#10B981" />
-                    <span>Hardware 1-Device Fingerprint Active</span>
+                    <span>Hardware 1-Device Binding Active</span>
                 </div>
 
             </div>

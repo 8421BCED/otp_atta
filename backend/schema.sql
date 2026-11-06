@@ -149,6 +149,124 @@ CREATE TABLE IF NOT EXISTS student_day_locks (
     UNIQUE KEY uq_student_date (student_id, date)
 );
 
+-- 12. Student Leave & On-Duty Applications
+CREATE TABLE IF NOT EXISTS leave_applications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    type ENUM('internal', 'external') NOT NULL DEFAULT 'internal',
+    event_name VARCHAR(255) NOT NULL,
+    category VARCHAR(100) DEFAULT 'Symposium / Hackathon',
+    venue VARCHAR(255) DEFAULT '',
+    from_date DATE NOT NULL,
+    to_date DATE NOT NULL,
+    is_all_day TINYINT(1) DEFAULT 1,
+    from_period INT DEFAULT 1,
+    to_period INT DEFAULT 7,
+    reason TEXT NOT NULL,
+    mentor_id INT NULL,
+    status ENUM('pending_mentor', 'pending_hod', 'approved', 'rejected') NOT NULL DEFAULT 'pending_mentor',
+    mentor_remarks TEXT NULL,
+    mentor_reviewed_at DATETIME NULL,
+    hod_remarks TEXT NULL,
+    hod_reviewed_at DATETIME NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_student (student_id),
+    INDEX idx_status (status),
+    INDEX idx_dates (from_date, to_date)
+);
+
+-- 13. Sports On-Duty Passes (Physical Education Department)
+CREATE TABLE IF NOT EXISTS sports_od_passes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    event_name VARCHAR(150) NOT NULL,
+    sport_category VARCHAR(100) DEFAULT 'General Sports',
+    venue VARCHAR(150) DEFAULT 'FXEC Sports Arena',
+    from_date DATE NOT NULL,
+    to_date DATE NOT NULL,
+    is_all_day TINYINT(1) DEFAULT 1,
+    from_period INT DEFAULT 1,
+    to_period INT DEFAULT 7,
+    reason TEXT NULL,
+    created_by INT NOT NULL,
+    status VARCHAR(50) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS sports_od_students (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    pass_id INT NOT NULL,
+    student_id INT NOT NULL,
+    notes VARCHAR(255) NULL,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (pass_id) REFERENCES sports_od_passes(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_pass_student (pass_id, student_id)
+);
+
+-- 14. Staff Movement History
+CREATE TABLE IF NOT EXISTS staff_movements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    staff_id INT NOT NULL,
+    from_room_id INT NULL,
+    to_room_id INT NOT NULL,
+    period_id INT NOT NULL DEFAULT 1,
+    date DATE NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    duration_minutes INT DEFAULT 0,
+    note VARCHAR(255) NULL,
+    FOREIGN KEY (staff_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (to_room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+    INDEX idx_staff_date (staff_id, date)
+);
+
+-- 15. AI Classroom YOLO Headcount Audits
+CREATE TABLE IF NOT EXISTS classroom_headcounts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    room_id INT NOT NULL,
+    staff_id INT NOT NULL,
+    period_id INT NOT NULL,
+    otp_count INT NOT NULL DEFAULT 0,
+    visual_count INT NOT NULL DEFAULT 0,
+    image_url VARCHAR(255) NOT NULL,
+    boxes_json JSON NULL,
+    match_status VARCHAR(50) DEFAULT 'verified',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NULL,
+    INDEX idx_room_period (room_id, period_id),
+    INDEX idx_expires (expires_at)
+);
+
+-- 16. Firebase Cloud Messaging (FCM) Push Notification Tokens
+CREATE TABLE IF NOT EXISTS fcm_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
+    role VARCHAR(50) NULL,
+    department VARCHAR(50) NULL,
+    token TEXT NOT NULL,
+    device_info VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_token (user_id, token(191))
+);
+
+-- 17. User Feedback & Issue Reports
+CREATE TABLE IF NOT EXISTS user_feedbacks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
+    user_name VARCHAR(255) NULL,
+    user_email VARCHAR(255) NULL,
+    user_role VARCHAR(50) NULL,
+    category VARCHAR(100) DEFAULT 'General Feedback',
+    message TEXT NOT NULL,
+    rating INT DEFAULT 5,
+    device_info VARCHAR(255) NULL,
+    status VARCHAR(50) DEFAULT 'open',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ==========================================================
 -- SEED INITIAL DATA
 -- ==========================================================

@@ -42,12 +42,15 @@ app.use(compression({
 }));
 
 // CORS Configuration for Production Domain & Local Development
+const envCorsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : [];
+
 const allowedOrigins = [
     'https://otpattendance.fxcams.in',
     'http://localhost:5000',
     'http://localhost:5173',
     'http://127.0.0.1:5000',
-    'http://127.0.0.1:5173'
+    'http://127.0.0.1:5173',
+    ...envCorsOrigin
 ];
 
 app.use(cors({

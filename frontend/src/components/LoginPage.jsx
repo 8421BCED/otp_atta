@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, AlertCircle, Sparkles, UserCheck, ArrowRight, Mail } from 'lucide-react';
 import { getDeviceSecurityInfo } from '../utils/deviceSecurity';
 
-const GOOGLE_CLIENT_ID = "755373927218-gv3bdo8sfup6tir4bc4te569ikufq5f4.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "755373927218-gv3bdo8sfup6tir4bc4te569ikufq5f4.apps.googleusercontent.com";
 
 export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigateRoute }) => {
     const [isLoading, setIsLoading] = useState(false);

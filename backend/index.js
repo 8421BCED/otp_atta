@@ -25,10 +25,11 @@ const PORT = process.env.PORT || 5000;
 // Trust reverse proxies (Cloudflare, Nginx, Load Balancers)
 app.set('trust proxy', 1);
 
-// Production Security Headers with cross-origin resource sharing allowance
+// Production Security Headers with Google SSO popup allowance
 app.use(helmet({
     contentSecurityPolicy: false, // Allows Vite HMR, Google SSO scripts, and assets
-    crossOriginEmbedderPolicy: false
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false // Allows Google Identity Services popup to postMessage back to window.opener
 }));
 
 // Gzip Compression for all API JSON payloads (drastically cuts mobile network bandwidth)

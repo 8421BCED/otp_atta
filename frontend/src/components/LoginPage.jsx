@@ -42,7 +42,9 @@ export const LoginPage = ({ onLoginSuccess, currentRoute = 'student', onNavigate
             window.google.accounts.id.initialize({
                 client_id: GOOGLE_CLIENT_ID,
                 callback: handleGoogleCredentialResponse,
-                auto_select: false
+                auto_select: false,
+                itp_support: true,
+                use_fedcm_for_prompt: false
             });
 
             if (googleButtonRef.current) {

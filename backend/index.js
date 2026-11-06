@@ -41,10 +41,27 @@ app.use(compression({
     }
 }));
 
-// CORS Configuration
+// CORS Configuration for Production Domain & Local Development
+const allowedOrigins = [
+    'https://otpattendance.fxcams.in',
+    'http://localhost:5000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5000',
+    'http://127.0.0.1:5173'
+];
+
 app.use(cors({
-    origin: true,
-    credentials: true
+    origin: (origin, callback) => {
+        // Allow mobile webview, curl, server-to-server with no origin header
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin) || origin.endsWith('.fxcams.in') || origin.endsWith('.trycloudflare.com')) {
+            return callback(null, true);
+        }
+        return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Body Parsers
@@ -150,9 +167,11 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 app.listen(PORT, () => {
+    const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
     console.log(`====================================================`);
     console.log(`🚀 FXEC AttendOTP Production Server active on port ${PORT}`);
-    console.log(`📡 URL: http://localhost:${PORT}/api/health`);
+    console.log(`🌐 Public Domain: ${APP_URL}`);
+    console.log(`📡 Health Check:  http://localhost:${PORT}/api/health`);
     console.log(`🛡️ Rate Limiting, Helmet Security & Gzip Compression active`);
     console.log(`====================================================`);
 });

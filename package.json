@@ -1,0 +1,16 @@
+{
+  "name": "fxec-attend-otp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FXEC AttendOTP - Production Anti-Proxy Attendance System",
+  "scripts": {
+    "start": "npm --prefix backend start",
+    "backend": "npm --prefix backend start",
+    "frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint"
+  },
+  "dependencies": {
+    "pptxgenjs": "^4.0.1"
+  }
+}

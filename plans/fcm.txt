@@ -1,0 +1,38 @@
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCfd67sNF7rzkxYCpbR1aWukO96mNqACAQ",
+  authDomain: "otpatt-da2b6.firebaseapp.com",
+  projectId: "otpatt-da2b6",
+  storageBucket: "otpatt-da2b6.firebasestorage.app",
+  messagingSenderId: "22236732690",
+  appId: "1:22236732690:web:606c3fd79370ed3eb5a7cb",
+  measurementId: "G-JZXNDZQK2X"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+C:\Users\0dani\Desktop\otp_att\plans\otpatt-da2b6-firebase-adminsdk-fbsvc-0dd9dce065.json check this and then bru who told you to place all shit innothe meun  ? remvoe that add only needed all the iconsa re in the open screen then dude why the heck again we need it there iside and then also hmm 

@@ -2,5 +2,5 @@ $user = [System.Environment]::ExpandEnvironmentVariables([Environment]::GetEnvir
 $machine = [System.Environment]::ExpandEnvironmentVariables([Environment]::GetEnvironmentVariable('Path', 'Machine'))
 $env:Path = "$user;$machine"
 
-Set-Location "c:\Users\0dani\Desktop\otp_att\server"
+Set-Location "c:\Users\0dani\Desktop\otp_att\backend"
 node index.js

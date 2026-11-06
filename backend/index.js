@@ -116,6 +116,21 @@ app.use('/api', (req, res) => {
     });
 });
 
+// Production Static Serving: Serve compiled React PWA frontend
+const frontendDistPath = path.join(__dirname, '../frontend/dist');
+app.use(express.static(frontendDistPath));
+
+// Centralized SPA Fallback: route non-API requests to index.html
+app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+        return next();
+    }
+    const indexPath = path.join(frontendDistPath, 'index.html');
+    res.sendFile(indexPath, (err) => {
+        if (err) next();
+    });
+});
+
 // Centralized Production Error Handler (prevents process crashing on unhandled route errors)
 app.use((err, req, res, next) => {
     console.error('Unhandled API Error:', err.stack || err.message);

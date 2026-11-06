@@ -4,6 +4,8 @@ frontend/dist/
 *.log
 plans/client_secret*.json
 client_secret*.json
+*serviceAccountKey*.json
+*firebase-adminsdk*.json
 backend/models/*.onnx
 backend/uploads/*
 !backend/uploads/.gitkeep

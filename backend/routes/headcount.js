@@ -2,7 +2,12 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const ort = require('onnxruntime-node');
+let ort = null;
+try {
+    ort = require('onnxruntime-node');
+} catch (e) {
+    console.warn('⚠️ onnxruntime-node optional dependency not loaded:', e.message);
+}
 const sharp = require('sharp');
 const pool = require('../db');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
@@ -21,24 +26,36 @@ const sessionOptions = {
 };
 
 const getFaceSession = async () => {
+    if (!ort) return null;
     if (!faceSession && fs.existsSync(FACE_MODEL_PATH)) {
-        faceSession = await ort.InferenceSession.create(FACE_MODEL_PATH, sessionOptions);
-        console.log('✓ YOLOv8m-Face (103MB Face Model) initialized on Node.js (CPU capped to 2 threads)');
+        try {
+            faceSession = await ort.InferenceSession.create(FACE_MODEL_PATH, sessionOptions);
+            console.log('✓ YOLOv8m-Face (103MB Face Model) initialized on Node.js (CPU capped to 2 threads)');
+        } catch (e) {
+            console.warn('⚠️ Error initializing YOLO Face model session:', e.message);
+        }
     }
     return faceSession;
 };
 
 const getPersonSession = async () => {
+    if (!ort) return null;
     if (!personSession && fs.existsSync(PERSON_MODEL_PATH)) {
-        personSession = await ort.InferenceSession.create(PERSON_MODEL_PATH, sessionOptions);
-        console.log('✓ YOLOv8m (103MB Person Model) initialized on Node.js (CPU capped to 2 threads)');
+        try {
+            personSession = await ort.InferenceSession.create(PERSON_MODEL_PATH, sessionOptions);
+            console.log('✓ YOLOv8m (103MB Person Model) initialized on Node.js (CPU capped to 2 threads)');
+        } catch (e) {
+            console.warn('⚠️ Error initializing YOLO Person model session:', e.message);
+        }
     }
     return personSession;
 };
 
-// Initialize models immediately with safety catch
-getFaceSession().catch(err => console.error('Error loading YOLO Face model:', err));
-getPersonSession().catch(err => console.error('Error loading YOLO Person model:', err));
+// Initialize models safely
+if (ort) {
+    getFaceSession().catch(err => console.error('Error loading YOLO Face model:', err.message));
+    getPersonSession().catch(err => console.error('Error loading YOLO Person model:', err.message));
+}
 
 // Helper: Extract NMS & Containment filtered boxes from model output
 const extractBoxes = (output, origWidth, origHeight, scale, padX, padY, threshold, isPerson = false) => {
@@ -131,6 +148,7 @@ const detectStudentsYOLO = async (buffer, { threshold, mode = 'hybrid' } = {}) =
         floatArr[channelSize + i] = data[i * 3 + 1] / 255.0; // G
         floatArr[channelSize * 2 + i] = data[i * 3 + 2] / 255.0; // B
     }
+    if (!ort) throw new Error('AI YOLO ONNX engine is not loaded on this server.');
     const tensor = new ort.Tensor('float32', floatArr, [1, 3, 640, 640]);
 
     if (mode === 'person') {

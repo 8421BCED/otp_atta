@@ -107,6 +107,10 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Production Static Serving: Serve compiled React PWA frontend
+const frontendDistPath = path.join(__dirname, '../frontend/dist');
+app.use(express.static(frontendDistPath));
+
 // Centralized 404 handler for unknown API routes
 app.use('/api', (req, res) => {
     res.status(404).json({
@@ -116,13 +120,9 @@ app.use('/api', (req, res) => {
     });
 });
 
-// Production Static Serving: Serve compiled React PWA frontend
-const frontendDistPath = path.join(__dirname, '../frontend/dist');
-app.use(express.static(frontendDistPath));
-
-// Centralized SPA Fallback: route non-API requests to index.html
-app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+// Centralized SPA Fallback: route any non-API GET request to index.html
+app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
         return next();
     }
     const indexPath = path.join(frontendDistPath, 'index.html');

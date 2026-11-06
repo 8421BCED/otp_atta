@@ -1,11 +1,10 @@
 node_modules/
 .env
-dist/
+frontend/dist/
 *.log
 plans/client_secret*.json
 client_secret*.json
 backend/models/*.onnx
 backend/uploads/*
 !backend/uploads/.gitkeep
-frontend/dist/
 *.onnx

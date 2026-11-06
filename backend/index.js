@@ -4,6 +4,7 @@ const compression = require('compression');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -128,8 +129,10 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Production Static Serving: Serve compiled React PWA frontend
-const frontendDistPath = path.join(__dirname, '../frontend/dist');
+// Production Static Serving: Serve compiled React PWA frontend (checks backend/dist first)
+const localDistPath = path.join(__dirname, 'dist');
+const externalDistPath = path.join(__dirname, '../frontend/dist');
+const frontendDistPath = fs.existsSync(localDistPath) ? localDistPath : externalDistPath;
 app.use(express.static(frontendDistPath));
 
 // Centralized 404 handler for unknown API routes

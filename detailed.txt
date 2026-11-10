@@ -1,0 +1,806 @@
+================================================================================
+FXEC AttendOTP - COMPREHENSIVE SYSTEM ARCHITECTURE & PROJECT MASTER DOCUMENTATION
+================================================================================
+Institution: Francis Xavier Engineering College (Autonomous), Tirunelveli
+Project Name: FXEC AttendOTP (Anti-Proxy Real-Time Classroom Attendance System)
+Repository: https://github.com/8421BCED/otp_atta.git
+Production Domain: https://otpattendance.fxcams.in
+Target Architecture: Monorepo (Node.js 22 + Express 5 Backend, React 19 + Vite 8 PWA Frontend, MySQL 8 Database)
+Date: November 2026
+Author / Lead Developer: Daniel A (IT Department) & Team
+
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+1. Executive Summary & Problem Statement
+2. Complete Technology Stack & Dependencies
+3. Full Directory & File Structure
+4. Core Anti-Proxy Security Architecture (Hardware Binding & Time Locks)
+5. Multi-Tier Role-Based Workflows & User Interfaces
+   5.1. Student Experience & PWA
+   5.2. Teaching Faculty / Staff Dashboard
+   5.3. Head of Department (HOD) Control Tower
+   5.4. Principal Executive Dashboard
+   5.5. Physical Education & Sports (PT) OD Portal
+   5.6. IT Operations & Emergency Management
+6. Complete Database Schema (18 Tables & Relationships)
+7. Full REST API Specification (Endpoints, Methods & Payloads)
+8. Progressive Web App (PWA) & Push Notification Architecture
+9. Production Deployment Guide (Linux, PM2, MySQL, Nginx, SSL)
+10. Summary of Critical Fixes & Production Hardening Performed
+11. Guide for Future AI Models & Developers Extending This Project
+
+================================================================================
+1. EXECUTIVE SUMMARY & PROBLEM STATEMENT
+================================================================================
+Traditional collegiate attendance systems suffer from severe vulnerabilities:
+- Paper rosters waste 10-15 minutes of lecture time and are vulnerable to proxy signatures.
+- Static QR codes pasted on classroom walls are photographed and shared via WhatsApp, allowing students outside the classroom or off-campus to mark attendance.
+- Biometric fingerprint scanners create massive physical bottlenecks at classroom doors and are unhygienic.
+
+FXEC AttendOTP solves this through a multi-layered, real-time defense mechanism:
+1. Dynamic 10-Second Rolling Classroom OTP: Generated locally by the verified faculty member in the physical room. Code changes every 10 seconds, eliminating forwarding.
+2. Hardware Device Fingerprint & Lockout: Each student account is permanently bound to their physical device (screen resolution, GPU renderer, platform, browser fingerprint, IP). Logging in from a friend's phone is blocked.
+3. Strict Time-Window Locks:
+   - Morning Day-Cutoff: Closes at 9:05 AM. Late arrivals are locked out and require HOD authorization.
+   - Post-Lunch Cutoff: Closes at 1:35 PM (Period 5).
+4. Dual AI Visual Headcount Validation: Faculty can capture a classroom photo; a local YOLOv8 computer vision model counts physical faces and verifies it against the number of submitted OTPs.
+5. Automated On-Duty (OD) & Leave Pipeline: Mentor -> HOD two-step sanctioning automatically credits attendance across all scheduled periods for approved events.
+6. Sports On-Duty Management: PT Director issues team passes with automatic period-level attendance credit.
+
+================================================================================
+2. COMPLETE TECHNOLOGY STACK & DEPENDENCIES
+================================================================================
+
+A. BACKEND ARCHITECTURE
+- Runtime: Node.js v22 LTS (CommonJS)
+- Framework: Express.js v5.3.0
+- Database Driver: MySQL2 v3.24.6 (Connection pool with keep-alive, auto-reconnect, 50 max connections)
+- Security & Middleware:
+  * Helmet v8.3.0 (Configured with crossOriginOpenerPolicy: false to enable Google OAuth popup)
+  * Compression v1.8.2 (Gzip compression for low-bandwidth mobile networks)
+  * Express-Rate-Limit v8.7.3 (Rate-limiting sensitive OTP and authentication endpoints)
+  * CORS v2.8.6 (Configured for https://otpattendance.fxcams.in and local dev)
+  * JSONWebToken (JWT) v9.0.3 (Signed session tokens with 24h expiration)
+  * BCryptJS v3.0.3 (Secure password hashing)
+- Push Notifications & Cloud Services:
+  * Firebase Admin SDK v14.5.0 (Firebase Cloud Messaging - FCM HTTP v1 API)
+- AI & Computer Vision (Optional / Defensive):
+  * ONNX Runtime Node v1.30.0 (YOLOv8n object detection weights)
+  * Sharp v0.35.5 (Image preprocessing, resizing, and normalization)
+- Data Processing:
+  * XLSX v0.18.5 (Excel roster parsing and staff profile importing)
+
+B. FRONTEND ARCHITECTURE
+- Framework: React v19.3.1
+- Build Tool: Vite v8.3.4 (with @vitejs/plugin-react & basicSsl for HTTPS local testing)
+- Styling: Custom Aero / Canary Design System in CSS3 (Glassmorphism, dark/light ambient modes, zero UI frameworks for optimal performance)
+- Icons: Lucide React v1.61.0
+- Animations & Micro-Interactions: Canvas Confetti v1.9.4
+- Client Authentication: Google Identity Services (GSI) Client SDK
+- Push Client: Firebase Client SDK v13.2.0 + Service Worker (firebase-messaging-sw.js)
+- Offline & App Shell: Progressive Web App (PWA) with Manifest v3 and CacheFirst Service Worker (sw.js)
+
+C. INFRASTRUCTURE & DATABASE
+- Database: MySQL 8.0+ Community Server
+- Process Manager: PM2 (Process Monitoring, Auto-Restart, Zero-Downtime Reload)
+- Operating System: Ubuntu 24.04 LTS / Windows Server compatible
+- Reverse Proxy: Nginx (SSL Termination, HTTP/2, WebSocket/SSE Proxying)
+
+================================================================================
+3. FULL DIRECTORY & FILE STRUCTURE
+================================================================================
+
+```text
+otp_att/
+├── backend/                               # Production Express API Server & Database
+│   ├── dist/                              # Bundled production React PWA frontend (served by backend)
+│   ├── index.js                           # Express server entry point (Port 5000, unified API + static PWA)
+│   ├── db.js                              # MySQL connection pool with error handling & reconnect
+│   ├── schema.sql                         # Full SQL schema (18 tables, constraints, initial seed)
+│   ├── package.json                       # Backend dependencies & npm scripts
+│   ├── .env.example                       # Production environment configuration template
+│   ├── routes/
+│   │   ├── attendance.js                  # 10s OTP verification, manual overrides, student history
+│   │   ├── auth.js                        # JWT authentication, Google SSO, hardware device binding
+│   │   ├── feedback.js                    # User feedback & bug reporting pipeline
+│   │   ├── headcount.js                   # AI YOLOv8 computer vision headcount audit
+│   │   ├── hod.js                         # HOD departmental metrics & lockout unlocks
+│   │   ├── holidays.js                    # Holiday management with college/department scope
+│   │   ├── itOps.js                       # IT Operations diagnostics & emergency unlocks
+│   │   ├── leave.js                       # Multi-level Leave & On-Duty (OD) application engine
+│   │   ├── location.js                    # Campus structure: Buildings -> Floors -> Rooms
+│   │   ├── notifications.js               # Firebase Cloud Messaging push dispatch
+│   │   ├── principal.js                   # College-wide analytics, department metrics, live monitors
+│   │   └── sports.js                      # Physical Education (PT) sports OD passes
+│   ├── middleware/
+│   │   └── auth.js                        # JWT verification & RBAC role guards (student/staff/hod/principal)
+│   ├── models/                            # AI model weights (yolov8n.onnx)
+│   └── scripts/                           # Database indexing, migration, and seed utilities
+│       ├── add_prod_indexes.js            # Creates performance indexes on heavy query tables
+│       ├── seed_college_rooms.js          # Seeds 161 FXEC classrooms, labs, and seminar halls
+│       ├── seed_designations.js           # Seeds designations for teaching faculty and HODs
+│       ├── seed_staff_from_csv.js         # Parses staffProf.csv and imports faculty accounts
+│       ├── migrate_leave.js               # Migrates leave_applications schema
+│       ├── migrate_sports_pt.js           # Migrates sports_od_passes and sports_od_students
+│       ├── migrate_fcm.js                 # Migrates fcm_tokens schema
+│       ├── migrate_feedback.js            # Migrates user_feedbacks schema
+│       ├── migrate_staff_movements.js     # Migrates staff_movements schema
+│       ├── check_daniel.js                # Diagnostic script for student Daniel account
+│       ├── unlock_daniel.js               # Unlocks Daniel from day lockout
+│       ├── clean_orphan_od.js             # Cleans up orphaned OD records
+│       └── test_staff_fetch.js            # Verifies staff authentication and profile retrieval
+│
+├── frontend/                              # React 19 Progressive Web App
+│   ├── index.html                         # HTML5 shell with PWA meta tags & Google GSI script
+│   ├── vite.config.js                     # Vite build configuration with proxy settings
+│   ├── package.json                       # Frontend dependencies & npm scripts
+│   ├── .env.development                  # Dev environment (VITE_API_BASE_URL=http://localhost:5000)
+│   ├── .env.production                   # Prod environment (VITE_API_BASE_URL=https://otpattendance.fxcams.in)
+│   ├── public/                            # Static PWA assets
+│   │   ├── manifest.json                  # PWA Web Manifest (name, icons, theme colors)
+│   │   ├── sw.js                          # Service Worker for offline shell and asset caching
+│   │   ├── firebase-messaging-sw.js       # Background push notification service worker
+│   │   ├── brand_logo.png                 # FXEC crest & brand badge
+│   │   └── icon-*.png                     # High-resolution & maskable application icons
+│   └── src/
+│       ├── main.jsx                       # React DOM root mounting
+│       ├── App.jsx                        # Main router, session manager, role dashboard switcher
+│       ├── App.css                        # Layout rules
+│       ├── index.css                      # Master Canary/Aero Design System stylesheet (6,500+ lines)
+│       ├── firebase.js                    # Firebase Web Push client initialization
+│       ├── utils/
+│       │   ├── deviceSecurity.js          # Hardware device fingerprint generation & validation
+│       │   └── fingerprint.js             # Canvas & WebGL browser fingerprinting
+│       └── components/
+│           ├── LoginPage.jsx              # Mobile-first login screen with Google SSO & manual login
+│           ├── LoginModal.jsx             # Role-switching popup modal
+│           ├── Header.jsx                 # Live clock, branding, notifications bell, user profile
+│           ├── MobileBottomNav.jsx        # Bottom tab navigation bar for mobile PWA
+│           ├── PeriodCountdownWheel.jsx   # Animated SVG countdown clock with color-coded stages
+│           ├── StudentDashboard.jsx       # Student period schedule, OTP entry modal, lock status
+│           ├── ClassroomSelectionPage.jsx # Hierarchical 3-step picker (Building -> Floor -> Room)
+│           ├── StaffDashboard.jsx         # Faculty broadcaster: 10s OTP generator, live roster
+│           ├── HODDashboard.jsx           # HOD dashboard: department metrics, lockouts, approvals
+│           ├── PrincipalDashboard.jsx     # Executive dashboard: campus-wide metrics, departments
+│           ├── PTSportsDashboard.jsx      # Physical education sports OD pass issuance portal
+│           ├── StudentLeavePortal.jsx     # Student Leave & OD application & tracking portal
+│           ├── LeaveReviewModal.jsx       # Staff mentor & HOD leave approval modal
+│           ├── AttendanceCalendarModal.jsx# Student monthly attendance calendar with drilldown
+│           ├── ClassroomHeadcountModal.jsx# AI YOLO face detection preview and verification modal
+│           ├── RoomSelectionModal.jsx     # Quick room switcher modal
+│           ├── RoomStudentsModal.jsx      # Modal showing all students currently in a classroom
+│           ├── StaffMovementModal.jsx     # Modal displaying faculty movement history
+│           ├── StudentDetailsModal.jsx    # Student profile and hardware lock inspector
+│           ├── FeedbackModal.jsx          # User feedback submission dialog
+│           ├── FeedbackPage.jsx           # Standalone feedback submission view
+│           ├── PWAInstallPrompt.jsx       # Mobile bottom drawer prompting PWA installation
+│           └── StatusPages.jsx            # 404, Unauthorized, and Error fallback screens
+│
+├── plans/                                 # Architectural specifications, CSV rosters, reference notes
+├── start_all.bat                          # Windows one-click launcher (MySQL + Backend + Frontend)
+├── start_backend.ps1                      # PowerShell backend launcher
+├── start_frontend.ps1                     # PowerShell frontend launcher
+├── start_mysql.bat                        # MySQL service launcher
+├── stop_mysql.bat                         # Graceful MySQL shutdown
+├── push_to_github.bat                     # Git push helper script
+└── package.json                           # Root monorepo build and start orchestrator
+```
+
+================================================================================
+4. CORE ANTI-PROXY SECURITY ARCHITECTURE
+================================================================================
+
+1. HARDWARE DEVICE LOCK (ANTI-PROXY BINDING):
+   - When a student signs in for the first time, `deviceSecurity.js` computes a SHA-256 fingerprint from:
+     * Screen resolution & color depth
+     * Hardware concurrency (CPU cores)
+     * Device memory
+     * User Agent & operating platform
+     * WebGL GPU renderer string
+     * AudioContext waveform fingerprint
+   - This device fingerprint and a generated UUID `device_id` are stored in the `device_locks` database table.
+   - On every subsequent login and OTP verification, the incoming hardware fingerprint is verified against `device_locks`.
+   - If a student attempts to log in from another phone, the request is rejected with HTTP 403: "Device mismatch. This account is locked to another mobile device. Contact HOD to reset device binding."
+
+2. 10-SECOND ROLLING CLASSROOM OTP:
+   - When the faculty member clicks "Start Attendance" inside a classroom, the server generates a cryptographically random 6-digit numeric OTP linked to `(room_id, period_id, staff_id)`.
+   - The OTP has an explicit expiration timestamp of `Date.now() + 10000` (10 seconds).
+   - The staff screen automatically polls/refreshes the OTP every 10 seconds.
+   - A student must enter the OTP displayed on the classroom screen. By the time a student types it and messages it to an absent friend, the code has already expired.
+
+3. STRICT DAY & PERIOD TIME CUTOFFS:
+   - Period 1 Day Cutoff (9:05 AM): College begins at 9:00 AM. Any student who fails to mark attendance in Period 1 by 9:05 AM is automatically locked out in `student_day_locks`. They cannot mark attendance for subsequent periods until the HOD unlocks them.
+   - Period 5 Post-Lunch Cutoff (1:35 PM): Lunch break ends at 1:30 PM. Period 5 OTP cutoff triggers at 1:35 PM to eliminate post-lunch proxy attendance.
+
+4. DUAL AI YOLOv8 CLASSROOM HEADCOUNT VALIDATION:
+   - The faculty member can take a picture of the classroom using their mobile device or room camera.
+   - The backend runs YOLOv8n object detection (using ONNX Runtime Node) to identify and count human faces/heads in the room (`visual_count`).
+   - The system compares `visual_count` against `otp_count` (the number of students who entered the OTP).
+   - If `otp_count > visual_count` by more than a configurable threshold (e.g., 2), the system flags the classroom as `mismatch_suspected`, notifying the HOD and staff to inspect proxy entries.
+
+5. ONE-DEVICE ONE-ATTENDANCE RULE:
+   - Even if two students use the same physical phone (by logging out and logging in), the system verifies `device_id` uniqueness within each `(period_id, date)` window in `attendance_records`.
+   - The second attendance mark from the identical hardware device is instantly flagged as a proxy attempt.
+
+================================================================================
+5. MULTI-TIER ROLE-BASED WORKFLOWS & USER INTERFACES
+================================================================================
+
+5.1. STUDENT WORKFLOW
+- Sign In: Google Single Sign-On (@francisxavier.ac.in institutional account) or email/password. First-time login automatically binds the hardware device.
+- Today Schedule & Countdown:
+  * Prominently displays the current college period.
+  * PeriodCountdownWheel: A large circular SVG progress wheel showing time remaining in the current period with color transitions (Green > 10m, Orange 5-10m, Red < 5m).
+  * Period cards show room number, subject, timing, and current status: `Present`, `Absent`, `On-Duty`, `Locked Out`, or `Upcoming`.
+- Marking Attendance:
+  * Tapping "Enter OTP" opens a custom numeric keypad modal (no system keyboard clutter).
+  * Submits 6-digit OTP to `/api/attendance/verify-otp`.
+  * On success: triggers celebratory confetti animation, plays soft confirmation sound, and updates card to green "Present".
+- Leave & OD Portal (`StudentLeavePortal.jsx`):
+  * Student applies for Leave, Internal OD (college competitions), or External OD (symposiums, hackathons at other universities).
+  * Selects dates, all-day or specific periods, specifies event title and venue.
+  * Real-time tracking pipeline: `Pending Mentor` -> `Pending HOD` -> `Approved` / `Rejected`.
+- Attendance History (`AttendanceCalendarModal.jsx`):
+  * Monthly interactive calendar view with color-coded day indicators.
+  * Calculates exact cumulative attendance percentage.
+  * Per-day period breakdown modal showing marked times and room locations.
+- PWA Features: Add to Home Screen prompt, offline caching, and push notifications for college announcements.
+
+5.2. TEACHING FACULTY / STAFF WORKFLOW
+- Classroom Selection (`ClassroomSelectionPage.jsx`):
+  * Selects Building (e.g., IT Block, Mechanical Block) -> Floor (Ground, 1st, 2nd, 3rd) -> Room (e.g., IT-LH-01, Programming Lab 2).
+  * Shows room capacity, current period, and active schedule.
+- Live Attendance Broadcaster (`StaffDashboard.jsx`):
+  * Displays dynamic 6-digit OTP rotating every 10 seconds with a circular progress countdown.
+  * Live seated roster: real-time list of students who have entered the OTP with roll number, name, timestamp, and device status.
+  * Manual Override: Faculty can manually mark a student Present or Absent (e.g., for students with broken phones).
+  * Movement Logging: Records when staff moves between classrooms (`staff_movements`).
+  * AI Headcount: Trigger photo upload to compare physical headcount with verified OTPs.
+- Mentor Leave Review (`LeaveReviewModal.jsx`):
+  * Faculty mentors view applications submitted by their assigned mentees.
+  * Mentors review details, attach remarks, and forward to HOD for final approval.
+
+5.3. HEAD OF DEPARTMENT (HOD) WORKFLOW (`HODDashboard.jsx`)
+- Department Overview:
+  * Macro metrics: Total department students, today's overall attendance rate (%), students on OD, students locked out.
+  * Active Classrooms grid showing real-time attendance counts per room.
+- Student Lockout Management:
+  * Displays all students locked out due to late arrival (>9:05 AM or >1:35 PM) or device mismatch.
+  * HOD has one-click "Unlock Student" authority with audit logging.
+- Final Leave & OD Approval:
+  * Reviews mentor-endorsed OD applications.
+  * On HOD approval: the backend automatically creates `attendance_records` marked as `present` with `status = 'present'` and `notes = 'OD: [Event Name]'` across all target periods, and unlocks any period locks.
+- Staff Movement Monitoring:
+  * Real-time tracker showing which classroom or lab each department faculty member is currently occupying.
+
+5.4. PRINCIPAL EXECUTIVE WORKFLOW (`PrincipalDashboard.jsx`)
+- Institutional Master Control:
+  * College-wide attendance percentage across all engineering departments (IT, CSE, ECE, EEE, MECH, CIVIL, AI&DS).
+  * Real-time department comparison leaderboards.
+  * Live monitoring of all active OTP classrooms across the campus.
+- Holiday Management:
+  * Declares college-wide or department-specific holidays.
+  * Automatically disables attendance cutoffs and lockouts on declared holiday dates.
+
+5.5. PHYSICAL EDUCATION & SPORTS (PT) WORKFLOW (`PTSportsDashboard.jsx`)
+- Purpose: Enables Sports Directors to grant official On-Duty attendance to student athletes participating in tournaments, zonal competitions, or sports training.
+- Workflow:
+  * Create Sports OD Pass: Specifies event name (e.g., Anna University Zonal Football), sport category, venue, dates, and period range.
+  * Add Athletes: Search students by roll number or name and attach them to the pass.
+  * One-Click Execution: Automatically registers attendance records for all attached athletes across target periods without requiring individual mentor approvals.
+
+5.6. IT OPERATIONS & EMERGENCY MANAGEMENT (`itOps.js`)
+- Server Health Diagnostics: MySQL pool status, memory usage, active connections, uptime.
+- Emergency Actions:
+  * System-wide reset of student day locks in case of server downtime or college-wide network disruptions.
+  * Device unbinding for students who lost or replaced their mobile phones.
+
+================================================================================
+6. COMPLETE DATABASE SCHEMA (18 TABLES & RELATIONSHIPS)
+================================================================================
+
+1. `users`
+   - id: INT AUTO_INCREMENT PRIMARY KEY
+   - name: VARCHAR(100) NOT NULL
+   - email: VARCHAR(150) NOT NULL UNIQUE
+   - password_hash: VARCHAR(255) NOT NULL
+   - role: ENUM('student', 'staff', 'hod', 'principal') NOT NULL
+   - department: VARCHAR(50) DEFAULT 'IT'
+   - roll_number: VARCHAR(50) NULL (e.g., '950724IT021')
+   - year_of_study: VARCHAR(10) NULL (e.g., '2nd Year')
+   - phone: VARCHAR(20) NULL
+   - is_active: TINYINT(1) DEFAULT 1
+   - created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+2. `device_locks`
+   - id: INT AUTO_INCREMENT PRIMARY KEY
+   - user_id: INT NOT NULL UNIQUE (FK -> users.id ON DELETE CASCADE)
+   - device_id: VARCHAR(255) NOT NULL
+   - device_fingerprint: TEXT NOT NULL
+   - device_name: VARCHAR(150) DEFAULT 'Mobile / Browser Device'
+   - platform: VARCHAR(100) NULL
+   - user_agent: TEXT NULL
+   - screen_resolution: VARCHAR(50) NULL
+   - ip_address: VARCHAR(50) NULL
+   - is_locked: TINYINT(1) DEFAULT 1
+   - locked_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   - last_verified_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+3. `buildings`
+   - id: INT AUTO_INCREMENT PRIMARY KEY
+   - name: VARCHAR(100) NOT NULL
+   - code: VARCHAR(20) NOT NULL UNIQUE (e.g., 'MAIN', 'IT_BLOCK', 'MECH_BLOCK')
+   - description: VARCHAR(255) NULL
+
+4. `floors`
+   - id: INT AUTO_INCREMENT PRIMARY KEY
+   - building_id: INT NOT NULL (FK -> buildings.id ON DELETE CASCADE)
+   - floor_number: INT NOT NULL
+   - name: VARCHAR(50) NOT NULL (e.g., 'Ground Floor', 'First Floor')
+
+5. `rooms`
+   - id: INT AUTO_INCREMENT PRIMARY KEY
+   - building_id: INT NOT NULL (FK -> buildings.id ON DELETE CASCADE)
+   - floor_id: INT NOT NULL (FK -> floors.id ON DELETE CASCADE)
+   - room_number: VARCHAR(20) NOT NULL
+   - name: VARCHAR(100) NOT NULL (e.g., 'IT Lecture Hall 1', 'DSP Lab')
+   - room_type: VARCHAR(50) DEFAULT 'classroom' ('classroom', 'lab', 'seminar_hall')
+   - capacity: INT DEFAULT 60
+   - department: VARCHAR(50) DEFAULT 'ALL'
+   - UNIQUE KEY: (building_id, room_number)
+
+6. `periods`
+   - id: INT AUTO_INCREMENT PRIMARY KEY
+   - period_number: INT NOT NULL (1 to 7)
+   - name: VARCHAR(50) NOT NULL ('1st Period', 'Lunch Break', etc.)
+   - start_time: TIME NOT NULL
+   - end_time: TIME NOT NULL
+   - is_break: TINYINT(1) DEFAULT 0
+   - FXEC Standard Schedule:
+     * P1: 09:00 - 09:50
+     * P2: 09:50 - 10:40
+     * Morning Break: 10:40 - 11:00
+     * P3: 11:00 - 11:50
+     * P4: 11:50 - 12:40
+     * Lunch Break: 12:40 - 13:30
+     * P5: 13:30 - 14:15
+     * P6: 14:15 - 15:05
+     * Afternoon Break: 15:05 - 15:20
+     * P7: 15:20 - 16:05
+
+7. `active_otps`
+   - id: INT AUTO_INCREMENT PRIMARY KEY
+   - room_id: INT NOT NULL (FK -> rooms.id ON DELETE CASCADE)
+   - staff_id: INT NOT NULL (FK -> users.id ON DELETE CASCADE)
+   - period_id: INT NOT NULL (FK -> periods.id ON DELETE CASCADE)
+   - otp_code: VARCHAR(6) NOT NULL
+   - generated_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   - expires_at: TIMESTAMP NOT NULL
+
+8. `attendance_records`
+   - id: INT AUTO_INCREMENT PRIMARY KEY
+   - student_id: INT NOT NULL (FK -> users.id ON DELETE CASCADE)
+   - period_id: INT NOT NULL (FK -> periods.id ON DELETE CASCADE)
+   - room_id: INT NOT NULL (FK -> rooms.id ON DELETE CASCADE)
+   - staff_id: INT NULL (FK -> users.id ON DELETE SET NULL)
+   - date: DATE NOT NULL
+   - marked_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   - status: ENUM('present', 'absent', 'late', 'locked_out') DEFAULT 'present'
+   - otp_used: VARCHAR(6) NULL
+   - device_id: VARCHAR(255) NULL
+   - UNIQUE KEY: (student_id, period_id, date)
+
+9. `student_day_locks`
+   - id: INT AUTO_INCREMENT PRIMARY KEY
+   - student_id: INT NOT NULL (FK -> users.id ON DELETE CASCADE)
+   - date: DATE NOT NULL
+   - first_otp_at: TIMESTAMP NULL
+   - is_locked_out: TINYINT(1) DEFAULT 0
+   - reason: VARCHAR(255) NULL
+   - UNIQUE KEY: (student_id, date)
+
+10. `student_movements`
+    - id: INT AUTO_INCREMENT PRIMARY KEY
+    - student_id: INT NOT NULL (FK -> users.id ON DELETE CASCADE)
+    - from_room_id: INT NULL (FK -> rooms.id ON DELETE CASCADE)
+    - to_room_id: INT NOT NULL (FK -> rooms.id ON DELETE CASCADE)
+    - period_id: INT NOT NULL (FK -> periods.id ON DELETE CASCADE)
+    - date: DATE NOT NULL
+    - timestamp: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    - duration_minutes: INT DEFAULT 0
+    - note: VARCHAR(255) NULL
+
+11. `staff_movements`
+    - id: INT AUTO_INCREMENT PRIMARY KEY
+    - staff_id: INT NOT NULL (FK -> users.id ON DELETE CASCADE)
+    - from_room_id: INT NULL
+    - to_room_id: INT NOT NULL (FK -> rooms.id ON DELETE CASCADE)
+    - period_id: INT NOT NULL DEFAULT 1
+    - date: DATE NOT NULL
+    - timestamp: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    - duration_minutes: INT DEFAULT 0
+    - note: VARCHAR(255) NULL
+
+12. `leave_applications`
+    - id: INT AUTO_INCREMENT PRIMARY KEY
+    - student_id: INT NOT NULL (FK -> users.id ON DELETE CASCADE)
+    - type: ENUM('internal', 'external') NOT NULL DEFAULT 'internal'
+    - event_name: VARCHAR(255) NOT NULL
+    - category: VARCHAR(100) DEFAULT 'Symposium / Hackathon'
+    - venue: VARCHAR(255) DEFAULT ''
+    - from_date: DATE NOT NULL
+    - to_date: DATE NOT NULL
+    - is_all_day: TINYINT(1) DEFAULT 1
+    - from_period: INT DEFAULT 1
+    - to_period: INT DEFAULT 7
+    - reason: TEXT NOT NULL
+    - mentor_id: INT NULL (FK -> users.id ON DELETE SET NULL)
+    - status: ENUM('pending_mentor', 'pending_hod', 'approved', 'rejected') DEFAULT 'pending_mentor'
+    - mentor_remarks: TEXT NULL
+    - mentor_reviewed_at: DATETIME NULL
+    - hod_remarks: TEXT NULL
+    - hod_reviewed_at: DATETIME NULL
+    - created_at: DATETIME DEFAULT CURRENT_TIMESTAMP
+    - updated_at: DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+13. `sports_od_passes`
+    - id: INT AUTO_INCREMENT PRIMARY KEY
+    - event_name: VARCHAR(150) NOT NULL
+    - sport_category: VARCHAR(100) DEFAULT 'General Sports'
+    - venue: VARCHAR(150) DEFAULT 'FXEC Sports Arena'
+    - from_date: DATE NOT NULL
+    - to_date: DATE NOT NULL
+    - is_all_day: TINYINT(1) DEFAULT 1
+    - from_period: INT DEFAULT 1
+    - to_period: INT DEFAULT 7
+    - reason: TEXT NULL
+    - created_by: INT NOT NULL (FK -> users.id ON DELETE CASCADE)
+    - status: VARCHAR(50) DEFAULT 'active'
+    - created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+14. `sports_od_students`
+    - id: INT AUTO_INCREMENT PRIMARY KEY
+    - pass_id: INT NOT NULL (FK -> sports_od_passes.id ON DELETE CASCADE)
+    - student_id: INT NOT NULL (FK -> users.id ON DELETE CASCADE)
+    - notes: VARCHAR(255) NULL
+    - added_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    - UNIQUE KEY: (pass_id, student_id)
+
+15. `classroom_headcounts`
+    - id: INT AUTO_INCREMENT PRIMARY KEY
+    - room_id: INT NOT NULL
+    - staff_id: INT NOT NULL
+    - period_id: INT NOT NULL
+    - otp_count: INT NOT NULL DEFAULT 0
+    - visual_count: INT NOT NULL DEFAULT 0
+    - image_url: VARCHAR(255) NOT NULL
+    - boxes_json: JSON NULL (bounding boxes of detected faces)
+    - match_status: VARCHAR(50) DEFAULT 'verified' ('verified', 'mismatch_suspected')
+    - created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    - expires_at: TIMESTAMP NULL
+
+16. `holidays`
+    - id: INT AUTO_INCREMENT PRIMARY KEY
+    - title: VARCHAR(150) NOT NULL
+    - holiday_date: DATE NOT NULL
+    - scope: ENUM('college', 'department') DEFAULT 'college'
+    - department: VARCHAR(50) DEFAULT 'ALL'
+    - declared_by: INT NOT NULL (FK -> users.id ON DELETE CASCADE)
+    - reason: TEXT NULL
+    - created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+17. `fcm_tokens`
+    - id: INT AUTO_INCREMENT PRIMARY KEY
+    - user_id: INT NULL (FK -> users.id ON DELETE CASCADE)
+    - role: VARCHAR(50) NULL
+    - department: VARCHAR(50) NULL
+    - token: TEXT NOT NULL
+    - device_info: VARCHAR(255) NULL
+    - created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    - updated_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    - UNIQUE KEY: (user_id, token(191))
+
+18. `user_feedbacks`
+    - id: INT AUTO_INCREMENT PRIMARY KEY
+    - user_id: INT NULL (FK -> users.id ON DELETE SET NULL)
+    - user_name: VARCHAR(255) NULL
+    - user_email: VARCHAR(255) NULL
+    - user_role: VARCHAR(50) NULL
+    - category: VARCHAR(100) DEFAULT 'General Feedback'
+    - message: TEXT NOT NULL
+    - rating: INT DEFAULT 5
+    - device_info: VARCHAR(255) NULL
+    - status: VARCHAR(50) DEFAULT 'open'
+    - created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+================================================================================
+7. FULL REST API SPECIFICATION
+================================================================================
+
+All endpoints are mounted under `/api/`. All protected endpoints require header:
+`Authorization: Bearer <JWT_TOKEN>`
+
+A. AUTHENTICATION MODULE (`/api/auth`)
+- POST `/api/auth/login`
+  Body: `{ email, password, deviceFingerprint, deviceName }`
+  Response: `{ success: true, token, user: { id, name, email, role, department, ... } }`
+- POST `/api/auth/google`
+  Body: `{ credential, deviceFingerprint, deviceName }`
+  Verifies Google ID token, enforces @francisxavier.ac.in domain, verifies/binds device fingerprint.
+- GET `/api/auth/verify`
+  Validates current JWT token and returns fresh user object.
+- POST `/api/auth/device-status`
+  Body: `{ userId, deviceFingerprint }`
+  Checks if current device matches stored lock.
+- POST `/api/auth/reset-device` (HOD/Admin only)
+  Body: `{ targetUserId, reason }`
+  Unbinds device lock to allow student to register a new phone.
+
+B. ATTENDANCE & OTP MODULE (`/api/attendance`)
+- GET `/api/attendance/current-period`
+  Returns active period object based on server clock, time remaining, and next period.
+- POST `/api/attendance/generate-otp` (Staff only)
+  Body: `{ roomId, periodId }`
+  Generates 6-digit OTP valid for 10 seconds. Returns `{ otpCode, expiresAt }`.
+- POST `/api/attendance/verify-otp` (Student only)
+  Body: `{ otpCode, roomId, deviceId, deviceFingerprint }`
+  Enforces:
+  1. Active OTP match & not expired (<10s).
+  2. Student device lock matching `device_locks`.
+  3. Student not locked out in `student_day_locks`.
+  4. Time window cutoffs (9:05 AM and 1:35 PM).
+  5. One-device-per-period uniqueness.
+  Marks `attendance_records` as `present`.
+- GET `/api/attendance/student-history`
+  Query: `?studentId=<id>&month=<YYYY-MM>`
+  Returns period-by-period attendance records, total days present, absent, percentage.
+- GET `/api/attendance/room-students/:roomId`
+  Returns real-time list of students present in the room for current period.
+- POST `/api/attendance/manual-mark` (Staff/HOD only)
+  Body: `{ studentId, periodId, roomId, status, reason }`
+  Manual override.
+
+C. LEAVE & ON-DUTY MODULE (`/api/leave`)
+- POST `/api/leave/apply` (Student only)
+  Body: `{ type, eventName, category, venue, fromDate, toDate, isAllDay, fromPeriod, toPeriod, reason, mentorId }`
+  Creates leave request with status `pending_mentor`.
+- GET `/api/leave/student-applications`
+  Returns all applications submitted by logged-in student.
+- GET `/api/leave/mentor-pending` (Staff only)
+  Returns requests pending mentor review.
+- POST `/api/leave/mentor-review` (Staff only)
+  Body: `{ applicationId, action: 'approve'|'reject', remarks }`
+  Updates status to `pending_hod` (if approved) or `rejected`.
+- GET `/api/leave/hod-pending` (HOD only)
+  Returns requests pending HOD sanction.
+- POST `/api/leave/hod-review` (HOD only)
+  Body: `{ applicationId, action: 'approve'|'reject', remarks }`
+  If approved: automatically inserts `present` attendance records for all affected periods and dates.
+
+D. HEAD OF DEPARTMENT MODULE (`/api/hod`)
+- GET `/api/hod/stats`
+  Returns department summary: attendance rate, student counts, active rooms, lockouts.
+- GET `/api/hod/lockouts`
+  Returns list of students currently locked out today.
+- POST `/api/hod/unlock-student`
+  Body: `{ studentId, reason }`
+  Clears lockout from `student_day_locks`.
+- GET `/api/hod/staff-movements`
+  Returns real-time staff room locations and movement logs.
+
+E. PRINCIPAL MODULE (`/api/principal`)
+- GET `/api/principal/overview`
+  Institutional stats, total college attendance, active classrooms.
+- GET `/api/principal/departments`
+  Department-by-department attendance breakdown and comparison.
+
+F. SPORTS & PHYSICAL EDUCATION MODULE (`/api/sports`)
+- POST `/api/sports/create-pass` (PT Director only)
+  Body: `{ eventName, sportCategory, venue, fromDate, toDate, isAllDay, fromPeriod, toPeriod, reason }`
+- POST `/api/sports/add-students` (PT Director only)
+  Body: `{ passId, studentIds: [id1, id2, ...] }`
+  Adds athletes to pass and automatically credits attendance.
+- GET `/api/sports/passes`
+  Lists all active and past sports passes.
+
+G. AI HEADCOUNT MODULE (`/api/headcount`)
+- POST `/api/headcount/upload`
+  Multipart upload of classroom photo. Preprocessed via Sharp.
+- POST `/api/headcount/audit`
+  Body: `{ roomId, periodId, imageUrl }`
+  Runs YOLOv8 face detection, records `visual_count`, compares with `otp_count`.
+
+H. LOCATION MODULE (`/api/location`)
+- GET `/api/location/buildings` -> List of campus buildings.
+- GET `/api/location/floors/:buildingId` -> Floors for building.
+- GET `/api/location/rooms/:floorId` -> Classrooms and labs on floor.
+- GET `/api/location/all` -> Entire hierarchical tree.
+
+I. HOLIDAYS MODULE (`/api/holidays`)
+- GET `/api/holidays/check` -> Checks if today is holiday.
+- POST `/api/holidays/declare` (HOD/Principal only) -> Declares holiday.
+
+J. NOTIFICATIONS MODULE (`/api/notifications`)
+- POST `/api/notifications/register-token` -> Registers FCM web push token.
+- POST `/api/notifications/broadcast` -> Dispatches push notification.
+
+K. USER FEEDBACK MODULE (`/api/feedback`)
+- POST `/api/feedback/submit` -> Submits issue report with device telemetry.
+- GET `/api/feedback/list` -> Admin feedback review.
+
+================================================================================
+8. PROGRESSIVE WEB APP (PWA) & PUSH NOTIFICATION ARCHITECTURE
+================================================================================
+
+1. WEB APP MANIFEST (`frontend/public/manifest.json`):
+   - Configured with `display: standalone`, `orientation: portrait-primary`.
+   - Theme color: `#0a0f1d` (Deep Navy / Slate).
+   - High-resolution icons (192x192, 512x512, maskable variants).
+   - Enables native app installation on Android, iOS (Safari Add to Home Screen), and Desktop Chrome.
+
+2. SERVICE WORKER CACHING (`frontend/public/sw.js`):
+   - Caches critical application shell assets (HTML, CSS, JS, branding logos).
+   - NetworkFirst strategy for `/api/*` requests.
+   - CacheFirst strategy for immutable static assets (fonts, icons).
+
+3. FIREBASE CLOUD MESSAGING (`firebase-messaging-sw.js`):
+   - Listens for background Web Push events when the app is closed.
+   - Displays native system notification banner with sound and vibrate pattern.
+   - Handles deep links: clicking notification navigates student directly to attendance or leave screen.
+
+================================================================================
+9. PRODUCTION DEPLOYMENT GUIDE (LINUX, PM2, MYSQL)
+================================================================================
+
+Official Production Domain: https://otpattendance.fxcams.in
+Target Port: 5000 (Unified API + React PWA static serving)
+
+STEP 1: INSTALL RUNTIME (UBUNTU 24.04 LINUX)
+```bash
+# Install Node.js 22 LTS standalone
+ARCH=$(uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/')
+curl -fsSL "https://nodejs.org/dist/v22.11.0/node-v22.11.0-linux-${ARCH}.tar.gz" | tar -xz -C /usr/local --strip-components=1
+export PATH="/usr/local/bin:$PATH"
+
+# Install PM2 globally
+npm install -g pm2
+```
+
+STEP 2: IMPORT DATABASE
+```bash
+# Upload and extract database dump
+unzip otp_attendance_db.zip
+
+# Import into MySQL (creates database and all 18 tables with 227 users and 161 rooms)
+mysql -u root -p < otp_attendance_full_dump.sql
+```
+
+STEP 3: CONFIGURE BACKEND ENVIRONMENT (`backend/.env`)
+```ini
+PORT=5000
+NODE_ENV=production
+APP_URL=https://otpattendance.fxcams.in
+CORS_ORIGIN=https://otpattendance.fxcams.in
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=<YOUR_MYSQL_PASSWORD>
+DB_NAME=otp_attendance
+JWT_SECRET=francis_xavier_engineering_college_otp_attendance_secret_key_2026
+```
+
+STEP 4: START APPLICATION WITH PM2
+```bash
+cd backend
+npm install --omit=dev
+
+# Start unified server (serves REST API and compiled React PWA from backend/dist)
+pm2 start index.js --name "otp-attendance"
+pm2 save
+pm2 startup
+```
+
+STEP 5: NGINX REVERSE PROXY CONFIGURATION
+```nginx
+server {
+    listen 80;
+    server_name otpattendance.fxcams.in;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name otpattendance.fxcams.in;
+
+    ssl_certificate /etc/letsencrypt/live/otpattendance.fxcams.in/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/otpattendance.fxcams.in/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}
+```
+
+STEP 6: GOOGLE CLOUD CONSOLE OAUTH CONFIGURATION
+In Google Cloud Console -> APIs & Services -> Credentials -> OAuth 2.0 Client ID:
+- Add to Authorized JavaScript origins:
+  `https://otpattendance.fxcams.in` (No trailing slash)
+- Add to Authorized redirect URIs:
+  `https://otpattendance.fxcams.in`
+
+================================================================================
+10. SUMMARY OF CRITICAL FIXES & HARDENING PERFORMED
+================================================================================
+
+1. Directory Restructuring & Monorepo Optimization:
+   - Refactored legacy `client/` and `server/` into clean `frontend/` and `backend/`.
+   - Consolidated 10+ loose migration and seed scripts from root into `backend/scripts/`.
+   - Updated root `package.json` to orchestrate builds and dev servers seamlessly.
+
+2. Express 5 SPA Fallback Route Fix:
+   - Express 5 uses strict `path-to-regexp` syntax where `app.get('*')` throws `TypeError: Missing parameter name at index 1: *`.
+   - Replaced with robust middleware fallback: `app.use((req, res, next) => { if (req.method === 'GET' && !req.path.startsWith('/api')) { ... } })`.
+
+3. Google Sign-In (GSI) Transform Blank White Screen Fix:
+   - Helmet v8 injects `Cross-Origin-Opener-Policy: same-origin` by default, which blocks `window.opener.postMessage` communication when Google's login popup completes.
+   - Resolved by setting `crossOriginOpenerPolicy: false` in Helmet configuration.
+   - Configured `itp_support: true` and `use_fedcm_for_prompt: false` in `LoginPage.jsx`.
+
+4. Defensive AI ONNX Engine Loading:
+   - Node 24 and newer runtimes have binary binding mismatches with native C++ modules.
+   - Wrapped `onnxruntime-node` import in `backend/routes/headcount.js` in a defensive try/catch. If native bindings are unavailable, the backend boots smoothly without crashing, disabling only the visual headcount endpoint.
+
+5. Unified Production Bundle (`backend/dist`):
+   - Enhanced `npm run build` so Vite compiles the React PWA and automatically copies `frontend/dist` to `backend/dist`.
+   - `backend/index.js` serves both the API (`/api/*`) and the PWA frontend (`/*`) from a single Node process on port 5000.
+
+6. Git Push & Secret Protection Hardening:
+   - Added `*serviceAccountKey*.json` and `*firebase-adminsdk*.json` to `.gitignore`.
+   - Rewrote unpushed commit history to purge accidental service account keys, resolving GitHub Push Protection GH013 violations.
+   - Pushed clean, verified branch `main` to GitHub remote.
+
+7. Database Portability:
+   - Generated `otp_attendance_full_dump.sql` with `--set-gtid-purged=OFF` so the database imports smoothly on any Linux MySQL or MariaDB instance without permission conflicts.
+
+================================================================================
+11. GUIDE FOR FUTURE AI MODELS & DEVELOPERS EXTENDING THIS PROJECT
+================================================================================
+
+When writing new features or modifying this codebase, adhere strictly to these rules:
+
+1. UI AESTHETICS & CODE STANDARDS:
+   - Zero emojis in UI or code comments. Maintain a high-end, clean, corporate collegiate aesthetic.
+   - Follow the Canary / Aero color palette: Slate Dark `#0a0f1d`, Primary Gold/Cyan accents, frosted glass cards (`backdrop-blur-md`).
+   - Every file link must be clickable in markdown documentation.
+
+2. ENVIRONMENT VARIABLES:
+   - All frontend environment variables MUST begin with `VITE_` (e.g., `VITE_API_BASE_URL`).
+   - Leave `VITE_API_BASE_URL` empty in production so it resolves relatively to the same-origin `/api` path when served by Express.
+
+3. ANTI-PROXY SECURITY MUST NOT BE WEAKENED:
+   - Never disable `device_locks` verification without explicit admin authorization.
+   - Never increase the active OTP expiration beyond 10-15 seconds.
+   - Never bypass the 9:05 AM Day Cutoff without recording an audit reason in `student_day_locks`.
+
+4. DATABASE MODIFICATIONS:
+   - When adding tables, update `backend/schema.sql` immediately.
+   - Add new migration scripts inside `backend/scripts/` using `require('../db')`.
+   - Ensure foreign keys include `ON DELETE CASCADE` or `ON DELETE SET NULL` to avoid orphaned records.
+
+5. REST API DESIGN:
+   - Always return standardized JSON: `{ success: boolean, data?: any, message?: string, error?: string }`.
+   - Wrap all async route handlers in `try / catch` blocks with meaningful HTTP status codes (400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Server Error).
+   - Use the connection pool `const db = require('../db')` with `await db.query(...)` promises.
+
+================================================================================
+END OF MASTER DOCUMENTATION
+================================================================================

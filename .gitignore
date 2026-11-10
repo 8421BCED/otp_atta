@@ -6,6 +6,8 @@ plans/client_secret*.json
 client_secret*.json
 *serviceAccountKey*.json
 *firebase-adminsdk*.json
+*.sql
+*.zip
 backend/models/*.onnx
 backend/uploads/*
 !backend/uploads/.gitkeep

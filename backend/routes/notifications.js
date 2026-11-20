@@ -1,195 +1,128 @@
 const express = require('express');
-const router = express.Router();
-const path = require('path');
-const fs = require('fs');
 const pool = require('../db');
+const { authenticate, authorizeRoles } = require('../middleware/auth');
+const { verifyItOps } = require('../middleware/itops');
+const { groupOf } = require('../utils/departments');
+const push = require('../utils/push');
 
-let adminApp = null;
-let messagingService = null;
+const router = express.Router();
 
-// Initialize Firebase Admin with Service Account (if present) or Project ID
-try {
-    const { initializeApp, cert, getApps } = require('firebase-admin/app');
-    const { getMessaging } = require('firebase-admin/messaging');
+// The key the browser needs to subscribe. Public by design.
+router.get('/public-key', (req, res) => {
+    res.json({ enabled: push.configured, publicKey: push.configured ? push.publicKey : null });
+});
 
-    // Look for serviceAccountKey.json in common paths
-    const possibleKeyPaths = [
-        path.resolve(process.cwd(), 'serviceAccountKey.json'),
-        path.resolve(__dirname, '../serviceAccountKey.json'),
-        path.resolve(__dirname, '../../serviceAccountKey.json'),
-        path.resolve(__dirname, '../../plans/serviceAccountKey.json')
-    ];
-
-    let serviceAccountPath = possibleKeyPaths.find(p => fs.existsSync(p));
-
-    if (getApps().length === 0) {
-        if (serviceAccountPath) {
-            const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-            adminApp = initializeApp({
-                credential: cert(serviceAccount),
-                projectId: serviceAccount.project_id || 'otpatt-da2b6'
-            });
-            console.log('✓ Firebase Admin initialized with Service Account from:', serviceAccountPath);
-        } else {
-            adminApp = initializeApp({
-                projectId: 'otpatt-da2b6'
-            });
-            console.log('Firebase Admin initialized with Project ID (serviceAccountKey.json can be added to root for full cloud dispatch).');
-        }
-    } else {
-        adminApp = getApps()[0];
-    }
-
-    if (adminApp) {
-        messagingService = getMessaging(adminApp);
-    }
-} catch (e) {
-    console.warn('Firebase Admin initialization notice:', e.message);
-}
-
-// 1. Register or update FCM Token from client device
-router.post('/register-token', async (req, res) => {
+// Does this user have at least one subscribed device?
+router.get('/status', authenticate, async (req, res) => {
     try {
-        const { token, userId, role, department, deviceInfo } = req.body;
-        if (!token) {
-            return res.status(400).json({ error: 'FCM Token is required' });
-        }
+        const [[row]] = await pool.query('SELECT COUNT(*) AS n FROM push_subscriptions WHERE user_id = ?', [req.user.id]);
+        res.json({ enabled: push.configured, devices: row.n });
+    } catch (err) {
+        res.status(500).json({ error: 'Could not read notification status' });
+    }
+});
 
-        await pool.query(
-            `INSERT INTO fcm_tokens (user_id, role, department, token, device_info)
-             VALUES (?, ?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE 
-                user_id = VALUES(user_id), 
-                role = VALUES(role), 
-                department = VALUES(department), 
-                device_info = VALUES(device_info),
-                updated_at = NOW()`,
-            [userId || null, role || null, department || null, token, deviceInfo || null]
+// Turn the doorbell on for this device. Must follow a tap, because the browser asks for permission.
+router.post('/subscribe', authenticate, async (req, res) => {
+    try {
+        if (!push.configured) return res.status(503).json({ error: 'Notifications are not set up on this server' });
+        await push.saveSubscription(req.user.id, req.body && req.body.subscription, req.headers['user-agent']);
+        res.json({ success: true });
+    } catch (err) {
+        if (err.status === 400) return res.status(400).json({ error: err.message });
+        console.error('Subscribe error:', err);
+        res.status(500).json({ error: 'Could not save the subscription' });
+    }
+});
+
+// Called by the service worker itself when the browser rotates this device's subscription.
+router.post('/resubscribe', async (req, res) => {
+    try {
+        if (!push.configured) return res.status(503).json({ error: 'Notifications are not set up on this server' });
+        const { oldEndpoint, subscription } = req.body || {};
+        await push.replaceSubscription(oldEndpoint, subscription, req.headers['user-agent']);
+        res.json({ success: true });
+    } catch (err) {
+        if (err.status) return res.status(err.status).json({ error: err.message });
+        console.error('Resubscribe error:', err);
+        res.status(500).json({ error: 'Could not update the subscription' });
+    }
+});
+
+// The service worker reports "I showed this message" (no sign-in: the worker has none). The endpoint is a
+// secret URL only that browser knows, and it must match a message we really sent to it.
+router.post('/ack', async (req, res) => {
+    try {
+        const { id, endpoint } = req.body || {};
+        const ok = await push.recordReceipt(id, endpoint);
+        res.json({ success: ok });
+    } catch (err) {
+        res.status(500).json({ error: 'Could not record the receipt' });
+    }
+});
+
+router.post('/unsubscribe', authenticate, async (req, res) => {
+    try {
+        const endpoint = req.body && req.body.endpoint;
+        if (endpoint) await push.removeSubscription(req.user.id, endpoint);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Could not remove the subscription' });
+    }
+});
+
+// "Send me a test": proves the doorbell works on the signed-in user's own devices.
+router.post('/test', authenticate, async (req, res) => {
+    try {
+        const out = await push.sendToUsers([req.user.id], {
+            title: 'Doorbell test',
+            body: 'If you can read this, attendance alerts will reach you even when the app is closed.',
+            url: '/',
+            tag: 'doorbell-test'
+        });
+        let message = 'Test sent. It should appear in a few seconds.';
+        if (out.sent === 0) message = out.failed > 0 ? 'Your device could not be reached. Turn alerts off and on again.' : 'No device is subscribed yet.';
+        res.json({ success: out.sent > 0, ...out, message });
+    } catch (err) {
+        res.status(500).json({ error: 'Could not send the test' });
+    }
+});
+
+// HODs notify their department's students, the Principal can notify a department or everyone.
+router.post('/dispatch', authenticate, authorizeRoles('hod', 'principal'), async (req, res) => {
+    try {
+        const { title, body, url } = req.body || {};
+        if (!title || !body) return res.status(400).json({ error: 'Title and body are required' });
+
+        let departments = null;
+        if (req.user.role === 'hod') departments = groupOf(req.user.department);
+        else if (req.body.department && req.body.department !== 'all') departments = groupOf(req.body.department);
+
+        const [rows] = await pool.query(
+            `SELECT id FROM users WHERE role = 'student' AND is_active = 1 ${departments ? 'AND department IN (?)' : ''}`,
+            departments ? [departments] : []
         );
-
-        console.log(`✓ FCM Token registered for User ${userId || 'guest'} (${role || 'student'})`);
-        return res.json({ success: true, message: 'FCM Token registered successfully' });
+        const out = await push.sendToUsers(rows.map((r) => r.id), {
+            title: String(title).slice(0, 80),
+            body: String(body).slice(0, 240),
+            url: typeof url === 'string' && url.startsWith('/') ? url : '/',
+            tag: 'announcement'
+        });
+        res.json({ success: true, ...out });
     } catch (err) {
-        console.error('Error saving FCM Token:', err);
-        return res.status(500).json({ error: 'Failed to save token' });
+        console.error('Dispatch error:', err);
+        res.status(500).json({ error: 'Could not send the notification' });
     }
 });
 
-// 2. Doorbell Dispatch Helper (High-Priority background wake up)
-async function sendDoorbellNotification({ title, body, tag, url, targetUserId, targetRole }) {
+// IT Operations: how many devices are subscribed
+router.get('/devices', verifyItOps, async (req, res) => {
     try {
-        let query = 'SELECT token FROM fcm_tokens WHERE 1=1';
-        let params = [];
-
-        if (targetUserId) {
-            query += ' AND user_id = ?';
-            params.push(targetUserId);
-        } else if (targetRole) {
-            query += ' AND role = ?';
-            params.push(targetRole);
-        }
-
-        const [rows] = await pool.query(query, params);
-        if (rows.length === 0) {
-            console.log('No registered FCM tokens found for target.');
-            return { sent: 0, count: 0, reason: 'No devices registered in fcm_tokens table' };
-        }
-
-        const tokens = rows.map(r => r.token);
-
-        if (!messagingService) {
-            console.warn('Messaging service not ready. (Place serviceAccountKey.json in project root)');
-            return { sent: 0, count: tokens.length, note: 'Service Account needed' };
-        }
-
-        // Multicast payload configured with Android high priority (Doorbell concept)
-        const messagePayload = {
-            tokens: tokens,
-            notification: {
-                title,
-                body
-            },
-            data: {
-                title,
-                body,
-                tag: tag || 'attend-otp-doorbell',
-                url: url || '/'
-            },
-            android: {
-                priority: 'high',
-                notification: {
-                    sound: 'default',
-                    priority: 'high',
-                    channelId: 'fxec_attend_doorbell',
-                    visibility: 'public'
-                }
-            },
-            webpush: {
-                headers: {
-                    Urgency: 'high'
-                },
-                notification: {
-                    requireInteraction: true,
-                    vibrate: [200, 100, 200, 100, 300],
-                    icon: '/icon-192.png'
-                }
-            }
-        };
-
-        const response = await messagingService.sendEachForMulticast(messagePayload);
-        console.log(`✓ Doorbell Push dispatched: ${response.successCount} successful, ${response.failureCount} failed.`);
-
-        // Automatically clean up stale or uninstalled tokens
-        if (response.failureCount > 0) {
-            const staleTokens = [];
-            response.responses.forEach((resp, idx) => {
-                if (!resp.success && resp.error && (resp.error.code === 'messaging/registration-token-not-registered' || resp.error.code === 'messaging/invalid-registration-token')) {
-                    staleTokens.push(tokens[idx]);
-                }
-            });
-            if (staleTokens.length > 0) {
-                await pool.query('DELETE FROM fcm_tokens WHERE token IN (?)', [staleTokens]);
-                console.log(`✓ Cleaned up ${staleTokens.length} stale/uninstalled FCM token(s).`);
-            }
-        }
-
-        return { 
-            sent: response.successCount, 
-            failed: response.failureCount,
-            responses: response.responses.map(r => ({ success: r.success, error: r.error ? r.error.code : null }))
-        };
+        const [[row]] = await pool.query('SELECT COUNT(*) AS devices, COUNT(DISTINCT user_id) AS users FROM push_subscriptions');
+        res.json(row);
     } catch (err) {
-        console.error('Doorbell push error:', err);
-        return { error: err.message };
-    }
-}
-
-// 3. Admin / Trigger Dispatch Endpoint (For testing & automated alerts)
-router.post('/dispatch', async (req, res) => {
-    try {
-        const { title, body, tag, url, targetUserId, targetRole } = req.body;
-        if (!title || !body) {
-            return res.status(400).json({ error: 'Title and body are required' });
-        }
-
-        const result = await sendDoorbellNotification({ title, body, tag, url, targetUserId, targetRole });
-        return res.json({ success: true, result });
-    } catch (err) {
-        return res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err.message });
     }
 });
 
-// 4. Endpoint to fetch registered devices count
-router.get('/devices', async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT id, user_id, role, department, device_info, updated_at FROM fcm_tokens');
-        return res.json({ count: rows.length, devices: rows });
-    } catch (err) {
-        return res.status(500).json({ error: err.message });
-    }
-});
-
-module.exports = {
-    router,
-    sendDoorbellNotification
-};
+module.exports = { router };

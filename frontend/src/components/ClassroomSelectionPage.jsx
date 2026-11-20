@@ -76,7 +76,7 @@ export const ClassroomSelectionPage = ({
                         <h1 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--dark-blue)', margin: 0 }}>
                             Select Classroom
                         </h1>
-                        <p style={{ fontSize: '0.72rem', color: '#64748B', margin: '2px 0 0 0' }}>
+                        <p style={{ fontSize: '0.72rem', color: '#526579', margin: '2px 0 0 0' }}>
                             Pick your current lecture hall or laboratory
                         </p>
                     </div>
@@ -90,7 +90,7 @@ export const ClassroomSelectionPage = ({
             </div>
 
             {/* Instant Search Bar */}
-            <div className="clean-input-box" style={{ margin: '14px 0 12px', background: '#FFFFFF' }}>
+            <div className="clean-input-box" style={{ margin: '14px 0 12px', background: '#E6F1FA' }}>
                 <Search size={16} className="clean-input-icon" />
                 <input
                     type="text"
@@ -104,7 +104,7 @@ export const ClassroomSelectionPage = ({
                     <button
                         type="button"
                         onClick={() => setSearchQuery('')}
-                        style={{ border: 'none', background: '#E2E8F0', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '0.70rem', color: '#64748B' }}
+                        style={{ border: 'none', background: '#CBDCEB', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '0.70rem', color: '#526579' }}
                     >
                         Cancel
                     </button>
@@ -114,7 +114,7 @@ export const ClassroomSelectionPage = ({
             {/* If searching: Show Instant Search Results */}
             {searchQuery ? (
                 <div className="classroom-search-results">
-                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#8497AB', textTransform: 'uppercase', marginBottom: '8px' }}>
                         {searchResults.length} Matching Rooms Found
                     </div>
                     {searchResults.length > 0 ? (
@@ -146,14 +146,14 @@ export const ClassroomSelectionPage = ({
                                                 <CheckCircle2 size={15} /> Selected
                                             </span>
                                         ) : (
-                                            <ChevronRight size={18} color="#94A3B8" className="room-arrow-icon" />
+                                            <ChevronRight size={18} color="#8497AB" className="room-arrow-icon" />
                                         )}
                                     </button>
                                 );
                             })}
                         </div>
                     ) : (
-                        <div style={{ padding: '30px 10px', textAlign: 'center', color: '#94A3B8', fontSize: '0.84rem' }}>
+                        <div style={{ padding: '30px 10px', textAlign: 'center', color: '#8497AB', fontSize: '0.84rem' }}>
                             No classroom found matching "{searchQuery}"
                         </div>
                     )}
@@ -203,7 +203,7 @@ export const ClassroomSelectionPage = ({
 
                     {/* Rooms in Active Floor Grid */}
                     <div className="rooms-grid-container">
-                        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#8497AB', textTransform: 'uppercase', marginBottom: '8px' }}>
                             Rooms on {activeFloor?.name || 'Floor'} ({availableRooms.length})
                         </div>
                         <div className="rooms-cards-grid">
@@ -234,7 +234,7 @@ export const ClassroomSelectionPage = ({
                                                 Current
                                             </span>
                                         ) : (
-                                            <ChevronRight size={16} color="#CBD5E1" className="room-arrow-icon" />
+                                            <ChevronRight size={16} color="#BCD0E2" className="room-arrow-icon" />
                                         )}
                                     </button>
                                 );

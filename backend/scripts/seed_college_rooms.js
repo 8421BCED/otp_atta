@@ -1,30 +1,20 @@
-const pool = require('../db');
+﻿const pool = require('../db');
 const fs = require('fs');
 const path = require('path');
 
 async function seedCollegeRooms() {
     console.log('========================================================');
-    console.log('🏛️  Seeding Official FXEC Campus Buildings, Floors & Rooms');
+    console.log('ðŸ›ï¸  Seeding Official FXEC Campus Buildings, Floors & Rooms');
     console.log('========================================================\n');
 
     try {
         // 1. Ensure rooms.room_type can store descriptive room types (lab, workshop, office, etc.)
         await pool.query("ALTER TABLE rooms MODIFY COLUMN room_type VARCHAR(50) DEFAULT 'classroom'");
-        console.log('✓ Verified rooms.room_type column');
+        console.log('âœ“ Verified rooms.room_type column');
 
-        // 2. Temporarily disable foreign key checks to safely clear old mock location records
-        await pool.query('SET FOREIGN_KEY_CHECKS = 0');
-        await pool.query('DELETE FROM active_otps');
-        await pool.query('DELETE FROM student_movements');
-        await pool.query('DELETE FROM attendance_records');
-        await pool.query('DELETE FROM rooms');
-        await pool.query('DELETE FROM floors');
-        await pool.query('DELETE FROM buildings');
-        await pool.query('ALTER TABLE buildings AUTO_INCREMENT = 1');
-        await pool.query('ALTER TABLE floors AUTO_INCREMENT = 1');
-        await pool.query('ALTER TABLE rooms AUTO_INCREMENT = 1');
-        await pool.query('SET FOREIGN_KEY_CHECKS = 1');
-        console.log('✓ Cleared previous mock buildings, floors, and rooms');
+        // 2. SAFE MODE: this script only ADDS what is missing. It never deletes or overwrites
+        //    buildings, floors, rooms or any attendance data, so it can be re-run at any time.
+        console.log('Safe mode: existing buildings, floors and rooms are kept exactly as they are.\n');
 
         // 3. Define Official College Buildings
         const buildingsData = [
@@ -61,14 +51,21 @@ async function seedCollegeRooms() {
         ];
 
         const buildingMap = {};
+        let addedBuildings = 0;
         for (const b of buildingsData) {
+            const [found] = await pool.query('SELECT id FROM buildings WHERE code = ?', [b.code]);
+            if (found.length > 0) {
+                buildingMap[b.code] = found[0].id;
+                continue;
+            }
             const [res] = await pool.query(
                 'INSERT INTO buildings (name, code, description) VALUES (?, ?, ?)',
                 [b.name, b.code, b.description]
             );
             buildingMap[b.code] = res.insertId;
+            addedBuildings++;
         }
-        console.log(`✓ Inserted ${Object.keys(buildingMap).length} Campus Buildings`);
+        console.log(`âœ“ Buildings: ${addedBuildings} added, ${Object.keys(buildingMap).length - addedBuildings} already present`);
 
         // 4. Define Floors for Each Building
         const floorsData = [
@@ -105,15 +102,22 @@ async function seedCollegeRooms() {
         ];
 
         const floorMap = {};
+        let addedFloors = 0;
         for (const f of floorsData) {
             const bId = buildingMap[f.bCode];
+            const [found] = await pool.query('SELECT id FROM floors WHERE building_id = ? AND floor_number = ?', [bId, f.num]);
+            if (found.length > 0) {
+                floorMap[`${f.bCode}_${f.num}`] = found[0].id;
+                continue;
+            }
             const [res] = await pool.query(
                 'INSERT INTO floors (building_id, floor_number, name) VALUES (?, ?, ?)',
                 [bId, f.num, f.name]
             );
             floorMap[`${f.bCode}_${f.num}`] = res.insertId;
+            addedFloors++;
         }
-        console.log(`✓ Inserted ${Object.keys(floorMap).length} Campus Floors`);
+        console.log(`âœ“ Floors: ${addedFloors} added, ${Object.keys(floorMap).length - addedFloors} already present`);
 
         // 5. Define All Official Rooms from Handwritten Notes
         const roomsData = [
@@ -332,6 +336,9 @@ async function seedCollegeRooms() {
                 continue;
             }
 
+            const [exists] = await pool.query('SELECT id FROM rooms WHERE building_id = ? AND room_number = ?', [bId, r.num]);
+            if (exists.length > 0) continue; // never overwrite a room that already exists
+
             await pool.query(
                 `INSERT INTO rooms (building_id, floor_id, room_number, name, room_type, capacity, department)
                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -339,51 +346,17 @@ async function seedCollegeRooms() {
             );
             insertedCount++;
         }
-        console.log(`✓ Successfully seeded ${insertedCount} real campus rooms, labs, workshops, and facilities!`);
-
-        // 6. Seed a clean initial active session for testing Daniel A in Room AK 207 (IT 2nd Year Lecture Hall)
-        const [targetRoom] = await pool.query('SELECT * FROM rooms WHERE room_number = "AK 207" LIMIT 1');
-        const [studentUser] = await pool.query('SELECT * FROM users WHERE email = "daniela.ug.24.it@francisxavier.ac.in" LIMIT 1');
-        const [staffUser] = await pool.query('SELECT * FROM users WHERE role = "staff" AND department = "IT" LIMIT 1');
-
-        if (targetRoom.length > 0 && studentUser.length > 0 && staffUser.length > 0) {
-            const today = new Date().toISOString().slice(0, 10);
-            const roomId = targetRoom[0].id;
-            const studentId = studentUser[0].id;
-            const staffId = staffUser[0].id;
-
-            // Generate an active OTP for AK 207
-            const expiresAt = new Date(Date.now() + 600 * 1000);
-            await pool.query(
-                'INSERT INTO active_otps (room_id, staff_id, period_id, otp_code, expires_at) VALUES (?, ?, 1, "739214", ?)',
-                [roomId, staffId, expiresAt]
-            );
-
-            // Record Daniel A attendance in AK 207
-            await pool.query(
-                `INSERT INTO attendance_records (student_id, period_id, room_id, staff_id, date, status, otp_used)
-                 VALUES (?, 1, ?, ?, ?, "present", "739214")`,
-                [studentId, roomId, staffId, today]
-            );
-
-            // Record initial movement
-            await pool.query(
-                `INSERT INTO student_movements (student_id, from_room_id, to_room_id, period_id, date, duration_minutes, note)
-                 VALUES (?, NULL, ?, 1, ?, 50, "Checked into Dr. APJ Abdul Kalam Block Rm AK 207 via 10s OTP")`,
-                [studentId, roomId, today]
-            );
-
-            console.log(`✓ Initialized live attendance in Room ${targetRoom[0].room_number} (${targetRoom[0].name})`);
-        }
+        console.log(`âœ“ Rooms: ${insertedCount} added, ${roomsData.length - insertedCount} already present`);
 
         console.log('\n========================================================');
-        console.log('🎉 REAL CAMPUS SEED COMPLETED SUCCESSFULLY!');
+        console.log('ðŸŽ‰ CAMPUS SEED COMPLETE (nothing was deleted)');
         console.log('========================================================');
         process.exit(0);
     } catch (err) {
-        console.error('❌ Error during room seeding:', err);
+        console.error('âŒ Error during room seeding:', err);
         process.exit(1);
     }
 }
 
 seedCollegeRooms();
+

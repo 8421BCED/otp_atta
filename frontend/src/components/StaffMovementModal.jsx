@@ -92,14 +92,14 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                             width: '46px',
                             height: '46px',
                             borderRadius: '12px',
-                            background: staff?.role === 'hod' ? 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)' : 'linear-gradient(135deg, #136CFC 0%, #0B3064 100%)',
+                            background: staff?.role === 'hod' ? 'linear-gradient(135deg, #A9762B 0%, #8B5F22 100%)' : 'linear-gradient(135deg, #5798D7 0%, #2E5F93 100%)',
                             color: '#FFFFFF',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontWeight: 800,
                             fontSize: '1.2rem',
-                            boxShadow: '0 4px 12px rgba(19, 108, 252, 0.25)'
+                            boxShadow: '0 4px 12px rgba(87, 152, 215, 0.25)'
                         }}>
                             {staff?.name ? staff.name.charAt(0).toUpperCase() : 'S'}
                         </div>
@@ -114,8 +114,8 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                                     padding: '2px 8px',
                                     borderRadius: '4px',
                                     textTransform: 'uppercase',
-                                    background: staff?.role === 'hod' ? '#EDE9FE' : '#E0F2FE',
-                                    color: staff?.role === 'hod' ? '#6D28D9' : '#0369A1'
+                                    background: staff?.role === 'hod' ? '#F6E9CB' : '#D3E5F5',
+                                    color: staff?.role === 'hod' ? '#A9762B' : '#2E5F93'
                                 }}>
                                     {staff?.role === 'hod' ? 'HOD' : 'FACULTY'}
                                 </span>
@@ -140,8 +140,8 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
 
                         {/* Top Live Presence Banner */}
                         <div style={{
-                            background: currentLocation ? '#F0FDF4' : '#F8FAFC',
-                            border: currentLocation ? '1.5px solid #86EFAC' : '1px solid #E2E8F0',
+                            background: currentLocation ? '#EEF1CF' : '#E6F1FA',
+                            border: currentLocation ? '1.5px solid #CBD577' : '1px solid #CBDCEB',
                             borderRadius: '12px',
                             padding: '14px 18px',
                             display: 'flex',
@@ -155,8 +155,8 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                                     width: '36px',
                                     height: '36px',
                                     borderRadius: '10px',
-                                    background: currentLocation ? '#DCFCE7' : '#E2E8F0',
-                                    color: currentLocation ? '#16A34A' : '#64748B',
+                                    background: currentLocation ? '#EEF1CF' : '#CBDCEB',
+                                    color: currentLocation ? '#7F8B26' : '#526579',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center'
@@ -164,7 +164,7 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                                     <MapPin size={20} />
                                 </div>
                                 <div>
-                                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800, color: currentLocation ? '#166534' : 'var(--text-sub)' }}>
+                                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800, color: currentLocation ? '#5F6A1B' : 'var(--text-sub)' }}>
                                         {currentLocation ? '● Current Verified Location' : 'Live Presence'}
                                     </div>
                                     <div style={{ fontSize: '0.96rem', fontWeight: 800, color: 'var(--dark-blue)' }}>
@@ -205,7 +205,7 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '14px' }}>
                                 
                                 {/* Today Timeline */}
-                                <div className="fx-card" style={{ background: '#FFFFFF', padding: '16px' }}>
+                                <div className="fx-card" style={{ background: '#E6F1FA', padding: '16px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                                         <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.90rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <Clock size={16} color="var(--blue)" />
@@ -220,8 +220,8 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                             {todayMovements.map((m, idx) => (
                                                 <div key={idx} style={{
-                                                    background: '#F8FAFC',
-                                                    border: '1px solid #E2E8F0',
+                                                    background: '#E6F1FA',
+                                                    border: '1px solid #CBDCEB',
                                                     borderRadius: '8px',
                                                     padding: '10px 12px',
                                                     display: 'flex',
@@ -240,7 +240,7 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                                                         <div style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--blue)' }}>
                                                             {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </div>
-                                                        <span style={{ fontSize: '0.66rem', color: '#16A34A', fontWeight: 800 }}>● Active</span>
+                                                        <span style={{ fontSize: '0.66rem', color: '#7F8B26', fontWeight: 800 }}>● Active</span>
                                                     </div>
                                                 </div>
                                             ))}
@@ -253,10 +253,10 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                                 </div>
 
                                 {/* Yesterday Timeline (Answering the user's explicit request: see where they were yesterday) */}
-                                <div className="fx-card" style={{ background: '#FFFFFF', padding: '16px' }}>
+                                <div className="fx-card" style={{ background: '#E6F1FA', padding: '16px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                                         <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.90rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <CalendarIcon size={16} color="#7C3AED" />
+                                            <CalendarIcon size={16} color="#A9762B" />
                                             <span>Where They Were Yesterday</span>
                                         </div>
                                         <span className="aero-pill purple" style={{ fontSize: '0.68rem' }}>
@@ -268,8 +268,8 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                             {yesterdayMovements.map((m, idx) => (
                                                 <div key={idx} style={{
-                                                    background: '#FAF5FF',
-                                                    border: '1px solid #E9D5FF',
+                                                    background: '#F6E9CB',
+                                                    border: '1px solid #EEDDA8',
                                                     borderRadius: '8px',
                                                     padding: '10px 12px',
                                                     display: 'flex',
@@ -277,7 +277,7 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                                                     alignItems: 'center'
                                                 }}>
                                                     <div>
-                                                        <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#581C87' }}>
+                                                        <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#8B5F22' }}>
                                                             Room {m.room_number} – {m.room_name}
                                                         </div>
                                                         <div style={{ fontSize: '0.72rem', color: 'var(--text-sub)' }}>
@@ -285,10 +285,10 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                                                         </div>
                                                     </div>
                                                     <div style={{ textAlign: 'right' }}>
-                                                        <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#7C3AED' }}>
+                                                        <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#A9762B' }}>
                                                             {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </div>
-                                                        <span style={{ fontSize: '0.66rem', color: '#6B21A8', fontWeight: 700 }}>Yesterday</span>
+                                                        <span style={{ fontSize: '0.66rem', color: '#8B5F22', fontWeight: 700 }}>Yesterday</span>
                                                     </div>
                                                 </div>
                                             ))}
@@ -304,7 +304,7 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
 
                         {/* View Tab 2: Monthly Calendar Grid */}
                         {viewTab === 'calendar' && (
-                            <div className="fx-card" style={{ background: '#FFFFFF', padding: '16px' }}>
+                            <div className="fx-card" style={{ background: '#E6F1FA', padding: '16px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                                     <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.95rem' }}>
                                         October 2026 Movement & Classroom Calendar
@@ -317,7 +317,7 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                                 {/* Day Headers */}
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', marginBottom: '6px' }}>
                                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
-                                        <div key={i} style={{ fontSize: '0.70rem', fontWeight: 800, color: i === 0 || i === 6 ? '#EF4444' : 'var(--text-sub)', textTransform: 'uppercase' }}>
+                                        <div key={i} style={{ fontSize: '0.70rem', fontWeight: 800, color: i === 0 || i === 6 ? '#C25B56' : 'var(--text-sub)', textTransform: 'uppercase' }}>
                                             {d}
                                         </div>
                                     ))}
@@ -341,29 +341,29 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                                                     padding: '6px',
                                                     borderRadius: '8px',
                                                     cursor: 'pointer',
-                                                    border: isSelected ? '2px solid var(--blue)' : '1px solid #E2E8F0',
-                                                    background: isSelected ? '#EFF6FF' : (item.hasMoves ? '#F0FDF4' : (item.isWeekend ? '#F8FAFC' : '#FFFFFF')),
+                                                    border: isSelected ? '2px solid var(--blue)' : '1px solid #CBDCEB',
+                                                    background: isSelected ? '#D3E5F5' : (item.hasMoves ? '#EEF1CF' : (item.isWeekend ? '#E6F1FA' : '#FFFFFF')),
                                                     display: 'flex',
                                                     flexDirection: 'column',
                                                     justifyContent: 'space-between'
                                                 }}
                                             >
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '0.76rem', fontWeight: 800, color: item.isWeekend ? '#94A3B8' : 'var(--dark-blue)' }}>
+                                                    <span style={{ fontSize: '0.76rem', fontWeight: 800, color: item.isWeekend ? '#8497AB' : 'var(--dark-blue)' }}>
                                                         {item.day}
                                                     </span>
                                                     {item.hasMoves && (
-                                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16A34A' }} />
+                                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#7F8B26' }} />
                                                     )}
                                                 </div>
 
                                                 {item.hasMoves ? (
-                                                    <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#166534', lineHeight: 1.1 }}>
+                                                    <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#5F6A1B', lineHeight: 1.1 }}>
                                                         {item.moveCount} Moves<br />
-                                                        <span style={{ color: '#0369A1' }}>{item.rooms}</span>
+                                                        <span style={{ color: '#2E5F93' }}>{item.rooms}</span>
                                                     </div>
                                                 ) : (
-                                                    <div style={{ fontSize: '0.60rem', color: '#94A3B8' }}>
+                                                    <div style={{ fontSize: '0.60rem', color: '#8497AB' }}>
                                                         {item.isWeekend ? 'Off' : 'No Data'}
                                                     </div>
                                                 )}
@@ -373,14 +373,14 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                                 </div>
 
                                 {/* Selected Day Details */}
-                                <div style={{ marginTop: '16px', background: '#F8FAFC', padding: '12px 14px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                <div style={{ marginTop: '16px', background: '#E6F1FA', padding: '12px 14px', borderRadius: '8px', border: '1px solid #CBDCEB' }}>
                                     <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.84rem', marginBottom: '8px' }}>
                                         Movements on {selectedDate}:
                                     </div>
                                     {selectedDateMovements.length > 0 ? (
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                             {selectedDateMovements.map((m, i) => (
-                                                <div key={i} style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', padding: '6px 10px', borderRadius: '6px', fontSize: '0.74rem' }}>
+                                                <div key={i} style={{ background: '#E6F1FA', border: '1px solid #BCD0E2', padding: '6px 10px', borderRadius: '6px', fontSize: '0.74rem' }}>
                                                     <b style={{ color: 'var(--blue)' }}>Room {m.room_number}</b> ({m.building_name}) • {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </div>
                                             ))}
@@ -395,7 +395,7 @@ export const StaffMovementModal = ({ isOpen, onClose, staffId }) => {
                         )}
 
                         {/* Contact & Profile Footnote */}
-                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '0.75rem', color: 'var(--text-sub)', padding: '10px 14px', background: '#F8FAFC', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '0.75rem', color: 'var(--text-sub)', padding: '10px 14px', background: '#E6F1FA', borderRadius: '8px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <Mail size={13} color="var(--blue)" />
                                 <span>{staff?.email}</span>

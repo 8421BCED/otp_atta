@@ -1,0 +1,137 @@
+/* ==========================================================================
+   Student screen + shared small pieces (ring, OTP cells, install banner)
+   ========================================================================== */
+
+/* ---------- Countdown ring ---------- */
+.ring-wrap { display: flex; flex-direction: column; align-items: center; }
+.ring {
+  position: relative; width: min(268px, 72vw); aspect-ratio: 1; border-radius: 50%;
+  background: var(--surface-raised); box-shadow: var(--sh-raised);
+  display: flex; align-items: center; justify-content: center;
+}
+.ring::after {
+  content: ''; position: absolute; inset: 22px; border-radius: 50%;
+  background: var(--surface-sunken); box-shadow: var(--sh-inset); pointer-events: none;
+}
+.ring-svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); z-index: 1; }
+.ring-center {
+  position: relative; z-index: 2; text-align: center; padding: 0 34px;
+  display: flex; flex-direction: column; align-items: center;
+}
+.ring-caption { font-size: .74rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.ring-digits { font-size: 3rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; color: var(--ink); margin: 4px 0 2px; }
+.ring-digits.is-long { font-size: 2.2rem; }
+.ring-sub { font-size: .76rem; font-weight: 600; color: var(--ink-2); }
+
+/* ---------- Student hero ---------- */
+.st-greet h1 { font-size: 1.5rem; letter-spacing: -0.03em; }
+.st-greet p { color: var(--ink-2); margin-top: 2px; font-size: .9rem; }
+
+.hero-body { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+
+.room-row {
+  width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 14px;
+  border-radius: var(--r-md); background: var(--surface-sunken); box-shadow: var(--sh-inset-sm);
+}
+.room-icon {
+  width: 40px; height: 40px; border-radius: 13px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--denim-500); background: var(--surface-raised); box-shadow: var(--sh-raised-xs);
+}
+.room-title { font-weight: 800; font-size: .95rem; }
+.room-meta { font-size: .76rem; color: var(--ink-2); font-weight: 600; }
+
+/* ---------- OTP cells ---------- */
+.otp-form { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 16px; }
+.otp-cells { position: relative; display: grid; grid-template-columns: repeat(6, 1fr); gap: 9px; cursor: text; }
+.otp-cell {
+  aspect-ratio: 1 / 1.18; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+  font-size: 1.55rem; font-weight: 800; color: var(--ink);
+  background: var(--surface-sunken); box-shadow: var(--sh-inset-sm); transition: box-shadow .14s ease;
+}
+.otp-cell.is-filled { color: var(--denim-600); }
+.otp-cell.is-cursor { box-shadow: var(--sh-inset-sm), 0 0 0 2px var(--denim-300); }
+.otp-hidden { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; background: transparent; cursor: text; font-size: 16px; }
+.otp-hint { text-align: center; font-size: .8rem; color: var(--ink-2); }
+
+/* ---------- State panels ---------- */
+.state-panel {
+  width: 100%; max-width: 420px; border-radius: var(--r-lg); padding: 22px 20px;
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;
+}
+.state-panel h3 { font-size: 1.1rem; }
+.state-panel p { font-size: .86rem; color: var(--ink-2); line-height: 1.5; }
+.state-badge {
+  width: 56px; height: 56px; border-radius: 19px; display: flex; align-items: center; justify-content: center;
+  background: var(--surface-raised); box-shadow: var(--sh-raised-sm);
+}
+.state-panel--danger { background: var(--danger-bg); }
+.state-panel--danger .state-badge { color: var(--danger-ink); }
+.state-panel--danger h3 { color: var(--danger-ink); }
+.state-panel--ok { background: var(--pistachio-100); }
+.state-panel--ok .state-badge { color: var(--pistachio-700); }
+.state-panel--ok h3 { color: var(--pistachio-700); }
+.state-panel--warn { background: var(--warn-bg); }
+.state-panel--warn .state-badge { color: var(--warn-ink); }
+.state-panel--warn h3 { color: var(--warn-ink); }
+.state-panel--info { background: var(--frost-200); }
+.state-panel--info .state-badge { color: var(--denim-600); }
+.state-facts { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 6px; font-size: .82rem; color: var(--ink); }
+.state-facts div { padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, .55); }
+.state-action {
+  width: 100%; text-align: left; padding: 12px 14px; border-radius: 14px;
+  background: rgba(255, 255, 255, .55); font-size: .82rem; color: var(--ink);
+}
+
+/* ---------- Schedule ---------- */
+.sch-row-name { font-weight: 700; font-size: .93rem; }
+.sch-row-time { font-size: .76rem; font-weight: 600; color: var(--ink-2); margin-top: 2px; }
+.sch-now { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; font-size: .66rem; font-weight: 800; letter-spacing: .08em; color: var(--pistachio-700); text-transform: uppercase; }
+
+/* ---------- Day layout (student home) ---------- */
+.day { display: flex; flex-direction: column; gap: 22px; }
+.day-strip {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); gap: 12px;
+  overflow-x: auto; padding: 6px 6px 14px; margin: -6px; scroll-snap-type: x proximity;
+}
+.day-slot {
+  scroll-snap-align: start; padding: 14px 16px; border-radius: var(--r-md);
+  background: var(--surface-raised); box-shadow: var(--sh-raised-xs); border-top: 4px solid var(--frost-300);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.day-slot-top { display: flex; align-items: center; justify-content: space-between; }
+.day-slot-no { font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.day-slot-time { font-weight: 800; font-size: .95rem; letter-spacing: -0.01em; }
+.day-slot-state { font-size: .8rem; font-weight: 700; color: var(--ink-2); }
+.day-slot--present { border-top-color: var(--pistachio-400); }
+.day-slot--present .day-slot-state { color: var(--pistachio-700); }
+.day-slot--od { border-top-color: var(--warn); }
+.day-slot--od .day-slot-state { color: var(--warn-ink); }
+.day-slot--absent { border-top-color: var(--danger); }
+.day-slot--absent .day-slot-state { color: var(--danger-ink); }
+.day-slot--live { border-top-color: var(--denim-400); }
+.day-slot--live .day-slot-state { color: var(--denim-600); }
+.day-slot.is-live { background: var(--surface-sunken); box-shadow: var(--sh-inset-sm); border-top-color: var(--denim-400); }
+
+.day-main { display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1024px) { .day-main { grid-template-columns: minmax(0, 1fr) 340px; } }
+.focus-card { padding: 28px; }
+@media (max-width: 640px) { .focus-card { padding: 20px; } }
+.day-side { display: flex; flex-direction: column; gap: 16px; }
+.summary-card { display: flex; flex-direction: column; gap: 12px; }
+.summary-number { display: flex; align-items: baseline; gap: 10px; }
+.summary-number strong { font-size: 3rem; letter-spacing: -0.04em; line-height: 1; }
+.summary-number span { color: var(--ink-2); font-weight: 600; font-size: .86rem; }
+
+.alerts-card { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.alerts-card .u-grow { min-width: 220px; }
+
+/* ---------- Install banner ---------- */
+.pwa-banner {
+  position: fixed; z-index: 90; left: 16px; right: 16px; bottom: calc(var(--tabbar-h) + 28px);
+  max-width: 520px; margin: 0 auto; display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+}
+@media (min-width: 1024px) { .pwa-banner { left: auto; right: 28px; bottom: 28px; margin: 0; width: 420px; } }
+.pwa-icon { width: 42px; height: 42px; border-radius: 13px; flex-shrink: 0; }
+.pwa-title { font-weight: 800; font-size: .9rem; }
+.pwa-sub { font-size: .74rem; color: var(--ink-2); }

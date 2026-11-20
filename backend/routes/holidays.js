@@ -1,10 +1,12 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
+const { todayIst, ruleTime } = require('../utils/time');
+const { clearHolidayCache } = require('../utils/rules');
 
 // 1. Get all holidays
-router.get('/', async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
     try {
         const [holidays] = await pool.query(
             `SELECT h.*, u.name as declared_by_name, u.role as declared_by_role 
@@ -20,11 +22,11 @@ router.get('/', async (req, res) => {
 });
 
 // 2. Check if a specific date (or today) is a holiday or timed exemption event
-router.get('/check', async (req, res) => {
+router.get('/check', authenticate, async (req, res) => {
     try {
-        const date = req.query.date || new Date().toISOString().slice(0, 10);
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : todayIst();
         const department = req.query.department || 'IT';
-        const currentTime = req.query.currentTime || null;
+        const currentTime = ruleTime(req.query.currentTime);
 
         const [results] = await pool.query(
             `SELECT * FROM holidays 
@@ -119,6 +121,7 @@ router.post('/declare', authenticate, authorizeRoles('hod', 'principal'), async 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [title, holiday_date, effectiveScope, effectiveDept, userId, reason || 'Declared by Academic Authority', isTimedEvent, sTime, eTime]
         );
+        clearHolidayCache(); // this server shows it immediately; the others within 30 seconds
 
         return res.status(201).json({
             success: true,
@@ -132,3 +135,4 @@ router.post('/declare', authenticate, authorizeRoles('hod', 'principal'), async 
 });
 
 module.exports = router;
+

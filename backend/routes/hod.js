@@ -1,30 +1,42 @@
 const express = require('express');
-const router = express.Router();
 const pool = require('../db');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
+const { todayIst, ruleTime } = require('../utils/time');
+const { groupOf, sameGroup } = require('../utils/departments');
+const { getSchedule, getOffDay, evaluateLock, readDayLock } = require('../utils/rules');
 
-// 1. Department Live Overview (Students present, room distribution)
-router.get('/overview', authenticate, authorizeRoles('hod', 'staff', 'principal'), async (req, res) => {
+const router = express.Router();
+
+router.use(authenticate);
+
+// The departments a request is about. HODs and staff see their own department plus any that share
+// their HOD (AI-DS and AI-ML). The Principal may choose a department.
+const scopeDepartments = (req) => {
+    const dept = req.user.role === 'principal' ? (req.query.department || req.body?.department || 'IT') : req.user.department;
+    return groupOf(dept);
+};
+
+// HODs may act only on students of their own department group. The Principal may act on anyone.
+const studentInScope = async (user, studentId) => {
+    const [rows] = await pool.query('SELECT id, name, department FROM users WHERE id = ? AND role = "student"', [studentId]);
+    if (rows.length === 0) return { error: 'Student not found', status: 404 };
+    if (user.role !== 'principal' && !sameGroup(user.department, rows[0].department)) {
+        return { error: 'This student belongs to another department', status: 403 };
+    }
+    return { student: rows[0] };
+};
+
+// 1. Department live overview
+router.get('/overview', authorizeRoles('hod', 'staff', 'principal'), async (req, res) => {
     try {
-        const department = req.user.role === 'principal' ? (req.query.department || 'IT') : req.user.department;
-        const today = new Date().toISOString().slice(0, 10);
+        const departments = scopeDepartments(req);
+        const today = todayIst();
 
-        // Department total student count
-        const [totalStudents] = await pool.query(
-            'SELECT COUNT(*) as total FROM users WHERE role = "student" AND department = ?',
-            [department]
-        );
-
-        // Department present count today
+        const [totalStudents] = await pool.query('SELECT COUNT(*) as total FROM users WHERE role = "student" AND department IN (?)', [departments]);
         const [presentToday] = await pool.query(
-            `SELECT COUNT(DISTINCT ar.student_id) as present 
-             FROM attendance_records ar
-             JOIN users u ON ar.student_id = u.id
-             WHERE u.department = ? AND ar.date = ? AND ar.status = "present"`,
-            [department, today]
-        );
-
-        // Real-time room distribution of department students
+            `SELECT COUNT(DISTINCT ar.student_id) as present
+             FROM attendance_records ar JOIN users u ON ar.student_id = u.id
+             WHERE u.department IN (?) AND ar.date = ? AND ar.status IN ('present', 'od')`, [departments, today]);
         const [roomDistribution] = await pool.query(
             `SELECT r.id as room_id, r.room_number, r.name as room_name, b.name as building_name,
                     COUNT(DISTINCT ar.student_id) as student_count
@@ -32,19 +44,16 @@ router.get('/overview', authenticate, authorizeRoles('hod', 'staff', 'principal'
              JOIN users u ON ar.student_id = u.id
              JOIN rooms r ON ar.room_id = r.id
              JOIN buildings b ON r.building_id = b.id
-             WHERE u.department = ? AND ar.date = ? AND ar.status = "present"
+             WHERE u.department IN (?) AND ar.date = ? AND ar.status = 'present'
              GROUP BY r.id, r.room_number, r.name, b.name
-             ORDER BY student_count DESC`,
-            [department, today]
-        );
+             ORDER BY student_count DESC`, [departments, today]);
 
+        const total = totalStudents[0].total;
         return res.json({
-            department,
-            totalStudents: totalStudents[0].total,
+            department: departments.join(' and '),
+            totalStudents: total,
             presentToday: presentToday[0].present,
-            attendanceRate: totalStudents[0].total > 0 
-                ? Math.round((presentToday[0].present / totalStudents[0].total) * 100) 
-                : 0,
+            attendanceRate: total > 0 ? Math.round((presentToday[0].present / total) * 100) : 0,
             roomDistribution
         });
     } catch (err) {
@@ -53,33 +62,27 @@ router.get('/overview', authenticate, authorizeRoles('hod', 'staff', 'principal'
     }
 });
 
-// 2. Search Students in Department (Real-time location & status)
-router.get('/students', authenticate, authorizeRoles('hod', 'staff', 'principal'), async (req, res) => {
+// 2. Students in the department
+router.get('/students', authorizeRoles('hod', 'staff', 'principal'), async (req, res) => {
     try {
-        const department = req.user.role === 'principal' ? (req.query.department || 'IT') : req.user.department;
-        const search = req.query.q ? `%${req.query.q.trim()}%` : '%';
-        const today = new Date().toISOString().slice(0, 10);
+        const departments = scopeDepartments(req);
+        const search = req.query.q ? `%${String(req.query.q).trim()}%` : '%';
+        const today = todayIst();
 
         const [students] = await pool.query(
             `SELECT u.id, u.name, u.email, u.roll_number, u.department, u.year_of_study,
                     dl.device_name, dl.is_locked, dl.locked_at,
-                    (SELECT r.room_number FROM student_movements sm 
-                     JOIN rooms r ON sm.to_room_id = r.id 
-                     WHERE sm.student_id = u.id AND sm.date = ? 
-                     ORDER BY sm.timestamp DESC LIMIT 1) as current_room,
-                    (SELECT b.name FROM student_movements sm 
-                     JOIN rooms r ON sm.to_room_id = r.id 
-                     JOIN buildings b ON r.building_id = b.id
-                     WHERE sm.student_id = u.id AND sm.date = ? 
-                     ORDER BY sm.timestamp DESC LIMIT 1) as current_building,
-                    (SELECT COUNT(*) FROM attendance_records ar WHERE ar.student_id = u.id AND ar.date = ? AND ar.status = "present") as periods_attended
+                    (SELECT r.room_number FROM student_movements sm JOIN rooms r ON sm.to_room_id = r.id
+                     WHERE sm.student_id = u.id AND sm.date = ? ORDER BY sm.timestamp DESC LIMIT 1) as current_room,
+                    (SELECT b.name FROM student_movements sm JOIN rooms r ON sm.to_room_id = r.id JOIN buildings b ON r.building_id = b.id
+                     WHERE sm.student_id = u.id AND sm.date = ? ORDER BY sm.timestamp DESC LIMIT 1) as current_building,
+                    (SELECT COUNT(*) FROM attendance_records ar WHERE ar.student_id = u.id AND ar.date = ? AND ar.status IN ('present', 'od')) as periods_attended
              FROM users u
              LEFT JOIN device_locks dl ON u.id = dl.user_id
-             WHERE u.role = "student" AND u.department = ? AND (u.name LIKE ? OR u.email LIKE ?)
+             WHERE u.role = "student" AND u.department IN (?) AND (u.name LIKE ? OR u.email LIKE ? OR u.roll_number LIKE ?)
              ORDER BY u.name ASC`,
-            [today, today, today, department, search, search]
+            [today, today, today, departments, search, search, search]
         );
-
         return res.json({ students });
     } catch (err) {
         console.error('Error searching students:', err);
@@ -87,23 +90,21 @@ router.get('/students', authenticate, authorizeRoles('hod', 'staff', 'principal'
     }
 });
 
-// 3. Reset Device Lock (Anti-Proxy Reset)
-router.post('/reset-device-lock', authenticate, authorizeRoles('hod', 'principal'), async (req, res) => {
+// 3. Reset a student's device binding
+router.post('/reset-device-lock', authorizeRoles('hod', 'principal'), async (req, res) => {
     try {
-        const { studentId } = req.body;
-        if (!studentId) {
-            return res.status(400).json({ error: 'Student ID is required' });
-        }
+        const { studentId } = req.body || {};
+        if (!studentId) return res.status(400).json({ error: 'Student ID is required' });
 
-        // Delete the bound device lock so the student can re-register their new phone on next login
+        const scope = await studentInScope(req.user, studentId);
+        if (scope.error) return res.status(scope.status).json({ error: scope.error });
+
         await pool.query('DELETE FROM device_locks WHERE user_id = ?', [studentId]);
-
-        // Get student details for notification
-        const [student] = await pool.query('SELECT name, email FROM users WHERE id = ?', [studentId]);
+        console.log(`AUDIT device reset: student ${studentId} by ${req.user.role} ${req.user.id}`);
 
         return res.json({
             success: true,
-            message: `Device lock successfully reset for ${student[0] ? student[0].name : 'student'}. The next device they use to log in will be automatically registered and locked.`
+            message: `Device binding reset for ${scope.student.name}. The next device they sign in from will be registered.`
         });
     } catch (err) {
         console.error('Error resetting device lock:', err);
@@ -111,98 +112,98 @@ router.post('/reset-device-lock', authenticate, authorizeRoles('hod', 'principal
     }
 });
 
-// 4. Get Locked Students (Missed Period 1 Morning Cutoff at 9:05 AM OR Period 5 Post-Lunch Cutoff at 1:35 PM)
-router.get('/locked-students', authenticate, authorizeRoles('hod', 'principal'), async (req, res) => {
+// 4. Students who are locked right now (see utils/rules.js for the morning and afternoon rules)
+router.get('/locked-students', authorizeRoles('hod', 'principal'), async (req, res) => {
     try {
-        const department = req.user.role === 'principal' ? (req.query.department || 'IT') : req.user.department;
-        const today = new Date().toISOString().slice(0, 10);
+        const departments = scopeDepartments(req);
+        const today = todayIst();
+        const now = ruleTime(req.query.simulateTime);
+        const schedule = await getSchedule();
 
-        let now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        const currentTimeStr = req.query.simulateTime || `${hours}:${minutes}:${seconds}`;
-
-        const isPastMorningCutoff = currentTimeStr > '09:05:00';
-        const isPastLunchCutoff = currentTimeStr > '13:35:00';
-
-        // Fetch students in department with attendance for Period 1 and Period 5 (id 7)
         const [students] = await pool.query(
             `SELECT u.id, u.name, u.email, u.roll_number, u.department, u.year_of_study,
-                    sdl.reason as day_lock_reason,
-                    sdl.first_otp_at,
-                    sdl.is_locked_out,
-                    (SELECT COUNT(*) FROM attendance_records ar WHERE ar.student_id = u.id AND ar.date = ? AND ar.period_id = 1 AND (ar.status = 'present' OR ar.status = 'od')) as p1_attended,
-                    (SELECT COUNT(*) FROM attendance_records ar WHERE ar.student_id = u.id AND ar.date = ? AND ar.period_id = 7 AND (ar.status = 'present' OR ar.status = 'od')) as p5_attended,
-                    (SELECT COUNT(*) FROM sports_od_students sos JOIN sports_od_passes sop ON sos.pass_id = sop.id WHERE sos.student_id = u.id AND ? BETWEEN sop.from_date AND sop.to_date AND (sop.status = 'active' OR sop.status = 'approved')) as has_sports_od
+                    sdl.is_locked_out, sdl.reason,
+                    DATE_FORMAT(sdl.first_otp_at, '%Y-%m-%d') AS unlock_date,
+                    DATE_FORMAT(sdl.first_otp_at, '%H:%i:%s') AS unlock_time,
+                    (SELECT COUNT(*) FROM attendance_records ar WHERE ar.student_id = u.id AND ar.date = ? AND ar.period_id = ? AND ar.status IN ('present', 'od')) as p1_attended,
+                    (SELECT COUNT(*) FROM attendance_records ar WHERE ar.student_id = u.id AND ar.date = ? AND ar.period_id = ? AND ar.status IN ('present', 'od')) as p5_attended,
+                    (SELECT COUNT(*) FROM sports_od_students sos JOIN sports_od_passes sop ON sos.pass_id = sop.id
+                     WHERE sos.student_id = u.id AND ? BETWEEN sop.from_date AND sop.to_date AND sop.status IN ('active', 'approved')) as has_sports_od
              FROM users u
              LEFT JOIN student_day_locks sdl ON u.id = sdl.student_id AND sdl.date = ?
-             WHERE u.role = "student" AND u.department = ?
+             WHERE u.role = "student" AND u.department IN (?)
              ORDER BY u.name ASC`,
-            [today, today, today, today, department]
+            [today, schedule.morningId, today, schedule.afternoonId, today, today, departments]
         );
 
-        // Identify students locked by morning cutoff OR lunch cutoff, who lack sports OD
-        const lockedList = students
-            .filter(st => {
-                const isMorningLocked = isPastMorningCutoff && st.p1_attended === 0 && st.has_sports_od === 0;
-                const isLunchLocked = isPastLunchCutoff && st.p5_attended === 0 && st.has_sports_od === 0;
-                const isExplicitlyLocked = st.is_locked_out === 1;
-                const isUnlocked = st.day_lock_reason === 'HOD_UNLOCKED';
-                
-                // Show if currently locked or was locked & HOD unlocked today
-                return isMorningLocked || isLunchLocked || isExplicitlyLocked || isUnlocked;
-            })
-            .map(st => {
-                let lockType = 'Morning (Period 1)';
-                if (isPastLunchCutoff && st.p5_attended === 0) {
-                    lockType = 'Post-Lunch (Period 5)';
-                } else if (st.p1_attended === 0) {
-                    lockType = 'Morning (Period 1)';
-                }
+        const offCache = new Map();
+        const offFor = async (dept) => {
+            if (!offCache.has(dept)) offCache.set(dept, await getOffDay(dept, today, now));
+            return offCache.get(dept);
+        };
 
-                return {
-                    id: st.id,
-                    name: st.name,
-                    email: st.email,
-                    roll_number: st.roll_number,
-                    year_of_study: st.year_of_study,
-                    lockType,
-                    isHodUnlocked: st.day_lock_reason === 'HOD_UNLOCKED',
-                    unlockedAt: st.day_lock_reason === 'HOD_UNLOCKED' ? st.first_otp_at : null,
-                    status: st.day_lock_reason === 'HOD_UNLOCKED' ? 'unlocked' : 'locked'
-                };
+        const lockedList = [];
+        for (const st of students) {
+            const off = await offFor(st.department);
+            if (off.off) continue; // nobody is locked on a holiday or weekly off
+
+            const { explicitLock, unlock } = readDayLock(st, today);
+            const lock = evaluateLock({
+                time: now, schedule,
+                p1Attended: st.p1_attended > 0, p5Attended: st.p5_attended > 0,
+                hasSportsPass: st.has_sports_od > 0, exempt: off.exempt,
+                explicitLock, unlock
             });
+            const unlockedToday = st.reason === 'HOD_UNLOCKED' && (st.unlock_date === today);
+            if (!lock.locked && !unlockedToday) continue;
 
-        return res.json({ success: true, lockedStudents: lockedList, count: lockedList.length });
+            let lockType = 'Unlocked by HOD';
+            if (lock.session === 'morning') lockType = 'Morning, periods 1 to 4';
+            else if (lock.session === 'afternoon') lockType = 'Afternoon, rest of the day';
+            else if (lock.session === 'day') lockType = 'Locked by HOD';
+
+            lockedList.push({
+                id: st.id,
+                name: st.name,
+                email: st.email,
+                roll_number: st.roll_number,
+                year_of_study: st.year_of_study,
+                lockType,
+                session: lock.session,
+                isHodUnlocked: !lock.locked,
+                unlockedAt: unlockedToday ? st.unlock_time : null,
+                status: lock.locked ? 'locked' : 'unlocked'
+            });
+        }
+
+        return res.json({ success: true, lockedStudents: lockedList, count: lockedList.filter((l) => l.status === 'locked').length });
     } catch (err) {
         console.error('Error fetching locked students for HOD:', err);
         return res.status(500).json({ error: 'Failed to fetch locked students' });
     }
 });
 
-// 5. HOD Unlock Day Attendance for Student
-router.post('/unlock-student-day', authenticate, authorizeRoles('hod', 'principal'), async (req, res) => {
+// 5. Unlock a student's attendance. The unlock covers the session it is granted in
+//    (morning until lunch, or afternoon until the end of the day).
+router.post('/unlock-student-day', authorizeRoles('hod', 'principal'), async (req, res) => {
     try {
-        const { studentId } = req.body;
-        if (!studentId) {
-            return res.status(400).json({ error: 'Student ID is required' });
-        }
-        const today = new Date().toISOString().slice(0, 10);
+        const { studentId } = req.body || {};
+        if (!studentId) return res.status(400).json({ error: 'Student ID is required' });
+
+        const scope = await studentInScope(req.user, studentId);
+        if (scope.error) return res.status(scope.status).json({ error: scope.error });
 
         await pool.query(
             `INSERT INTO student_day_locks (student_id, date, first_otp_at, is_locked_out, reason)
              VALUES (?, ?, NOW(), 0, 'HOD_UNLOCKED')
              ON DUPLICATE KEY UPDATE is_locked_out = 0, reason = 'HOD_UNLOCKED', first_otp_at = NOW()`,
-            [studentId, today]
+            [studentId, todayIst()]
         );
-
-        const [st] = await pool.query('SELECT name FROM users WHERE id = ?', [studentId]);
-        const studentName = st[0] ? st[0].name : 'Student';
+        console.log(`AUDIT unlock: student ${studentId} by ${req.user.role} ${req.user.id}`);
 
         return res.json({
             success: true,
-            message: `Day Attendance unlocked for ${studentName}! The student is now authorized to select their classroom and submit OTP for remaining periods today.`
+            message: `Attendance unlocked for ${scope.student.name}. They can enter codes for the rest of this session.`
         });
     } catch (err) {
         console.error('Error unlocking student day:', err);
@@ -210,26 +211,24 @@ router.post('/unlock-student-day', authenticate, authorizeRoles('hod', 'principa
     }
 });
 
-// 6. HOD Relock Day Attendance for Student
-router.post('/relock-student-day', authenticate, authorizeRoles('hod', 'principal'), async (req, res) => {
+// 6. Lock a student's attendance for the rest of today
+router.post('/relock-student-day', authorizeRoles('hod', 'principal'), async (req, res) => {
     try {
-        const { studentId } = req.body;
-        if (!studentId) {
-            return res.status(400).json({ error: 'Student ID is required' });
-        }
-        const today = new Date().toISOString().slice(0, 10);
+        const { studentId } = req.body || {};
+        if (!studentId) return res.status(400).json({ error: 'Student ID is required' });
+
+        const scope = await studentInScope(req.user, studentId);
+        if (scope.error) return res.status(scope.status).json({ error: scope.error });
 
         await pool.query(
             `INSERT INTO student_day_locks (student_id, date, is_locked_out, reason)
              VALUES (?, ?, 1, 'LOCKED_BY_HOD')
              ON DUPLICATE KEY UPDATE is_locked_out = 1, reason = 'LOCKED_BY_HOD'`,
-            [studentId, today]
+            [studentId, todayIst()]
         );
+        console.log(`AUDIT relock: student ${studentId} by ${req.user.role} ${req.user.id}`);
 
-        return res.json({
-            success: true,
-            message: 'Day attendance re-locked for student.'
-        });
+        return res.json({ success: true, message: 'Attendance locked for this student for the rest of today.' });
     } catch (err) {
         console.error('Error re-locking student day:', err);
         return res.status(500).json({ error: 'Failed to re-lock student day' });

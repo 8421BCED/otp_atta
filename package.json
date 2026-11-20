@@ -1,16 +1,13 @@
 {
   "name": "fxec-attend-otp",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "FXEC AttendOTP - Production Anti-Proxy Attendance System",
+  "description": "FXEC AttendOTP - classroom attendance with rolling room codes",
   "scripts": {
     "start": "npm --prefix backend start",
     "backend": "npm --prefix backend start",
     "frontend": "npm --prefix frontend run dev",
-    "build": "npm --prefix frontend run build && node -e \"const fs=require('fs'); fs.cpSync('frontend/dist', 'backend/dist', {recursive: true, force: true}); console.log('✓ Synced dist into backend/dist');\"",
+    "build": "npm --prefix frontend run build && node -e \"const fs=require('fs'); fs.rmSync('backend/dist',{recursive:true,force:true}); fs.cpSync('frontend/dist','backend/dist',{recursive:true}); console.log('Copied frontend/dist to backend/dist');\"",
     "lint": "npm --prefix frontend run lint"
-  },
-  "dependencies": {
-    "pptxgenjs": "^4.0.1"
   }
 }

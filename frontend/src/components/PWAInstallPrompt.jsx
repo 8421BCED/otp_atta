@@ -1,170 +1,76 @@
-import React, { useState, useEffect } from 'react';
-import { Download, X, Smartphone, Sparkles, Check } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Download, X } from 'lucide-react';
+import { canInstall, isInstalled, isIos, promptInstall, subscribeInstall } from '../installPrompt';
+
+// Shared state, so the banner and the account menu button always agree.
+export const useInstallState = () => {
+    const [, tick] = useState(0);
+    useEffect(() => subscribeInstall(() => tick((n) => n + 1)), []);
+    return { available: canInstall(), installed: isInstalled(), ios: isIos() };
+};
 
 export const PWAInstallPrompt = () => {
-    const [deferredPrompt, setDeferredPrompt] = useState(null);
-    const [isInstallable, setIsInstallable] = useState(false);
-    const [isIOS, setIsIOS] = useState(false);
-    const [isInstalled, setIsInstalled] = useState(false);
-    const [isDismissed, setIsDismissed] = useState(() => {
-        return sessionStorage.getItem('pwa_prompt_dismissed') === 'true';
+    const { available, installed, ios } = useInstallState();
+    const [dismissed, setDismissed] = useState(() => {
+        try { return sessionStorage.getItem('pwa_prompt_dismissed') === 'true'; } catch (e) { return false; }
     });
     const [showIOSGuide, setShowIOSGuide] = useState(false);
 
+    // Stop pinch-zoom so the app feels native.
     useEffect(() => {
-        // Check if already in standalone display mode (PWA installed)
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                             window.navigator.standalone || 
-                             document.referrer.includes('android-app://');
-        if (isStandalone) {
-            setIsInstalled(true);
-            return;
-        }
-
-        // Detect iOS
-        const userAgent = window.navigator.userAgent.toLowerCase();
-        const isIPhoneOrIPad = /iphone|ipad|ipod/.test(userAgent) && !window.MSStream;
-        if (isIPhoneOrIPad) {
-            setIsIOS(true);
-            setIsInstallable(true);
-        }
-
-        // Listen for beforeinstallprompt event (Android Chrome / Edge / Desktop Chrome)
-        const handleBeforeInstallPrompt = (e) => {
-            e.preventDefault();
-            setDeferredPrompt(e);
-            setIsInstallable(true);
-        };
-
-        const handleAppInstalled = () => {
-            setIsInstalled(true);
-            setIsInstallable(false);
-            setDeferredPrompt(null);
-        };
-
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        window.addEventListener('appinstalled', handleAppInstalled);
-
-        // Also prevent pinch-to-zoom gestures in Safari and mobile webviews
-        const handleTouchMove = (e) => {
-            if (e.touches && e.touches.length > 1) {
-                e.preventDefault();
-            }
-        };
-        const handleGestureStart = (e) => {
-            e.preventDefault();
-        };
-
-        document.addEventListener('touchmove', handleTouchMove, { passive: false });
-        document.addEventListener('gesturestart', handleGestureStart, { passive: false });
-
+        const onTouchMove = (e) => { if (e.touches && e.touches.length > 1) e.preventDefault(); };
+        const onGesture = (e) => e.preventDefault();
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        document.addEventListener('gesturestart', onGesture, { passive: false });
         return () => {
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-            window.removeEventListener('appinstalled', handleAppInstalled);
-            document.removeEventListener('touchmove', handleTouchMove);
-            document.removeEventListener('gesturestart', handleGestureStart);
+            document.removeEventListener('touchmove', onTouchMove);
+            document.removeEventListener('gesturestart', onGesture);
         };
     }, []);
 
-    const handleInstallClick = async () => {
-        if (isIOS) {
-            setShowIOSGuide(true);
-            return;
-        }
-
-        if (!deferredPrompt) {
-            return;
-        }
-
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            setIsInstalled(true);
-            setIsInstallable(false);
-        }
-        setDeferredPrompt(null);
+    const dismiss = () => {
+        setDismissed(true);
+        try { sessionStorage.setItem('pwa_prompt_dismissed', 'true'); } catch (e) { /* ignore */ }
     };
 
-    const handleDismiss = () => {
-        setIsDismissed(true);
-        sessionStorage.setItem('pwa_prompt_dismissed', 'true');
+    const install = async () => {
+        if (ios) { setShowIOSGuide(true); return; }
+        await promptInstall();
     };
 
-    if (isInstalled || isDismissed || !isInstallable) {
-        return null;
-    }
+    if (installed || dismissed || !(available || ios)) return null;
 
     return (
         <>
-            {/* Floating Sleek Inbuilt PWA Install Banner */}
-            <div className="pwa-install-banner">
-                <div className="pwa-banner-content">
-                    <img 
-                        src="/icon-192.png" 
-                        alt="AttendOTP Logo" 
-                        className="pwa-app-icon"
-                    />
-                    <div className="pwa-text-group">
-                        <div className="pwa-title">
-                            Install AttendOTP App
-                        </div>
-                        <div className="pwa-subtitle">
-                            Full-screen native feel • Fast 10s OTP & Anti-Proxy
-                        </div>
-                    </div>
+            <div className="pwa-banner ui-card ui-card--sm" role="complementary" aria-label="Install app">
+                <img src="/icon-192.png" alt="" className="pwa-icon" />
+                <div className="u-grow">
+                    <div className="pwa-title">Install AttendOTP</div>
+                    <div className="pwa-sub">Opens like an app and sends attendance alerts</div>
                 </div>
-
-                <div className="pwa-action-group">
-                    <button 
-                        type="button" 
-                        className="pwa-install-btn"
-                        onClick={handleInstallClick}
-                    >
-                        <Download size={14} />
-                        <span>Install</span>
-                    </button>
-                    <button 
-                        type="button" 
-                        className="pwa-dismiss-btn"
-                        onClick={handleDismiss}
-                        aria-label="Dismiss"
-                        title="Dismiss"
-                    >
-                        <X size={15} />
-                    </button>
-                </div>
+                <button type="button" className="ui-btn ui-btn--primary ui-btn--sm" onClick={install}>
+                    <Download size={15} />
+                    Install
+                </button>
+                <button type="button" className="ui-icon-btn" style={{ width: 34, height: 34, borderRadius: 11 }} onClick={dismiss} aria-label="Dismiss">
+                    <X size={16} />
+                </button>
             </div>
 
-            {/* iOS Add to Home Screen Modal Guide */}
             {showIOSGuide && (
-                <div className="aero-modal-backdrop" onClick={() => setShowIOSGuide(false)} style={{ zIndex: 10000 }}>
-                    <div className="aero-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '360px', textAlign: 'center', padding: '22px' }}>
-                        <div style={{ width: '56px', height: '56px', margin: '0 auto 12px', borderRadius: '14px', background: '#0B3064', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <img src="/icon-192.png" alt="AttendOTP" style={{ width: '42px', height: '42px', borderRadius: '10px' }} />
-                        </div>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--dark-blue)', marginBottom: '8px' }}>
-                            Install AttendOTP on iPhone
-                        </h3>
-                        <p style={{ fontSize: '0.84rem', color: 'var(--text-sub)', marginBottom: '16px', lineHeight: 1.5 }}>
-                            To install as a fullscreen native app:
-                        </p>
-                        <ol style={{ textAlign: 'left', fontSize: '0.82rem', color: 'var(--dark-blue)', paddingLeft: '20px', lineHeight: 1.8, marginBottom: '20px' }}>
-                            <li>Tap the <strong>Share</strong> button (box with upward arrow) in Safari.</li>
-                            <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
-                            <li>Tap <strong>Add</strong> in the top-right corner.</li>
+                <div className="ui-modal-backdrop" onClick={() => setShowIOSGuide(false)}>
+                    <div className="ui-modal" style={{ maxWidth: 380, padding: 26 }} onClick={(e) => e.stopPropagation()}>
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: 6 }}>Install on iPhone</h3>
+                        <p className="u-muted" style={{ marginBottom: 14 }}>Add AttendOTP to your home screen. Alerts only work once it is installed.</p>
+                        <ol style={{ paddingLeft: 20, lineHeight: 1.9, marginBottom: 20 }}>
+                            <li>Open this page in <strong>Safari</strong> and tap <strong>Share</strong>.</li>
+                            <li>Choose <strong>Add to Home Screen</strong>.</li>
+                            <li>Tap <strong>Add</strong>, then open AttendOTP from your home screen.</li>
                         </ol>
-                        <button 
-                            type="button" 
-                            className="duo-btn duo-btn-blue sm" 
-                            style={{ width: '100%' }}
-                            onClick={() => setShowIOSGuide(false)}
-                        >
-                            Got It
-                        </button>
+                        <button type="button" className="ui-btn ui-btn--primary ui-btn--block" onClick={() => setShowIOSGuide(false)}>Done</button>
                     </div>
                 </div>
             )}
         </>
     );
 };
-

@@ -1,64 +1,82 @@
-const express = require('express');
-const router = express.Router();
+﻿const express = require('express');
+const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const pool = require('../db');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
+const { isDeviceLockExempt } = require('../deviceLockExempt');
+const { ruleTime, todayIst, yesterdayIst, addMinutes, allowTimeSimulation } = require('../utils/time');
+const { sameGroup } = require('../utils/departments');
+const { getSchedule, getOffDay, getStudentDayState, MORNING_CUTOFF, LUNCH_CUTOFF } = require('../utils/rules');
+const { notifyAttendanceOpened } = require('../utils/push');
 
-// Helper to get active period based on time (or simulated time)
+const router = express.Router();
+
+const STAFF_ROLES = ['staff', 'hod', 'principal'];
+const LUNCH_START = '13:30:00';
+const OTP_TTL_SECONDS = 10;
+const OTP_GRACE_SECONDS = 4; // a student who was typing when the code rolled over still gets in
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 const getPeriodForTime = (periods, timeStr) => {
-    // timeStr in HH:MM:SS format
+    // A period starts exactly at its start time and ends exactly at its end time, the same rule the phone uses.
     for (const p of periods) {
-        if (timeStr >= p.start_time && timeStr <= p.end_time) {
-            return p;
-        }
+        if (timeStr >= p.start_time && timeStr < p.end_time) return p;
     }
-    // If before first period
-    if (periods.length > 0 && timeStr < periods[0].start_time) {
-        return { isBeforeCollege: true, nextPeriod: periods[0] };
-    }
-    // If after last period
-    if (periods.length > 0 && timeStr > periods[periods.length - 1].end_time) {
+    if (periods.length > 0 && timeStr < periods[0].start_time) return { isBeforeCollege: true, nextPeriod: periods[0] };
+    if (periods.length > 0 && timeStr >= periods[periods.length - 1].end_time) {
         return { isAfterCollege: true, lastPeriod: periods[periods.length - 1] };
     }
     return null;
 };
 
-// 1. Get Current Period & Schedule Info
-router.get('/current-period', async (req, res) => {
+// Staff and HODs look after students of their own department (and any department that shares
+// their HOD, like AI-DS and AI-ML). The Principal sees everyone.
+const canViewStudent = (viewer, student) =>
+    viewer.role === 'principal' || (STAFF_ROLES.includes(viewer.role) && sameGroup(viewer.department, student.department));
+
+// Failed and successful submissions both count: 10 tries per minute per student.
+const otpAttemptLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => `student:${req.user.id}`,
+    validate: { keyGeneratorIpFallback: false },
+    message: { error: 'Too many attempts', message: 'Too many code attempts. Wait a minute and try again.' }
+});
+
+const offDayMessage = (off) =>
+    off.type === 'weekend' ? 'There are no classes today (weekly off).' : `There are no classes today: ${off.title}.`;
+
+// ---------------------------------------------------------------------------
+// 1. Current period, plus what kind of day it is for this user. One cheap request
+//    replaces the separate period and holiday polls.
+// ---------------------------------------------------------------------------
+router.get('/current-period', authenticate, async (req, res) => {
     try {
-        const [periods] = await pool.query('SELECT * FROM periods ORDER BY id ASC');
-
-        // Allow simulation of time via query param e.g. ?simulateTime=09:02:00
-        let currentTimeStr = req.query.simulateTime;
-        if (!currentTimeStr) {
-            currentTimeStr = new Intl.DateTimeFormat('en-IN', {
-                timeZone: 'Asia/Kolkata',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-            }).format(new Date());
-        }
-
+        const schedule = await getSchedule();
+        const periods = schedule.periods;
+        const date = todayIst();
+        const currentTimeStr = ruleTime(req.query.simulateTime);
         const activePeriod = getPeriodForTime(periods, currentTimeStr);
-        
-        // Critical 9:00 - 9:05 AM Day Start Window Check
-        const isMorningWindow = currentTimeStr >= '09:00:00' && currentTimeStr <= '09:05:00';
-        const isPastMorningCutoff = currentTimeStr > '09:05:00';
-
-        // Critical 1:30 - 1:35 PM Post-Lunch Window Check (Lunch ends at 1:30 PM / 13:30)
-        const isLunchWindow = currentTimeStr >= '13:30:00' && currentTimeStr <= '13:35:00';
-        const isPastLunchCutoff = currentTimeStr > '13:35:00';
+        const off = await getOffDay(req.user.department, date, currentTimeStr);
 
         return res.json({
             currentTime: currentTimeStr,
+            serverTime: new Date().toISOString(),
+            date,
+            simulationEnabled: allowTimeSimulation,
             activePeriod: activePeriod && !activePeriod.isBeforeCollege && !activePeriod.isAfterCollege ? activePeriod : null,
             isBreak: activePeriod ? !!activePeriod.is_break : false,
             isBeforeCollege: !!(activePeriod && activePeriod.isBeforeCollege),
             isAfterCollege: !!(activePeriod && activePeriod.isAfterCollege),
-            isMorningWindow,
-            isPastMorningCutoff,
-            isLunchWindow,
-            isPastLunchCutoff,
+            isMorningWindow: currentTimeStr >= '09:00:00' && currentTimeStr <= MORNING_CUTOFF,
+            isPastMorningCutoff: currentTimeStr > MORNING_CUTOFF,
+            isLunchWindow: currentTimeStr >= LUNCH_START && currentTimeStr <= LUNCH_CUTOFF,
+            isPastLunchCutoff: currentTimeStr > LUNCH_CUTOFF,
+            dayStatus: { off: !!off.off, type: off.type || null, title: off.title || null, exempt: !!off.exempt, until: off.until || null },
             allPeriods: periods
         });
     } catch (err) {
@@ -67,77 +85,86 @@ router.get('/current-period', async (req, res) => {
     }
 });
 
-// 2. Staff: Generate 10-Second Rolling OTP (Strict 5-minute window from period start)
+// ---------------------------------------------------------------------------
+// 2. Staff: generate the rolling room OTP (only inside the first 5 minutes of a period)
+// ---------------------------------------------------------------------------
 router.post('/generate-otp', authenticate, authorizeRoles('staff', 'hod'), async (req, res) => {
     try {
-        const { roomId, periodId, forceOverride } = req.body;
+        const roomId = parseInt(req.body.roomId, 10);
+        const periodId = parseInt(req.body.periodId, 10);
         const staffId = req.user.id;
 
         if (!roomId || !periodId) {
             return res.status(400).json({ error: 'Room ID and Period ID are required' });
         }
 
-        // Fetch period timings to enforce 5-minute window rule
         const [periodRows] = await pool.query('SELECT * FROM periods WHERE id = ?', [periodId]);
-        if (periodRows.length > 0 && !forceOverride) {
-            const period = periodRows[0];
-            let now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            const currentTimeStr = req.body.simulateTime || `${hours}:${minutes}:${seconds}`;
+        if (periodRows.length === 0) return res.status(404).json({ error: 'Period not found' });
+        const period = periodRows[0];
+        if (period.is_break) return res.status(400).json({ error: 'No attendance is taken during a break.' });
 
-            // Calculate cutoff: period.start_time + 5 minutes
-            const [pHours, pMins] = period.start_time.split(':').map(Number);
-            let cutoffTotalMinutes = pHours * 60 + pMins + 5;
-            const cutoffHours = String(Math.floor(cutoffTotalMinutes / 60)).padStart(2, '0');
-            const cutoffMinutes = String(cutoffTotalMinutes % 60).padStart(2, '0');
-            const cutoffTimeStr = `${cutoffHours}:${cutoffMinutes}:00`;
+        const [roomRows] = await pool.query('SELECT id, room_number FROM rooms WHERE id = ?', [roomId]);
+        if (roomRows.length === 0) return res.status(404).json({ error: 'Room not found' });
 
-            // If time is before start or after 5-minute window
-            if (currentTimeStr > cutoffTimeStr) {
-                return res.status(403).json({
-                    error: `OTP generation closed for ${period.name}. In accordance with anti-proxy rules, OTP generation is strictly restricted to the first 5 minutes of the period (${period.start_time.slice(0, 5)} - ${cutoffHours}:${cutoffMinutes}).`,
-                    windowExpired: true,
-                    periodName: period.name,
-                    startTime: period.start_time,
-                    cutoffTime: cutoffTimeStr
-                });
-            }
+        const now = ruleTime(req.body.simulateTime);
+        const today = todayIst();
+
+        const off = await getOffDay(req.user.department, today, now);
+        if (off.off) return res.status(409).json({ error: offDayMessage(off), code: 'NO_CLASSES', dayOff: true });
+
+        const cutoff = addMinutes(period.start_time, 5);
+        if (now < period.start_time || now > cutoff) {
+            return res.status(403).json({
+                error: `OTP generation is open only for the first 5 minutes of ${period.name} (${period.start_time.slice(0, 5)} to ${cutoff.slice(0, 5)}).`,
+                windowExpired: now > cutoff,
+                periodName: period.name,
+                startTime: period.start_time,
+                cutoffTime: cutoff
+            });
         }
 
-        // Generate 6-digit random number
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpCode = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
 
-        // Expire in 10 seconds
-        const expiresAt = new Date(Date.now() + 10 * 1000);
-
-        // Delete old active OTPs for this room
-        await pool.query('DELETE FROM active_otps WHERE room_id = ?', [roomId]);
-
-        // Insert new active OTP
-        await pool.query(
-            `INSERT INTO active_otps (room_id, staff_id, period_id, otp_code, expires_at)
-             VALUES (?, ?, ?, ?, ?)`,
-            [roomId, staffId, periodId, otpCode, expiresAt]
+        // Is this the first code for this room and period today? Then ring the doorbell.
+        const [[already]] = await pool.query(
+            'SELECT COUNT(*) AS n FROM active_otps WHERE room_id = ? AND period_id = ? AND generated_at >= CURDATE()',
+            [roomId, periodId]
         );
 
-        // Also track staff/HOD movement / presence in this room
-        const todayStr = new Date().toISOString().slice(0, 10);
+        // Keep the previous code briefly (grace window) and clear anything stale.
+        await pool.query('DELETE FROM active_otps WHERE room_id = ? AND expires_at < DATE_SUB(NOW(), INTERVAL 1 MINUTE)', [roomId]);
         await pool.query(
-            `INSERT INTO staff_movements (staff_id, to_room_id, period_id, date, timestamp, note)
-             VALUES (?, ?, ?, ?, NOW(), 'Classroom Lecture / Session Active')`,
-            [staffId, roomId, periodId, todayStr]
-        ).catch(e => console.error('Staff movement log note:', e.message));
+            `INSERT INTO active_otps (room_id, staff_id, period_id, otp_code, expires_at)
+             VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? SECOND))`,
+            [roomId, staffId, periodId, otpCode, OTP_TTL_SECONDS]
+        );
+
+        if (already.n === 0) {
+            notifyAttendanceOpened({ department: req.user.department, periodId, periodName: period.name, roomNumber: roomRows[0].room_number, date: today })
+                .catch((e) => console.error('Doorbell failed:', e.message));
+        }
+
+        // Log presence once per room and period, not on every 10 second refresh.
+        const [last] = await pool.query(
+            'SELECT to_room_id, period_id FROM staff_movements WHERE staff_id = ? AND date = ? ORDER BY id DESC LIMIT 1',
+            [staffId, today]
+        );
+        if (last.length === 0 || last[0].to_room_id !== roomId || last[0].period_id !== periodId) {
+            await pool.query(
+                `INSERT INTO staff_movements (staff_id, to_room_id, period_id, date, note)
+                 VALUES (?, ?, ?, ?, 'Classroom session active')`,
+                [staffId, roomId, periodId, today]
+            ).catch((e) => console.error('Staff movement log:', e.message));
+        }
 
         return res.json({
             success: true,
             otpCode,
             roomId,
             periodId,
-            expiresInSeconds: 10,
-            expiresAt: expiresAt.toISOString(),
-            message: 'OTP generated. Valid for 10 seconds.'
+            expiresInSeconds: OTP_TTL_SECONDS,
+            expiresAt: new Date(Date.now() + OTP_TTL_SECONDS * 1000).toISOString(),
+            message: `OTP generated. Valid for ${OTP_TTL_SECONDS} seconds.`
         });
     } catch (err) {
         console.error('Error generating OTP:', err);
@@ -145,30 +172,26 @@ router.post('/generate-otp', authenticate, authorizeRoles('staff', 'hod'), async
     }
 });
 
-// 3. Staff: Get Currently Active OTP for Room
+// ---------------------------------------------------------------------------
+// 3. Staff: the OTP this staff member is currently broadcasting in a room
+// ---------------------------------------------------------------------------
 router.get('/active-otp/:roomId', authenticate, authorizeRoles('staff', 'hod'), async (req, res) => {
     try {
-        const { roomId } = req.params;
         const [otps] = await pool.query(
-            `SELECT * FROM active_otps 
-             WHERE room_id = ? AND expires_at > NOW() 
+            `SELECT otp_code, period_id, expires_at, GREATEST(0, TIMESTAMPDIFF(SECOND, NOW(), expires_at)) AS remaining
+             FROM active_otps
+             WHERE room_id = ? AND staff_id = ? AND expires_at > NOW()
              ORDER BY id DESC LIMIT 1`,
-            [roomId]
+            [req.params.roomId, req.user.id]
         );
-
-        if (otps.length === 0) {
-            return res.json({ hasActiveOtp: false });
-        }
+        if (otps.length === 0) return res.json({ hasActiveOtp: false });
 
         const otp = otps[0];
-        const remainingMs = new Date(otp.expires_at).getTime() - Date.now();
-        const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
-
         return res.json({
             hasActiveOtp: true,
             otpCode: otp.otp_code,
             periodId: otp.period_id,
-            remainingSeconds,
+            remainingSeconds: Number(otp.remaining),
             expiresAt: otp.expires_at
         });
     } catch (err) {
@@ -177,400 +200,298 @@ router.get('/active-otp/:roomId', authenticate, authorizeRoles('staff', 'hod'), 
     }
 });
 
-// 4. Staff/HOD/Principal: Live Room Roster and Student Count
-router.get('/room-live-roster/:roomId', authenticate, async (req, res) => {
+// ---------------------------------------------------------------------------
+// 4. Staff/HOD/Principal: live room roster
+// ---------------------------------------------------------------------------
+router.get('/room-live-roster/:roomId', authenticate, authorizeRoles(...STAFF_ROLES), async (req, res) => {
     try {
         const { roomId } = req.params;
-        const today = new Date().toISOString().slice(0, 10);
+        const today = todayIst();
         const periodId = req.query.periodId;
 
-        // Fetch room info
         const [rooms] = await pool.query(
-            `SELECT r.*, b.name as building_name, f.name as floor_name 
-             FROM rooms r 
-             JOIN buildings b ON r.building_id = b.id 
-             JOIN floors f ON r.floor_id = f.id 
-             WHERE r.id = ?`,
-            [roomId]
-        );
+            `SELECT r.*, b.name as building_name, f.name as floor_name
+             FROM rooms r JOIN buildings b ON r.building_id = b.id JOIN floors f ON r.floor_id = f.id
+             WHERE r.id = ?`, [roomId]);
+        if (rooms.length === 0) return res.status(404).json({ error: 'Room not found' });
 
-        if (rooms.length === 0) {
-            return res.status(404).json({ error: 'Room not found' });
-        }
-
-        const roomInfo = rooms[0];
-
-        // Fetch present students in this room for today (optionally filtered by period)
         let query = `
             SELECT ar.id, ar.marked_at, ar.status, u.id as student_id, u.name, u.email, u.roll_number, u.department, u.year_of_study
             FROM attendance_records ar
             JOIN users u ON ar.student_id = u.id
-            WHERE ar.room_id = ? AND ar.date = ? AND ar.status = 'present'
-        `;
-        let params = [roomId, today];
-
-        if (periodId) {
-            query += ' AND ar.period_id = ?';
-            params.push(periodId);
-        }
-
+            WHERE ar.room_id = ? AND ar.date = ? AND ar.status = 'present'`;
+        const params = [roomId, today];
+        if (periodId) { query += ' AND ar.period_id = ?'; params.push(periodId); }
         query += ' ORDER BY ar.marked_at DESC';
 
         const [students] = await pool.query(query, params);
-
-        return res.json({
-            room: roomInfo,
-            presentCount: students.length,
-            students
-        });
+        return res.json({ room: rooms[0], presentCount: students.length, students });
     } catch (err) {
         console.error('Error fetching live room roster:', err);
         return res.status(500).json({ error: 'Failed to fetch room roster' });
     }
 });
 
-// 5. Student: Submit OTP for Attendance & Room Check-in
-router.post('/submit-otp', authenticate, authorizeRoles('student'), async (req, res) => {
+// ---------------------------------------------------------------------------
+// 5. Student: submit the room OTP
+// ---------------------------------------------------------------------------
+router.post('/submit-otp', authenticate, authorizeRoles('student'), otpAttemptLimiter, async (req, res) => {
+    const studentId = req.user.id;
     try {
-        const { roomId, otpCode, deviceInfo, periodId, currentTime } = req.body;
-        const studentId = req.user.id;
-        const today = new Date().toISOString().slice(0, 10);
+        const roomId = parseInt(req.body.roomId, 10);
+        const otpCode = String(req.body.otpCode || '').trim();
+        const today = todayIst();
+        const nowTime = ruleTime(req.body.currentTime);
+        const exempt = isDeviceLockExempt(req.user.email);
 
-        if (!roomId || !otpCode) {
-            return res.status(400).json({ error: 'Room selection and 6-digit OTP code are required' });
+        if (!roomId || !/^\d{6}$/.test(otpCode)) {
+            return res.status(400).json({ error: 'Choose your classroom and enter the 6-digit code.' });
         }
 
-        // A. Anti-Proxy: Verify Device Lock
-        const [locks] = await pool.query('SELECT * FROM device_locks WHERE user_id = ?', [studentId]);
-        if (locks.length > 0) {
+        // A. Device: the fingerprint inside the signed session must match the registered device.
+        const deviceFp = req.user.deviceFp || null;
+        const deviceId = req.user.deviceId || null;
+        if (!exempt) {
+            const [locks] = await pool.query('SELECT device_fingerprint, device_name, is_locked FROM device_locks WHERE user_id = ?', [studentId]);
             const lock = locks[0];
-            const incomingDeviceId = deviceInfo ? deviceInfo.deviceId : null;
-            if (lock.is_locked && incomingDeviceId && lock.device_id !== incomingDeviceId) {
+            if (!lock || !deviceFp || (lock.is_locked && lock.device_fingerprint !== deviceFp)) {
                 return res.status(403).json({
                     code: 'DEVICE_MISMATCH',
-                    error: 'Anti-Proxy Security Violation',
-                    message: `This account is locked to your registered device: "${lock.device_name}". Attendance cannot be submitted from another mobile device.`
+                    error: 'Device not recognised',
+                    message: lock
+                        ? `This account is registered to "${lock.device_name}". Attendance can only be submitted from that device.`
+                        : 'This device is not registered. Sign out and sign in again.'
                 });
             }
         }
 
-        // B. Morning 9:00 - 9:05 AM Day-Start Lockout Check
-        const [dayLock] = await pool.query('SELECT * FROM student_day_locks WHERE student_id = ? AND date = ?', [studentId, today]);
-        const isExplicitlyLocked = dayLock.length > 0 && dayLock[0].is_locked_out;
-        const isHodUnlockedNow = dayLock.length > 0 && dayLock[0].reason === 'HOD_UNLOCKED';
-
-        // Check if student attended period 1 (morning) and period 7 (Period 5 - afternoon post lunch)
-        const [p1Record] = await pool.query(
-            'SELECT * FROM attendance_records WHERE student_id = ? AND date = ? AND period_id = 1 AND (status = "present" OR status = "od")',
-            [studentId, today]
-        );
-        const attendedPeriod1 = p1Record.length > 0;
-
-        const [p5Record] = await pool.query(
-            'SELECT * FROM attendance_records WHERE student_id = ? AND date = ? AND period_id = 7 AND (status = "present" OR status = "od")',
-            [studentId, today]
-        );
-        const attendedPeriod5 = p5Record.length > 0;
-
-        // Check sports pass
-        const [sportsPass] = await pool.query(
-            `SELECT * FROM sports_od_students sos 
-             JOIN sports_od_passes sop ON sos.pass_id = sop.id 
-             WHERE sos.student_id = ? AND ? BETWEEN sop.from_date AND sop.to_date AND (sop.status = "active" OR sop.status = "approved")`,
-            [studentId, today]
-        );
-        const hasSportsPass = sportsPass.length > 0;
-
-        let nowTime = new Date();
-        const curTimeStr = req.body.currentTime || `${String(nowTime.getHours()).padStart(2, '0')}:${String(nowTime.getMinutes()).padStart(2, '0')}:${String(nowTime.getSeconds()).padStart(2, '0')}`;
-        const isPastCutoffTime = curTimeStr > '09:05:00';
-        const isPastLunchCutoffTime = curTimeStr > '13:35:00';
-
-        if (isExplicitlyLocked) {
+        // B. What kind of day is it, and is this student locked right now?
+        const state = await getStudentDayState({ studentId, department: req.user.department, date: today, time: nowTime });
+        if (state.off.off) {
+            return res.status(409).json({ code: 'NO_CLASSES', error: 'No classes today', message: offDayMessage(state.off) });
+        }
+        if (state.lock.locked) {
+            const morning = state.lock.session === 'morning';
             return res.status(403).json({
                 code: 'DAY_LOCKED_OUT',
-                error: 'College Day Attendance Locked',
-                message: 'Your attendance is locked for today. Please report in person to your HOD to request an official unlock.'
+                session: state.lock.session,
+                reopensAt: state.lock.reopensAt,
+                error: morning ? 'Morning attendance locked' : 'Attendance locked',
+                message: morning
+                    ? `You did not enter the code between 9:00 and 9:05 AM, so you are marked absent for the morning periods. Attendance reopens at ${state.lock.reopensAt.slice(0, 5)} after lunch, or meet your HOD to unlock it sooner.`
+                    : 'You did not enter the code in the first five minutes after lunch, so you are marked absent for the rest of the day. Meet your HOD in person to request an unlock.'
             });
         }
 
-        if (!hasSportsPass && isPastCutoffTime && !attendedPeriod1 && !isHodUnlockedNow) {
-            return res.status(403).json({
-                code: 'DAY_LOCKED_OUT',
-                error: 'Morning Attendance Locked',
-                message: 'You failed to verify your morning attendance between 9:00 AM and 9:05 AM. In accordance with college policy, your attendance is locked. Please report in person to your HOD to request an official unlock.'
-            });
-        }
-
-        if (!hasSportsPass && isPastLunchCutoffTime && !attendedPeriod5 && !isHodUnlockedNow && (req.body.periodId === 7 || curTimeStr >= '13:30:00')) {
-            return res.status(403).json({
-                code: 'DAY_LOCKED_OUT',
-                error: 'Post-Lunch Attendance Locked',
-                message: 'You failed to verify your post-lunch attendance between 1:30 PM and 1:35 PM (5 mins after lunch). In accordance with college anti-proxy rules, your afternoon attendance is locked. Please report to your HOD.'
-            });
-        }
-
-        // C. Fetch target active OTP
-        // Check if there is an active OTP for this code
+        // C. The code must belong to the room the student picked
         const [activeOtps] = await pool.query(
-            `SELECT * FROM active_otps 
-             WHERE otp_code = ? AND expires_at >= NOW() 
+            `SELECT * FROM active_otps
+             WHERE room_id = ? AND otp_code = ? AND expires_at >= DATE_SUB(NOW(), INTERVAL ? SECOND)
              ORDER BY id DESC LIMIT 1`,
-            [otpCode.trim()]
+            [roomId, otpCode, OTP_GRACE_SECONDS]
         );
 
         if (activeOtps.length === 0) {
+            const [other] = await pool.query(
+                `SELECT r.room_number FROM active_otps a JOIN rooms r ON r.id = a.room_id
+                 WHERE a.otp_code = ? AND a.room_id <> ? AND a.expires_at >= DATE_SUB(NOW(), INTERVAL ? SECOND) LIMIT 1`,
+                [otpCode, roomId, OTP_GRACE_SECONDS]
+            );
+            if (other.length > 0) {
+                return res.status(400).json({
+                    code: 'CROSS_ROOM_MISMATCH',
+                    error: 'Wrong classroom',
+                    message: `That code belongs to room ${other[0].room_number}, not the room you selected.`
+                });
+            }
             return res.status(400).json({
-                error: 'Invalid or Expired OTP',
-                message: 'The OTP entered is either incorrect or expired (10-second validity window exceeded). Please enter the fresh OTP displayed by your staff.'
+                error: 'Invalid or expired code',
+                message: 'The code is wrong or has expired. Enter the fresh code shown by your faculty.'
             });
         }
 
         const activeOtp = activeOtps[0];
+        const periodId = activeOtp.period_id; // the period comes from the OTP, never from the client
 
-        // D. Cross-Room Verification: Student's selected room MUST match Staff's room
-        if (parseInt(activeOtp.room_id) !== parseInt(roomId)) {
-            // Fetch both room numbers for crystal-clear error message
-            const [roomNames] = await pool.query(
-                'SELECT id, room_number, name FROM rooms WHERE id IN (?, ?)',
-                [roomId, activeOtp.room_id]
+        // D. One device, one attendance per period
+        if (deviceId && !exempt) {
+            const [dup] = await pool.query(
+                `SELECT student_id FROM attendance_records
+                 WHERE device_id = ? AND period_id = ? AND date = ? AND student_id <> ? AND status = 'present' LIMIT 1`,
+                [deviceId, periodId, today, studentId]
             );
-            const studentRoom = roomNames.find(r => r.id === parseInt(roomId));
-            const otpRoom = roomNames.find(r => r.id === parseInt(activeOtp.room_id));
-
-            return res.status(400).json({
-                code: 'CROSS_ROOM_MISMATCH',
-                error: 'Cross-Room Attendance Prohibited',
-                message: `Location mismatch: You selected "${studentRoom ? studentRoom.room_number : roomId}", but this OTP was generated for room "${otpRoom ? otpRoom.room_number : activeOtp.room_id}". Please verify you are in the correct classroom.`
-            });
-        }
-
-        const effectivePeriodId = periodId || activeOtp.period_id;
-
-        // E. Check if already marked for this period today
-        const [existing] = await pool.query(
-            'SELECT * FROM attendance_records WHERE student_id = ? AND period_id = ? AND date = ?',
-            [studentId, effectivePeriodId, today]
-        );
-
-        // Fetch room info for from & to rooms
-        const [targetRooms] = await pool.query(
-            'SELECT r.id, r.room_number, r.name, b.name as building_name FROM rooms r JOIN buildings b ON r.building_id = b.id WHERE r.id = ?',
-            [roomId]
-        );
-        const targetRoomInfo = targetRooms[0] || { room_number: roomId, name: 'Room' };
-
-        if (existing.length > 0) {
-            const currentRecord = existing[0];
-            // If already in this exact room
-            if (parseInt(currentRecord.room_id) === parseInt(roomId)) {
+            if (dup.length > 0) {
                 return res.status(409).json({
-                    error: 'Attendance Already Recorded',
-                    message: `You have already marked your attendance in Room ${targetRoomInfo.room_number} for this period.`
+                    code: 'DEVICE_REUSED',
+                    error: 'Device already used',
+                    message: 'Another student has already marked attendance from this device for this period.'
                 });
             }
-
-            // Student is RELOCATING to a new classroom or lab mid-period!
-            const [oldRooms] = await pool.query(
-                'SELECT r.id, r.room_number, r.name FROM rooms r WHERE r.id = ?',
-                [currentRecord.room_id]
-            );
-            const oldRoomInfo = oldRooms[0] || { room_number: currentRecord.room_id, name: 'Previous Room' };
-
-            // 1. Update attendance record with the new room and staff
-            await pool.query(
-                `UPDATE attendance_records 
-                 SET room_id = ?, staff_id = ?, otp_used = ?, marked_at = NOW() 
-                 WHERE id = ?`,
-                [roomId, activeOtp.staff_id, otpCode, currentRecord.id]
-            );
-
-            // 2. Insert verified movement record into student_movements
-            const moveNote = `Relocated from Room ${oldRoomInfo.room_number} to Room ${targetRoomInfo.room_number} (${targetRoomInfo.name}) - Verified via Lab Staff OTP`;
-            await pool.query(
-                `INSERT INTO student_movements 
-                 (student_id, from_room_id, to_room_id, period_id, date, duration_minutes, note)
-                 VALUES (?, ?, ?, ?, ?, 50, ?)`,
-                [studentId, currentRecord.room_id, roomId, effectivePeriodId, today, moveNote]
-            );
-
-            return res.json({
-                success: true,
-                isRelocation: true,
-                message: `Arrival verified! You are now checked into Room ${targetRoomInfo.room_number} (${targetRoomInfo.name}). Movement recorded.`,
-                periodId: effectivePeriodId,
-                roomId
-            });
         }
 
-        // F. Initial Check-in: Insert Attendance Record
-        await pool.query(
-            `INSERT INTO attendance_records 
-            (student_id, period_id, room_id, staff_id, date, status, otp_used, device_id)
-            VALUES (?, ?, ?, ?, ?, 'present', ?, ?)`,
-            [studentId, effectivePeriodId, roomId, activeOtp.staff_id, today, otpCode, deviceInfo ? deviceInfo.deviceId : null]
-        );
+        const [targetRooms] = await pool.query('SELECT r.id, r.room_number, r.name FROM rooms r WHERE r.id = ?', [roomId]);
+        const targetRoom = targetRooms[0] || { room_number: roomId, name: 'Room' };
 
-        // G. Update / Record Initial Movement
-        const [lastMovement] = await pool.query(
-            'SELECT * FROM student_movements WHERE student_id = ? AND date = ? ORDER BY id DESC LIMIT 1',
-            [studentId, today]
-        );
-        const fromRoomId = lastMovement.length > 0 ? lastMovement[0].to_room_id : null;
+        // Thousands of students submit at the same moment. If MySQL has to cancel one transaction because two
+        // collided (a deadlock), try again a moment later instead of showing the student an error.
+        const TRANSIENT = new Set(['ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT']);
+        for (let attempt = 1; attempt <= 4; attempt++) {
+            const conn = await pool.getConnection();
+            try {
+                await conn.beginTransaction();
 
-        await pool.query(
-            `INSERT INTO student_movements 
-            (student_id, from_room_id, to_room_id, period_id, date, duration_minutes, note)
-            VALUES (?, ?, ?, ?, ?, 50, ?)`,
-            [studentId, fromRoomId, roomId, effectivePeriodId, today, `Checked in to Room ${targetRoomInfo.room_number} via 10s OTP`]
-        );
+                // Look without locking first. Locking a row that does not exist yet takes a "gap" lock,
+                // and gap locks are what made simultaneous check-ins collide.
+                const [seen] = await conn.query(
+                    'SELECT id FROM attendance_records WHERE student_id = ? AND period_id = ? AND date = ?',
+                    [studentId, periodId, today]
+                );
+                let existing = [];
+                if (seen.length > 0) {
+                    // Lock only this one existing row (by its id) before changing it.
+                    [existing] = await conn.query('SELECT * FROM attendance_records WHERE id = ? FOR UPDATE', [seen[0].id]);
+                }
 
-        // H. If 1st period, record day unlock
-        if (effectivePeriodId === 1) {
-            await pool.query(
-                `INSERT INTO student_day_locks (student_id, date, first_otp_at, is_locked_out)
-                 VALUES (?, ?, NOW(), 0)
-                 ON DUPLICATE KEY UPDATE first_otp_at = NOW(), is_locked_out = 0`,
-                [studentId, today]
-            );
-        }
+                if (existing.length > 0) {
+                    const current = existing[0];
+                    if (current.room_id === roomId) {
+                        await conn.rollback();
+                        return res.status(409).json({
+                            error: 'Already recorded',
+                            message: `You have already marked attendance in room ${targetRoom.room_number} for this period.`
+                        });
+                    }
 
-        return res.json({
-            success: true,
-            message: `Attendance verified and marked present in Room ${targetRoomInfo.room_number}!`,
-            periodId: effectivePeriodId,
-            roomId
-        });
-    } catch (err) {
+                    // Moving to a lab or another room mid-period
+                    const [oldRooms] = await conn.query('SELECT room_number FROM rooms WHERE id = ?', [current.room_id]);
+                    const oldNumber = oldRooms[0] ? oldRooms[0].room_number : current.room_id;
+
+                    await conn.query(
+                        'UPDATE attendance_records SET room_id = ?, staff_id = ?, otp_used = ?, device_id = ?, marked_at = NOW() WHERE id = ?',
+                        [roomId, activeOtp.staff_id, otpCode, deviceId, current.id]
+                    );
+                    await conn.query(
+                        `INSERT INTO student_movements (student_id, from_room_id, to_room_id, period_id, date, duration_minutes, note)
+                         VALUES (?, ?, ?, ?, ?, 0, ?)`,
+                        [studentId, current.room_id, roomId, periodId, today,
+                            `Moved from room ${oldNumber} to room ${targetRoom.room_number} (${targetRoom.name}), verified by faculty code`]
+                    );
+                    await conn.commit();
+                    return res.json({
+                        success: true,
+                        isRelocation: true,
+                        message: `Arrival verified. You are now checked into room ${targetRoom.room_number} (${targetRoom.name}).`,
+                        periodId,
+                        roomId
+                    });
+                }
+
+                // The unique key (student, period, date) is the real guard against a double submit.
+                await conn.query(
+                    `INSERT INTO attendance_records (student_id, period_id, room_id, staff_id, date, status, otp_used, device_id)
+                     VALUES (?, ?, ?, ?, ?, 'present', ?, ?)`,
+                    [studentId, periodId, roomId, activeOtp.staff_id, today, otpCode, deviceId]
+                );
+
+                const [lastMove] = await conn.query(
+                    'SELECT to_room_id FROM student_movements WHERE student_id = ? AND date = ? ORDER BY id DESC LIMIT 1',
+                    [studentId, today]
+                );
+                await conn.query(
+                    `INSERT INTO student_movements (student_id, from_room_id, to_room_id, period_id, date, duration_minutes, note)
+                     VALUES (?, ?, ?, ?, ?, 0, ?)`,
+                    [studentId, lastMove.length > 0 ? lastMove[0].to_room_id : null, roomId, periodId, today,
+                        `Checked in to room ${targetRoom.room_number} with the rolling code`]
+                );
+
+                // Marking period 1 is what opens the day. Keep any HOD unlock time intact.
+                if (periodId === state.schedule.morningId) {
+                    await conn.query(
+                        `INSERT INTO student_day_locks (student_id, date, first_otp_at, is_locked_out)
+                         VALUES (?, ?, NOW(), 0)
+                         ON DUPLICATE KEY UPDATE first_otp_at = IF(reason = 'HOD_UNLOCKED', first_otp_at, NOW()), is_locked_out = 0`,
+                        [studentId, today]
+                    );
+                }
+
+                await conn.commit();
+                return res.json({
+                    success: true,
+                    message: `Attendance verified. Marked present in room ${targetRoom.room_number}.`,
+                    periodId,
+                    roomId
+                });
+            } catch (txErr) {
+                try { await conn.rollback(); } catch (e) { /* ignore */ }
+                if (txErr && txErr.code === 'ER_DUP_ENTRY') {
+                    return res.status(409).json({ error: 'Already recorded', message: 'Your attendance for this period was already recorded.' });
+                }
+                if (txErr && TRANSIENT.has(txErr.code) && attempt < 4) {
+                    await new Promise((r) => setTimeout(r, 15 + Math.random() * 60 * attempt));
+                    continue;
+                }
+                throw txErr;
+            } finally {
+                conn.release();
+            }
+        }    } catch (err) {
         console.error('Error submitting OTP:', err);
         return res.status(500).json({ error: 'Failed to record attendance' });
     }
 });
 
-// 6. Student: Room / Lab Movement (Switching classes)
-router.post('/move-room', authenticate, authorizeRoles('student'), async (req, res) => {
-    try {
-        const { toRoomId, periodId, note } = req.body;
-        const studentId = req.user.id;
-        const today = new Date().toISOString().slice(0, 10);
-
-        if (!toRoomId) {
-            return res.status(400).json({ error: 'Destination room is required' });
-        }
-
-        // Get last location
-        const [last] = await pool.query(
-            'SELECT to_room_id FROM student_movements WHERE student_id = ? AND date = ? ORDER BY id DESC LIMIT 1',
-            [studentId, today]
-        );
-        const fromRoomId = last.length > 0 ? last[0].to_room_id : null;
-
-        await pool.query(
-            `INSERT INTO student_movements (student_id, from_room_id, to_room_id, period_id, date, note)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [studentId, fromRoomId, toRoomId, periodId || 1, today, note || 'Relocated to class/lab']
-        );
-
-        return res.json({ success: true, message: 'Location updated. Ready for room OTP.' });
-    } catch (err) {
-        console.error('Error logging movement:', err);
-        return res.status(500).json({ error: 'Failed to record movement' });
-    }
-});
-
-// 7. Student Daily Timeline & Movements
+// ---------------------------------------------------------------------------
+// 6. Student daily timeline. Also carries the lock state, the kind of day and any sports pass,
+//    so the student screen needs only this one request (plus the period one) to stay current.
+// ---------------------------------------------------------------------------
 router.get('/student-timeline/:studentId', authenticate, async (req, res) => {
     try {
-        const { studentId } = req.params;
-        const today = req.query.date || new Date().toISOString().slice(0, 10);
+        const studentId = Number(req.params.studentId);
+        const isSelf = req.user.role === 'student' && req.user.id === studentId;
 
-        // Fetch all periods
-        const [periods] = await pool.query('SELECT * FROM periods ORDER BY id ASC');
+        let department = req.user.department;
+        if (!isSelf) {
+            const [rows] = await pool.query('SELECT department FROM users WHERE id = ? AND role = "student"', [studentId]);
+            if (rows.length === 0) return res.status(404).json({ error: 'Student not found' });
+            if (!canViewStudent(req.user, rows[0])) return res.status(403).json({ error: 'Access denied' });
+            department = rows[0].department;
+        }
 
-        // Fetch student's attendance records for the day
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : todayIst();
+        const nowTime = ruleTime(req.query.simulateTime);
+
         const [attendance] = await pool.query(
-            `SELECT ar.*, r.room_number, r.name as room_name, b.name as building_name 
+            `SELECT ar.*, r.room_number, r.name as room_name, b.name as building_name
              FROM attendance_records ar
              JOIN rooms r ON ar.room_id = r.id
              JOIN buildings b ON r.building_id = b.id
-             WHERE ar.student_id = ? AND ar.date = ?`,
-            [studentId, today]
-        );
+             WHERE ar.student_id = ? AND ar.date = ?`, [studentId, date]);
 
-        // Fetch movements
-        const [movements] = await pool.query(
-            `SELECT sm.*, r_to.room_number as to_room, r_from.room_number as from_room,
-                    b_to.name as building_to
-             FROM student_movements sm
-             JOIN rooms r_to ON sm.to_room_id = r_to.id
-             LEFT JOIN rooms r_from ON sm.from_room_id = r_from.id
-             JOIN buildings b_to ON r_to.building_id = b_to.id
-             WHERE sm.student_id = ? AND sm.date = ?
-             ORDER BY sm.timestamp ASC`,
-            [studentId, today]
-        );
+        const state = await getStudentDayState({ studentId, department, date, time: nowTime });
 
-        // Combine period schedule with attendance status
-        const timeline = periods.map(p => {
-            const att = attendance.find(a => a.period_id === p.id);
-            return {
-                ...p,
-                attendance: att || null,
-                isMarked: !!att,
-                status: att ? att.status : (p.is_break ? 'break' : 'pending')
-            };
+        const timeline = state.schedule.periods.map((p) => {
+            const att = attendance.find((a) => a.period_id === p.id);
+            return { ...p, attendance: att || null, isMarked: !!att, status: att ? att.status : (p.is_break ? 'break' : 'pending') };
         });
 
-        // Check day lock status
-        const [dayLockRows] = await pool.query(
-            'SELECT * FROM student_day_locks WHERE student_id = ? AND date = ?',
-            [studentId, today]
-        );
-        const isExplicitlyLocked = dayLockRows.length > 0 && dayLockRows[0].is_locked_out;
-        const isHodUnlocked = dayLockRows.length > 0 && dayLockRows[0].reason === 'HOD_UNLOCKED';
-
-        // Check if student attended period 1 (morning) and period 7 (Period 5 post-lunch)
-        const period1Att = attendance.find(a => a.period_id === 1);
-        const isPeriod1Present = !!(period1Att && (period1Att.status === 'present' || period1Att.status === 'od'));
-
-        const period5Att = attendance.find(a => a.period_id === 7);
-        const isPeriod5Present = !!(period5Att && (period5Att.status === 'present' || period5Att.status === 'od'));
-
-        // Check active sports pass
-        const [sportsPasses] = await pool.query(
-            `SELECT * FROM sports_od_students sos 
-             JOIN sports_od_passes sop ON sos.pass_id = sop.id 
-             WHERE sos.student_id = ? AND ? BETWEEN sop.from_date AND sop.to_date AND (sop.status = "active" OR sop.status = "approved")`,
-            [studentId, today]
-        );
-        const hasSportsPass = sportsPasses.length > 0;
-
-        // Current time check
-        let now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        const currentTimeStr = req.query.simulateTime || `${hours}:${minutes}:${seconds}`;
-
-        const isPastMorningCutoff = currentTimeStr > '09:05:00';
-        const isPastLunchCutoff = currentTimeStr > '13:35:00';
-
-        const isMorningLocked = !hasSportsPass && isPastMorningCutoff && !isPeriod1Present && !isHodUnlocked;
-        const isLunchLocked = !hasSportsPass && isPastLunchCutoff && !isPeriod5Present && !isHodUnlocked;
-
-        const isDayLocked = isExplicitlyLocked || isMorningLocked || isLunchLocked;
-
+        const ok = (a) => a.status === 'present' || a.status === 'od';
         return res.json({
-            date: today,
+            date,
+            serverTime: nowTime,
             timeline,
-            movements,
-            totalPresent: attendance.filter(a => a.status === 'present' || a.status === 'od').length,
-            isDayLocked: !!isDayLocked,
-            isHodUnlocked: !!isHodUnlocked,
-            isPastCutoff: isPastMorningCutoff,
-            isPastMorningCutoff,
-            isPastLunchCutoff,
-            isPeriod1Present
+            totalPresent: attendance.filter(ok).length,
+            isDayLocked: state.lock.locked,
+            lockSession: state.lock.session,      // 'morning' | 'afternoon' | 'day' | null
+            lockReopensAt: state.lock.reopensAt,  // set for the morning lock
+            isHodUnlocked: !!state.unlock,
+            dayOff: state.off.off ? { type: state.off.type, title: state.off.title } : null,
+            exemptEvent: state.off.exempt && !state.off.off ? { title: state.off.title, until: state.off.until } : null,
+            activeSportsPass: state.sportsPass,
+            // kept for older screens
+            isPastCutoff: nowTime > MORNING_CUTOFF,
+            isPastMorningCutoff: nowTime > MORNING_CUTOFF,
+            isPastLunchCutoff: nowTime > LUNCH_CUTOFF,
+            isPeriod1Present: attendance.some((a) => a.period_id === state.schedule.morningId && ok(a))
         });
     } catch (err) {
         console.error('Error fetching student timeline:', err);
@@ -578,89 +499,63 @@ router.get('/student-timeline/:studentId', authenticate, async (req, res) => {
     }
 });
 
-// 9. Full Student Profile, Location, Yesterday & Calendar History (Staff / HOD inspection)
+// ---------------------------------------------------------------------------
+// 7. Full student profile and history (the student themself, or staff of that department)
+// ---------------------------------------------------------------------------
 router.get('/student-details/:studentId', authenticate, async (req, res) => {
     try {
-        const { studentId } = req.params;
+        const studentId = Number(req.params.studentId);
         const [users] = await pool.query(
             'SELECT id, name, email, roll_number, department, year_of_study FROM users WHERE id = ? AND role = "student"',
             [studentId]
         );
-        if (users.length === 0) {
-            return res.status(404).json({ error: 'Student not found' });
-        }
+        if (users.length === 0) return res.status(404).json({ error: 'Student not found' });
         const student = users[0];
 
-        // Device lock info
-        const [locks] = await pool.query('SELECT * FROM device_locks WHERE user_id = ?', [studentId]);
+        const isSelf = req.user.role === 'student' && req.user.id === studentId;
+        if (!isSelf && !canViewStudent(req.user, student)) return res.status(403).json({ error: 'Access denied' });
+
+        const [locks] = await pool.query(
+            'SELECT device_name, platform, screen_resolution, is_locked, locked_at, last_verified_at FROM device_locks WHERE user_id = ?',
+            [studentId]);
         const deviceLock = locks.length > 0 ? locks[0] : null;
 
-        const today = new Date().toISOString().slice(0, 10);
-        const yDate = new Date();
-        yDate.setDate(yDate.getDate() - 1);
-        const yesterday = yDate.toISOString().slice(0, 10);
+        const today = todayIst();
+        const yesterday = yesterdayIst();
 
-        // Current location from latest student movement
         const [latestMove] = await pool.query(
             `SELECT sm.*, r.room_number, r.name as room_name, b.name as building_name, f.name as floor_name
              FROM student_movements sm
              JOIN rooms r ON sm.to_room_id = r.id
              JOIN buildings b ON r.building_id = b.id
              JOIN floors f ON r.floor_id = f.id
-             WHERE sm.student_id = ?
-             ORDER BY sm.timestamp DESC LIMIT 1`,
-            [studentId]
-        );
+             WHERE sm.student_id = ? ORDER BY sm.timestamp DESC LIMIT 1`, [studentId]);
 
-        // Today's attendance records with room & period
-        const [todayRecords] = await pool.query(
-            `SELECT ar.*, p.name as period_name, p.start_time, p.end_time, r.room_number, r.name as room_name, b.name as building_name
-             FROM attendance_records ar
-             JOIN periods p ON ar.period_id = p.id
-             LEFT JOIN rooms r ON ar.room_id = r.id
-             LEFT JOIN buildings b ON r.building_id = b.id
-             WHERE ar.student_id = ? AND ar.date = ?
-             ORDER BY p.id ASC`,
-            [studentId, today]
-        );
+        const dayQuery = `
+            SELECT ar.*, p.name as period_name, p.start_time, p.end_time, r.room_number, r.name as room_name, b.name as building_name
+            FROM attendance_records ar
+            JOIN periods p ON ar.period_id = p.id
+            LEFT JOIN rooms r ON ar.room_id = r.id
+            LEFT JOIN buildings b ON r.building_id = b.id
+            WHERE ar.student_id = ? AND ar.date = ?
+            ORDER BY p.id ASC`;
+        const [todayRecords] = await pool.query(dayQuery, [studentId, today]);
+        const [yesterdayRecords] = await pool.query(dayQuery, [studentId, yesterday]);
 
-        // Yesterday's attendance records (Where was the student yesterday at this time?)
-        const [yesterdayRecords] = await pool.query(
-            `SELECT ar.*, p.name as period_name, p.start_time, p.end_time, r.room_number, r.name as room_name, b.name as building_name
-             FROM attendance_records ar
-             JOIN periods p ON ar.period_id = p.id
-             LEFT JOIN rooms r ON ar.room_id = r.id
-             LEFT JOIN buildings b ON r.building_id = b.id
-             WHERE ar.student_id = ? AND ar.date = ?
-             ORDER BY p.id ASC`,
-            [studentId, yesterday]
-        );
-
-        // Stats summary: present and od both count towards attendance credit
         const [stats] = await pool.query(
-            `SELECT COUNT(*) as total_periods, 
+            `SELECT COUNT(*) as total_periods,
                     SUM(CASE WHEN status IN ('present', 'od') THEN 1 ELSE 0 END) as present_periods
-             FROM attendance_records
-             WHERE student_id = ?`,
-            [studentId]
-        );
+             FROM attendance_records WHERE student_id = ?`, [studentId]);
 
-        // Past 14 days history breakdown
         const [pastDates] = await pool.query(
-            `SELECT ar.date, 
-                    COUNT(DISTINCT ar.period_id) as periods_marked,
-                    MAX(r.room_number) as last_room,
-                    MAX(b.name) as last_building
+            `SELECT ar.date, COUNT(DISTINCT ar.period_id) as periods_marked,
+                    MAX(r.room_number) as last_room, MAX(b.name) as last_building
              FROM attendance_records ar
              LEFT JOIN rooms r ON ar.room_id = r.id
              LEFT JOIN buildings b ON r.building_id = b.id
              WHERE ar.student_id = ? AND ar.status IN ('present', 'od')
-             GROUP BY ar.date
-             ORDER BY ar.date DESC LIMIT 14`,
-            [studentId]
-        );
+             GROUP BY ar.date ORDER BY ar.date DESC LIMIT 14`, [studentId]);
 
-        // All student attendance records across the semester
         const [allRecords] = await pool.query(
             `SELECT ar.id, DATE_FORMAT(ar.date, '%Y-%m-%d') as date_str, ar.period_id, ar.status, ar.marked_at,
                     p.name as period_name, p.start_time, p.end_time,
@@ -670,11 +565,8 @@ router.get('/student-details/:studentId', authenticate, async (req, res) => {
              LEFT JOIN rooms r ON ar.room_id = r.id
              LEFT JOIN buildings b ON r.building_id = b.id
              WHERE ar.student_id = ?
-             ORDER BY ar.date DESC, p.id ASC`,
-            [studentId]
-        );
+             ORDER BY ar.date DESC, p.id ASC`, [studentId]);
 
-        // All student movements with formatted date_str
         const [movements] = await pool.query(
             `SELECT sm.id, DATE_FORMAT(sm.date, '%Y-%m-%d') as date_str, sm.timestamp, sm.note,
                     r_to.room_number as to_room, r_to.name as to_room_name, b_to.name as to_building,
@@ -685,23 +577,16 @@ router.get('/student-details/:studentId', authenticate, async (req, res) => {
              LEFT JOIN rooms r_from ON sm.from_room_id = r_from.id
              LEFT JOIN buildings b_from ON r_from.building_id = b_from.id
              WHERE sm.student_id = ?
-             ORDER BY sm.timestamp DESC`,
-            [studentId]
-        );
+             ORDER BY sm.timestamp DESC LIMIT 500`, [studentId]);
 
-        // Holidays declared
         const [holidays] = await pool.query(
-            `SELECT title, DATE_FORMAT(holiday_date, '%Y-%m-%d') as date_str, reason, scope, is_timed, start_time, end_time FROM holidays`
-        );
+            `SELECT title, DATE_FORMAT(holiday_date, '%Y-%m-%d') as date_str, reason, scope, is_timed, start_time, end_time
+             FROM holidays WHERE scope = 'college' OR department IN (?, 'ALL')`, [student.department]);
 
-        // Active/Approved sports OD passes for student
         const [sportsPasses] = await pool.query(
             `SELECT sop.event_name, DATE_FORMAT(sop.from_date, '%Y-%m-%d') as from_date_str, DATE_FORMAT(sop.to_date, '%Y-%m-%d') as to_date_str, sop.status
-             FROM sports_od_students sos
-             JOIN sports_od_passes sop ON sos.pass_id = sop.id
-             WHERE sos.student_id = ? AND (sop.status = 'active' OR sop.status = 'approved')`,
-            [studentId]
-        );
+             FROM sports_od_students sos JOIN sports_od_passes sop ON sos.pass_id = sop.id
+             WHERE sos.student_id = ? AND sop.status IN ('active', 'approved')`, [studentId]);
 
         return res.json({
             student,
@@ -713,11 +598,12 @@ router.get('/student-details/:studentId', authenticate, async (req, res) => {
             movements,
             holidays,
             sportsPasses,
+            weeklyOff: require('../config').weeklyOff,
             stats: {
                 totalPeriods: stats[0].total_periods || 0,
                 presentPeriods: stats[0].present_periods || 0,
-                percentage: stats[0].total_periods > 0 
-                    ? Math.round((stats[0].present_periods / stats[0].total_periods) * 100) 
+                percentage: stats[0].total_periods > 0
+                    ? Math.round((stats[0].present_periods / stats[0].total_periods) * 100)
                     : 100
             },
             pastDates
@@ -729,3 +615,4 @@ router.get('/student-details/:studentId', authenticate, async (req, res) => {
 });
 
 module.exports = router;
+

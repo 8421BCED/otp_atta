@@ -1,88 +1,115 @@
-// FXEC Device Security and Anti-Proxy Binding Utility
-export const getDeviceSecurityInfo = async () => {
-    // 1. Persistent Unique Device ID (simulates hardware ID)
-    let deviceId = null;
+// Identifies the physical device. The fingerprint is built from traits that stay the same on one
+// phone and differ between phones: screen size, graphics chip, operating system family, touch
+// support and time zone. It deliberately ignores memory, storage and anything that changes with
+// browser updates, zoom or how busy the phone is, so it does not flip between visits.
+// Nothing here is stored in the browser, so copying browser data to another phone carries nothing over.
+
+let cached = null;
+
+const toHex = (buf) => Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+
+// SHA-256 where the browser allows it, otherwise a deterministic stand-in of the same length.
+const digest = async (text) => {
     try {
-        deviceId = localStorage.getItem('fxec_device_id');
-    } catch (e) {}
-
-    if (!deviceId) {
-        const randomPart = Math.random().toString(36).substring(2, 10).toUpperCase();
-        const timePart = Date.now().toString(36).toUpperCase();
-        deviceId = `FXEC-DEV-${timePart}-${randomPart}`;
-        try {
-            localStorage.setItem('fxec_device_id', deviceId);
-        } catch (e) {}
+        if (window.crypto && window.crypto.subtle) {
+            return toHex(await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
+        }
+    } catch (e) { /* fall through */ }
+    let out = '';
+    for (let seed = 0; out.length < 64; seed++) {
+        let h = 0x811c9dc5 ^ seed;
+        for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+        out += h.toString(16).padStart(8, '0');
     }
+    return out.slice(0, 64);
+};
 
-    // 2. Hardware Hash
-    let hardwareHash = 'hw_standard';
+const gpuRenderer = () => {
     try {
         const canvas = document.createElement('canvas');
-        canvas.width = 200;
-        canvas.height = 50;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-            ctx.textBaseline = 'top';
-            ctx.font = '14px Arial';
-            ctx.fillStyle = '#0B3064';
-            ctx.fillText('FXEC-SECURE-2026', 2, 2);
-            ctx.fillStyle = '#FFB800';
-            ctx.fillText('STUDENT_DEVICE_BINDING', 4, 20);
-            const dataUrl = canvas.toDataURL();
-            let hash = 0;
-            for (let i = 0; i < dataUrl.length; i++) {
-                hash = (hash << 5) - hash + dataUrl.charCodeAt(i);
-                hash |= 0;
-            }
-            hardwareHash = `HW_${Math.abs(hash).toString(16)}`;
-        }
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (!gl) return 'no-webgl';
+        const ext = gl.getExtension('WEBGL_debug_renderer_info');
+        const raw = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+        return String(raw || 'unknown').toLowerCase().replace(/\s+/g, ' ').trim();
     } catch (e) {
-        console.warn('Canvas hardware hash fallback:', e);
+        return 'unknown';
+    }
+};
+
+const osFamily = (ua) => {
+    if (/android/i.test(ua)) return 'android';
+    if (/iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) return 'ios';
+    if (/windows/i.test(ua)) return 'windows';
+    if (/macintosh|mac os x/i.test(ua)) return 'macos';
+    if (/cros/i.test(ua)) return 'chromeos';
+    if (/linux/i.test(ua)) return 'linux';
+    return 'other';
+};
+
+const newDeviceId = () => {
+    try { if (window.crypto && window.crypto.randomUUID) return `FXEC-${window.crypto.randomUUID()}`; } catch (e) { /* fall through */ }
+    return `FXEC-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`.toUpperCase();
+};
+
+const friendlyName = (ua, os) => {
+    if (os === 'android') {
+        if (/samsung|sm-/i.test(ua)) return 'Samsung Galaxy phone';
+        if (/redmi|xiaomi/i.test(ua)) return 'Xiaomi / Redmi phone';
+        if (/oneplus/i.test(ua)) return 'OnePlus phone';
+        if (/vivo/i.test(ua)) return 'Vivo phone';
+        if (/oppo/i.test(ua)) return 'Oppo phone';
+        return 'Android phone';
+    }
+    if (os === 'ios') return /ipad/i.test(ua) ? 'Apple iPad' : 'Apple iPhone';
+    if (os === 'windows') return 'Windows computer';
+    if (os === 'macos') return 'Mac';
+    if (os === 'linux') return 'Linux computer';
+    return 'This device';
+};
+
+export const getDeviceSecurityInfo = async () => {
+    if (cached) return cached;
+
+    // A random id kept in the browser. Used only to tell two browsers on the same phone apart in logs;
+    // it is never what decides whether a device is the registered one.
+    let deviceId = null;
+    try { deviceId = localStorage.getItem('fxec_device_id'); } catch (e) { /* storage blocked */ }
+    if (!deviceId) {
+        deviceId = newDeviceId();
+        try { localStorage.setItem('fxec_device_id', deviceId); } catch (e) { /* storage blocked */ }
     }
 
-    // 3. Detect Device Model / Platform
-    const ua = navigator.userAgent;
-    let platform = 'Standard OS';
-    let deviceName = 'Personal Computer / Browser';
+    const ua = navigator.userAgent || '';
+    const os = osFamily(ua);
+    const w = window.screen.width;
+    const h = window.screen.height;
 
-    if (/android/i.test(ua)) {
-        platform = 'Android';
-        if (/samsung/i.test(ua) || /sm-/i.test(ua)) {
-            deviceName = 'Samsung Galaxy Mobile';
-        } else if (/redmi|xiaomi/i.test(ua)) {
-            deviceName = 'Xiaomi / Redmi Mobile';
-        } else if (/oneplus/i.test(ua)) {
-            deviceName = 'OnePlus Mobile';
-        } else if (/vivo/i.test(ua)) {
-            deviceName = 'Vivo Smartphone';
-        } else if (/oppo/i.test(ua)) {
-            deviceName = 'Oppo Smartphone';
-        } else {
-            deviceName = 'Android Smartphone';
-        }
-    } else if (/iphone|ipad|ipod/i.test(ua)) {
-        platform = 'iOS';
-        deviceName = /ipad/i.test(ua) ? 'Apple iPad' : 'Apple iPhone';
-    } else if (/windows/i.test(ua)) {
-        platform = 'Windows';
-        deviceName = 'Windows Workstation / Laptop';
-    } else if (/macintosh|mac os x/i.test(ua)) {
-        platform = 'macOS';
-        deviceName = 'Apple MacBook / Mac';
-    } else if (/linux/i.test(ua)) {
-        platform = 'Linux';
-        deviceName = 'Linux Workstation';
-    }
+    const traits = {
+        longSide: Math.max(w, h),
+        shortSide: Math.min(w, h),       // same value in portrait and landscape
+        colorDepth: window.screen.colorDepth || 24,
+        os,
+        mobile: navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean'
+            ? navigator.userAgentData.mobile
+            : /mobi|android|iphone|ipad/i.test(ua),
+        touch: (navigator.maxTouchPoints || 0) > 0,
+        gpu: gpuRenderer(),
+        timezone: (Intl.DateTimeFormat().resolvedOptions().timeZone) || ''
+    };
 
-    const screenRes = `${window.screen.width}x${window.screen.height} (${window.devicePixelRatio || 1}x)`;
+    const fingerprint = `v2:${await digest(JSON.stringify([
+        traits.longSide, traits.shortSide, traits.colorDepth, traits.os, traits.mobile, traits.touch, traits.gpu, traits.timezone
+    ]))}`;
 
-    return {
+    cached = {
         deviceId,
-        deviceName,
-        platform,
-        screenResolution: screenRes,
-        fingerprint: `${hardwareHash}-${platform}-${screenRes}-${navigator.hardwareConcurrency || 4}`,
+        deviceName: friendlyName(ua, os),
+        platform: os,
+        screenResolution: `${w}x${h}`,
+        fingerprint,
+        traits,
         timestamp: new Date().toISOString()
     };
+    return cached;
 };

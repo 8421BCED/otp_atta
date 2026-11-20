@@ -350,7 +350,7 @@ export const ClassroomHeadcountModal = ({
         }
     };
 
-    // 8. Render Crisp Neon Green Square Bounding Boxes on Canvas (#00FF66)
+    // 8. Render Crisp Neon Green Square Bounding Boxes on Canvas (#B9C255)
     const renderAnnotatedCanvas = (imageSrc, boxes) => {
         if (!canvasRef.current || !imageSrc) return;
         const canvas = canvasRef.current;
@@ -366,7 +366,7 @@ export const ClassroomHeadcountModal = ({
             boxes.forEach((box, index) => {
                 ctx.shadowColor = 'rgba(0, 255, 102, 0.7)';
                 ctx.shadowBlur = 8;
-                ctx.strokeStyle = '#00FF66'; // Neon Green YOLO Square
+                ctx.strokeStyle = '#B9C255'; // Neon Green YOLO Square
                 ctx.lineWidth = Math.max(2.5, img.width * 0.0035);
 
                 ctx.strokeRect(box.x, box.y, box.width, box.height);
@@ -379,10 +379,10 @@ export const ClassroomHeadcountModal = ({
                 const textWidth = ctx.measureText(text).width;
                 const pad = 4;
 
-                ctx.fillStyle = '#00FF66';
+                ctx.fillStyle = '#B9C255';
                 ctx.fillRect(box.x, Math.max(0, box.y - fontSize - pad * 2), textWidth + pad * 2, fontSize + pad * 2);
 
-                ctx.fillStyle = '#0B3064';
+                ctx.fillStyle = '#2E5F93';
                 ctx.fillText(text, box.x + pad, Math.max(fontSize, box.y - pad));
             });
         };
@@ -493,9 +493,9 @@ export const ClassroomHeadcountModal = ({
                 style={{ maxWidth: '960px', width: '95vw', maxHeight: '92vh', overflowY: 'auto', padding: '22px' }}
             >
                 {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '14px', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #CBDCEB', paddingBottom: '14px', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg, #136CFC 0%, #0B3064 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg, #5798D7 0%, #2E5F93 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF' }}>
                             <Camera size={22} />
                         </div>
                         <div>
@@ -509,7 +509,7 @@ export const ClassroomHeadcountModal = ({
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '0.72rem', color: '#0369A1', background: '#E0F2FE', padding: '4px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                        <span style={{ fontSize: '0.72rem', color: '#2E5F93', background: '#D3E5F5', padding: '4px 8px', borderRadius: '6px', fontWeight: 700 }}>
                             {isMobile ? 'Mobile Mode (Back Camera Priority)' : 'Laptop Mode (Webcam Priority)'}
                         </span>
 
@@ -517,7 +517,7 @@ export const ClassroomHeadcountModal = ({
                             type="button" 
                             onClick={onClose} 
                             className="aero-close-btn"
-                            style={{ border: 'none', background: '#F1F5F9', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            style={{ border: 'none', background: '#DCEAF6', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
                             <X size={18} color="var(--text-sub)" />
                         </button>
@@ -527,31 +527,31 @@ export const ClassroomHeadcountModal = ({
                 {/* Audit Comparison Status Pill Banner */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
                     {/* Live OTP Count */}
-                    <div style={{ background: '#F0F9FF', border: '1.5px solid #BAE6FD', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#0284C7', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                    <div style={{ background: '#EAF4FC', border: '1.5px solid #BDD7F0', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#2E5F93', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
                             {otpPresentCount}
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.72rem', color: '#0369A1', fontWeight: 700, textTransform: 'uppercase' }}>OTP Submitted</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0C4A6E' }}>{otpPresentCount} Students Verified</div>
+                            <div style={{ fontSize: '0.72rem', color: '#2E5F93', fontWeight: 700, textTransform: 'uppercase' }}>OTP Submitted</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#234A74' }}>{otpPresentCount} Students Verified</div>
                         </div>
                     </div>
 
                     {/* AI Visual Count */}
-                    <div style={{ background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#16A34A', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                    <div style={{ background: '#EEF1CF', border: '1.5px solid #DDE4A0', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#7F8B26', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
                             {visualCount}
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.72rem', color: '#15803D', fontWeight: 700, textTransform: 'uppercase' }}>YOLO Vision Count</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#14532D' }}>{visualCount} Faces Detected</div>
+                            <div style={{ fontSize: '0.72rem', color: '#6E7A20', fontWeight: 700, textTransform: 'uppercase' }}>YOLO Vision Count</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#5F6A1B' }}>{visualCount} Faces Detected</div>
                         </div>
                     </div>
 
                     {/* Fidelity / Proxy Anomaly Status */}
                     <div style={{ 
-                        background: isMatch ? '#F0FDF4' : (isProxyAlert ? '#FEF2F2' : '#FFFBEB'), 
-                        border: `1.5px solid ${isMatch ? '#86EFAC' : (isProxyAlert ? '#FCA5A5' : '#FDE68A')}`, 
+                        background: isMatch ? '#EEF1CF' : (isProxyAlert ? '#F6DEDC' : '#F6E9CB'), 
+                        border: `1.5px solid ${isMatch ? '#CBD577' : (isProxyAlert ? '#E8C3C0' : '#EEDDA8')}`, 
                         borderRadius: '12px', 
                         padding: '12px 16px', 
                         display: 'flex', 
@@ -559,15 +559,15 @@ export const ClassroomHeadcountModal = ({
                         gap: '12px' 
                     }}>
                         {isMatch ? (
-                            <CheckCircle2 size={28} color="#16A34A" />
+                            <CheckCircle2 size={28} color="#7F8B26" />
                         ) : (
-                            <AlertTriangle size={28} color={isProxyAlert ? '#DC2626' : '#D97706'} />
+                            <AlertTriangle size={28} color={isProxyAlert ? '#C25B56' : '#C98F36'} />
                         )}
                         <div>
-                            <div style={{ fontSize: '0.72rem', color: isMatch ? '#15803D' : (isProxyAlert ? '#B91C1C' : '#B45309'), fontWeight: 800, textTransform: 'uppercase' }}>
+                            <div style={{ fontSize: '0.72rem', color: isMatch ? '#6E7A20' : (isProxyAlert ? '#AD4C48' : '#A9762B'), fontWeight: 800, textTransform: 'uppercase' }}>
                                 {isMatch ? 'Audit Confirmed' : (isProxyAlert ? 'Proxy Discrepancy Alert' : 'Headcount Variance')}
                             </div>
-                            <div style={{ fontSize: '0.84rem', fontWeight: 700, color: isMatch ? '#14532D' : (isProxyAlert ? '#7F1D1D' : '#78350F') }}>
+                            <div style={{ fontSize: '0.84rem', fontWeight: 700, color: isMatch ? '#5F6A1B' : (isProxyAlert ? '#99403D' : '#8B5F22') }}>
                                 {isMatch 
                                     ? '100% Fidelity • No Proxy Found' 
                                     : (isProxyAlert 
@@ -579,11 +579,11 @@ export const ClassroomHeadcountModal = ({
                 </div>
 
                 {/* Model Mode & Power Selector */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '8px 14px', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#E6F1FA', border: '1px solid #BCD0E2', borderRadius: '10px', padding: '8px 14px', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Sparkles size={16} color="#136CFC" />
+                        <Sparkles size={16} color="#5798D7" />
                         <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--dark-blue)' }}>AI Engine:</span>
-                        <div style={{ display: 'flex', gap: '4px', background: '#E2E8F0', padding: '3px', borderRadius: '8px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '4px', background: '#CBDCEB', padding: '3px', borderRadius: '8px', flexWrap: 'wrap' }}>
                             <button
                                 type="button"
                                 onClick={() => {
@@ -597,9 +597,9 @@ export const ClassroomHeadcountModal = ({
                                     borderRadius: '6px',
                                     border: 'none',
                                     cursor: 'pointer',
-                                    background: detectionMode === 'hybrid' ? '#136CFC' : 'transparent',
-                                    color: detectionMode === 'hybrid' ? '#FFF' : '#475569',
-                                    boxShadow: detectionMode === 'hybrid' ? '0 2px 6px rgba(19, 108, 252, 0.3)' : 'none'
+                                    background: detectionMode === 'hybrid' ? '#5798D7' : 'transparent',
+                                    color: detectionMode === 'hybrid' ? '#FFF' : '#526579',
+                                    boxShadow: detectionMode === 'hybrid' ? '0 2px 6px rgba(87, 152, 215, 0.3)' : 'none'
                                 }}
                             >
                                 Dual-Engine (Face + Occluded)
@@ -617,9 +617,9 @@ export const ClassroomHeadcountModal = ({
                                     borderRadius: '6px',
                                     border: 'none',
                                     cursor: 'pointer',
-                                    background: detectionMode === 'face' ? '#136CFC' : 'transparent',
-                                    color: detectionMode === 'face' ? '#FFF' : '#475569',
-                                    boxShadow: detectionMode === 'face' ? '0 2px 6px rgba(19, 108, 252, 0.3)' : 'none'
+                                    background: detectionMode === 'face' ? '#5798D7' : 'transparent',
+                                    color: detectionMode === 'face' ? '#FFF' : '#526579',
+                                    boxShadow: detectionMode === 'face' ? '0 2px 6px rgba(87, 152, 215, 0.3)' : 'none'
                                 }}
                             >
                                 YOLOv8m-Face
@@ -637,9 +637,9 @@ export const ClassroomHeadcountModal = ({
                                     borderRadius: '6px',
                                     border: 'none',
                                     cursor: 'pointer',
-                                    background: detectionMode === 'person' ? '#136CFC' : 'transparent',
-                                    color: detectionMode === 'person' ? '#FFF' : '#475569',
-                                    boxShadow: detectionMode === 'person' ? '0 2px 6px rgba(19, 108, 252, 0.3)' : 'none'
+                                    background: detectionMode === 'person' ? '#5798D7' : 'transparent',
+                                    color: detectionMode === 'person' ? '#FFF' : '#526579',
+                                    boxShadow: detectionMode === 'person' ? '0 2px 6px rgba(87, 152, 215, 0.3)' : 'none'
                                 }}
                             >
                                 YOLOv8m-Person
@@ -649,7 +649,7 @@ export const ClassroomHeadcountModal = ({
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569' }}>Sensitivity:</span>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#526579' }}>Sensitivity:</span>
                             <input 
                                 type="range" 
                                 min="0.12" 
@@ -661,29 +661,29 @@ export const ClassroomHeadcountModal = ({
                                     setConfidenceThreshold(val);
                                     if (capturedImage) executeYoloDetection(capturedImage, detectionMode, val);
                                 }}
-                                style={{ width: '85px', accentColor: '#136CFC', cursor: 'pointer' }}
+                                style={{ width: '85px', accentColor: '#5798D7', cursor: 'pointer' }}
                                 title={`Threshold: ${confidenceThreshold} (Lower = More Sensitive for Far Rows)`}
                             />
-                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#136CFC', minWidth: '28px' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#5798D7', minWidth: '28px' }}>
                                 {confidenceThreshold}
                             </span>
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                            Engine: <strong style={{ color: '#0F172A' }}>{activeModelName}</strong>
+                        <div style={{ fontSize: '0.72rem', color: '#526579' }}>
+                            Engine: <strong style={{ color: '#1D2B3C' }}>{activeModelName}</strong>
                         </div>
                     </div>
                 </div>
 
                 {/* Dark Lens / Camera Warning Banner */}
                 {detectionWarning && (
-                    <div style={{ background: '#FEF2F2', border: '1.5px solid #FCA5A5', color: '#991B1B', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.80rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <AlertTriangle size={18} color="#DC2626" />
+                    <div style={{ background: '#F6DEDC', border: '1.5px solid #E8C3C0', color: '#99403D', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.80rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <AlertTriangle size={18} color="#C25B56" />
                         <span>{detectionWarning}</span>
                     </div>
                 )}
 
                 {/* Camera / Image Display Viewport */}
-                <div style={{ position: 'relative', width: '100%', minHeight: '380px', background: '#0F172A', borderRadius: '14px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ position: 'relative', width: '100%', minHeight: '380px', background: '#1D2B3C', borderRadius: '14px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     
                     {/* ALWAYS-MOUNTED Video Element (Ensures ref.current is NEVER null) */}
                     <video 
@@ -706,8 +706,8 @@ export const ClassroomHeadcountModal = ({
                     {isCameraActive && (
                         <>
                             {/* Live Badge */}
-                            <div style={{ position: 'absolute', top: '15px', left: '15px', color: '#00FF66', fontSize: '0.78rem', background: 'rgba(0,0,0,0.75)', padding: '5px 12px', borderRadius: '6px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
-                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1s infinite' }} />
+                            <div style={{ position: 'absolute', top: '15px', left: '15px', color: '#B9C255', fontSize: '0.78rem', background: 'rgba(60, 100, 140,0.75)', padding: '5px 12px', borderRadius: '6px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C25B56', animation: 'pulse 1s infinite' }} />
                                 LIVE CAMERA ACTIVE
                             </div>
 
@@ -720,7 +720,7 @@ export const ClassroomHeadcountModal = ({
                                             setSelectedDeviceId(e.target.value);
                                             startCamera(e.target.value);
                                         }}
-                                        style={{ background: 'rgba(0,0,0,0.8)', color: '#FFF', border: '1px solid #38BDF8', borderRadius: '6px', padding: '5px 10px', fontSize: '0.74rem', cursor: 'pointer', fontWeight: 600 }}
+                                        style={{ background: 'rgba(60, 100, 140,0.8)', color: '#FFFFFF', border: '1px solid #5798D7', borderRadius: '6px', padding: '5px 10px', fontSize: '0.74rem', cursor: 'pointer', fontWeight: 600 }}
                                     >
                                         {availableCameras.map((cam, idx) => (
                                             <option key={cam.deviceId || idx} value={cam.deviceId}>
@@ -734,7 +734,7 @@ export const ClassroomHeadcountModal = ({
                                     <button
                                         type="button"
                                         onClick={handleSwitchCamera}
-                                        style={{ background: 'rgba(0,0,0,0.8)', color: '#38BDF8', border: '1px solid #38BDF8', borderRadius: '6px', padding: '5px 10px', fontSize: '0.74rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                        style={{ background: 'rgba(60, 100, 140,0.8)', color: '#5798D7', border: '1px solid #5798D7', borderRadius: '6px', padding: '5px 10px', fontSize: '0.74rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                                         title="Switch to next camera"
                                     >
                                         <SwitchCamera size={14} />
@@ -767,14 +767,14 @@ export const ClassroomHeadcountModal = ({
 
                     {/* Empty State: Prompt to open camera or upload */}
                     {!isCameraActive && !capturedImage && (
-                        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94A3B8' }}>
-                            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', margin: '0 auto 16px auto', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38BDF8' }}>
+                        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#8497AB' }}>
+                            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', margin: '0 auto 16px auto', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5798D7' }}>
                                 <Camera size={32} />
                             </div>
-                            <div style={{ fontWeight: 700, color: '#F1F5F9', fontSize: '1.05rem', marginBottom: '6px' }}>
+                            <div style={{ fontWeight: 700, color: '#DCEAF6', fontSize: '1.05rem', marginBottom: '6px' }}>
                                 Take or Upload Classroom Front Photo
                             </div>
-                            <p style={{ fontSize: '0.82rem', color: '#94A3B8', maxWidth: '440px', margin: '0 auto 20px auto', lineHeight: 1.5 }}>
+                            <p style={{ fontSize: '0.82rem', color: '#8497AB', maxWidth: '440px', margin: '0 auto 20px auto', lineHeight: 1.5 }}>
                                 Aim your device from the faculty podium towards student rows. The YOLO AI vision engine will detect faces, draw neon green boxes, and verify headcount against submitted OTPs.
                             </p>
                             
@@ -792,7 +792,7 @@ export const ClassroomHeadcountModal = ({
                                     type="button"
                                     onClick={() => fileInputRef.current?.click()}
                                     className="fx-btn-outline"
-                                    style={{ width: 'auto', padding: '10px 20px', fontSize: '0.86rem', color: '#F8FAFC', borderColor: 'rgba(255,255,255,0.25)' }}
+                                    style={{ width: 'auto', padding: '10px 20px', fontSize: '0.86rem', color: '#E6F1FA', borderColor: 'rgba(255,255,255,0.25)' }}
                                 >
                                     <Upload size={16} style={{ marginRight: '6px' }} />
                                     <span>Upload Classroom Photo</span>
@@ -803,12 +803,12 @@ export const ClassroomHeadcountModal = ({
 
                     {/* Processing Overlay */}
                     {isProcessing && (
-                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(11, 48, 100, 0.88)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', color: '#FFF', zIndex: 20 }}>
-                            <RefreshCw size={36} className="fa-spin" color="#00FF66" />
-                            <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#00FF66' }}>
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(11, 48, 100, 0.88)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', color: '#FFFFFF', zIndex: 20 }}>
+                            <RefreshCw size={36} className="fa-spin" color="#B9C255" />
+                            <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#B9C255' }}>
                                 YOLOv8 AI Face Detection in Progress...
                             </div>
-                            <div style={{ fontSize: '0.78rem', color: '#E2E8F0' }}>
+                            <div style={{ fontSize: '0.78rem', color: '#CBDCEB' }}>
                                 Analyzing students across front, middle and back rows
                             </div>
                         </div>
@@ -835,7 +835,7 @@ export const ClassroomHeadcountModal = ({
                                     type="button"
                                     onClick={handleCaptureFromCamera}
                                     className="aero-gloss-btn"
-                                    style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', padding: '10px 22px', fontSize: '0.88rem' }}
+                                    style={{ background: 'linear-gradient(135deg, #7F8B26 0%, #6E7A20 100%)', padding: '10px 22px', fontSize: '0.88rem' }}
                                 >
                                     <Camera size={16} style={{ marginRight: '6px' }} />
                                     <span>Capture & Run YOLO Audit</span>
@@ -858,7 +858,7 @@ export const ClassroomHeadcountModal = ({
                                     type="button"
                                     onClick={stopCamera}
                                     className="fx-btn-outline"
-                                    style={{ padding: '8px 14px', fontSize: '0.78rem', color: '#EF4444', borderColor: '#FCA5A5' }}
+                                    style={{ padding: '8px 14px', fontSize: '0.78rem', color: '#C25B56', borderColor: '#E8C3C0' }}
                                 >
                                     <span>Cancel</span>
                                 </button>
@@ -885,7 +885,7 @@ export const ClassroomHeadcountModal = ({
                                 </button>
 
                                 {/* Zoom Controls */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#F1F5F9', borderRadius: '8px', padding: '2px 6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#DCEAF6', borderRadius: '8px', padding: '2px 6px' }}>
                                     <button 
                                         type="button" 
                                         onClick={() => setZoomLevel(prev => Math.max(0.7, prev - 0.2))} 
@@ -918,7 +918,7 @@ export const ClassroomHeadcountModal = ({
                     {capturedImage && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             {auditStatus === 'saved' && (
-                                <span style={{ color: '#16A34A', fontSize: '0.82rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ color: '#7F8B26', fontSize: '0.82rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <CheckCircle2 size={16} /> Audit Saved (Valid 1 Hr)
                                 </span>
                             )}

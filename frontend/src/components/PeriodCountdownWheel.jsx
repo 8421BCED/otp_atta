@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+﻿import React from 'react';
+import { useClock } from '../clock';
 import { AlertCircle } from 'lucide-react';
 
 const timeToSeconds = (timeStr) => {
@@ -7,175 +8,91 @@ const timeToSeconds = (timeStr) => {
     return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
 };
 
-const getIstNowSeconds = () => {
-    try {
-        const parts = new Intl.DateTimeFormat('en-IN', {
-            timeZone: 'Asia/Kolkata',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        }).formatToParts(new Date());
-
-        const h = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
-        const m = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
-        const s = parseInt(parts.find(p => p.type === 'second')?.value || '0', 10);
-        return h * 3600 + m * 60 + s;
-    } catch (e) {
-        const d = new Date();
-        return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
-    }
-};
+const pad = (n) => String(n).padStart(2, '0');
 
 export const PeriodCountdownWheel = ({ currentPeriodInfo, timeline }) => {
-    const [, setSecondsTick] = useState(0);
+    // Re-renders every second from the synced college clock, so the countdown never stalls and never drifts.
+    const { time: clockTime } = useClock();
 
-    // Live continuous 1-second interval to guarantee smooth real-time ticking
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setSecondsTick(s => s + 1);
-        }, 1000);
-        return () => clearInterval(interval);
-    }, []);
+    let simulatedTime = null;
+    try { simulatedTime = localStorage.getItem('fxec_simulated_time'); } catch (e) { /* ignore */ }
 
-    const simulatedTime = localStorage.getItem('fxec_simulated_time');
     const activePeriod = currentPeriodInfo?.activePeriod;
     const isBreak = currentPeriodInfo?.isBreak;
-    const isBeforeCollege = currentPeriodInfo?.isBeforeCollege;
-    const isAfterCollege = currentPeriodInfo?.isAfterCollege;
-    const isMorningWindow = currentPeriodInfo?.isMorningWindow;
+    const markedPeriod = activePeriod ? timeline?.find((t) => t.id === activePeriod.id && t.isMarked) : null;
 
-    // Derive current active period attendance status from timeline
-    const markedPeriod = activePeriod ? timeline?.find(t => t.id === activePeriod.id && t.isMarked) : null;
-    const isCurrentMarked = !!markedPeriod;
+    const nowSec = timeToSeconds(simulatedTime || clockTime);
 
-    // Calculate period timer and progress
-    let displayTime = '--:--';
-    let progressPct = 0;
-    let labelSub = 'PERIOD DURATION';
-    let isUrgent = false;
-
-    // Always use real-time IST continuous seconds unless Principal master simulation is active
-    const nowSec = simulatedTime ? timeToSeconds(simulatedTime) : getIstNowSeconds();
+    let display = '--:--';
+    let caption = '';
+    let sub = '';
+    let pct = 0;
+    let urgent = false;
 
     if (activePeriod) {
-        const startSec = timeToSeconds(activePeriod.start_time);
-        const endSec = timeToSeconds(activePeriod.end_time);
-        const durationSec = Math.max(1, endSec - startSec);
-        const elapsedSec = Math.min(durationSec, Math.max(0, nowSec - startSec));
-        const remainingSec = Math.max(0, endSec - nowSec);
-
-        const m = Math.floor(remainingSec / 60);
-        const s = remainingSec % 60;
-        displayTime = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-        progressPct = Math.min(100, Math.max(0, (elapsedSec / durationSec) * 100));
-
-        if (remainingSec <= 300) {
-            isUrgent = true;
-        }
-
-        if (isBreak) {
-            labelSub = `${activePeriod.name.toUpperCase()} INTERVAL`;
-        } else {
-            labelSub = `${activePeriod.name.toUpperCase()} DURATION`;
-        }
-    } else if (isBeforeCollege) {
-        // Before college hours (9:00 AM)
-        const startSec = timeToSeconds('09:00:00');
-        const diffSec = Math.max(0, startSec - nowSec);
-        const h = Math.floor(diffSec / 3600);
-        const m = Math.floor((diffSec % 3600) / 60);
-        const s = diffSec % 60;
-
-        if (h > 0) {
-            displayTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-        } else {
-            displayTime = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-        }
-        labelSub = 'COLLEGE OPENS AT 9:00 AM';
-        progressPct = 0;
-    } else if (isAfterCollege) {
-        displayTime = '00:00';
-        labelSub = 'COLLEGE DISMISSED (4:05 PM)';
-        progressPct = 100;
+        const start = timeToSeconds(activePeriod.start_time);
+        const end = timeToSeconds(activePeriod.end_time);
+        const duration = Math.max(1, end - start);
+        const elapsed = Math.min(duration, Math.max(0, nowSec - start));
+        const remaining = Math.max(0, end - nowSec);
+        display = `${pad(Math.floor(remaining / 60))}:${pad(remaining % 60)}`;
+        pct = (elapsed / duration) * 100;
+        urgent = remaining <= 300 && !isBreak;
+        caption = activePeriod.name;
+        sub = isBreak ? 'Interval, time left' : 'Time left in period';
+    } else if (currentPeriodInfo?.isBeforeCollege) {
+        const diff = Math.max(0, timeToSeconds('09:00:00') - nowSec);
+        const h = Math.floor(diff / 3600);
+        const m = Math.floor((diff % 3600) / 60);
+        display = h > 0 ? `${pad(h)}:${pad(m)}:${pad(diff % 60)}` : `${pad(m)}:${pad(diff % 60)}`;
+        caption = 'Before college';
+        sub = 'Classes begin at 9:00 AM';
+    } else if (currentPeriodInfo?.isAfterCollege) {
+        display = '00:00';
+        pct = 100;
+        caption = 'College closed';
+        sub = 'Classes ended at 4:05 PM';
     }
 
-    // SVG Circular Geometry: 290x290 container, radius 120, stroke 18 (broad, bold, prominent circle)
-    const radius = 120;
-    const strokeWidth = 18;
-    const circumference = 2 * Math.PI * radius; // ≈ 753.98
-    const strokeDashoffset = circumference - (circumference * progressPct) / 100;
-
-    const isLongTime = displayTime.length >= 7; // e.g. "05:10:59"
+    const radius = 104;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (circumference * pct) / 100;
+    const stroke = urgent ? 'var(--warn)' : markedPeriod ? 'var(--pistachio-400)' : 'var(--denim-400)';
 
     return (
-        <div className="period-wheel-pure">
-            {/* Circular Progress Wheel */}
-            <div className="countdown-wheel-container">
-                <div className="countdown-svg-wrap">
-                    <svg className="countdown-svg" viewBox="0 0 290 290">
-                        {/* Background Light Blue Track */}
-                        <circle
-                            className="countdown-circle-track"
-                            cx="145"
-                            cy="145"
-                            r={radius}
-                            stroke="#E8F4FC"
-                            strokeWidth={strokeWidth}
-                            fill="none"
-                        />
-                        {/* Light Green Live Border Arc Moving along to the Period */}
-                        <circle
-                            className="countdown-circle-progress"
-                            cx="145"
-                            cy="145"
-                            r={radius}
-                            stroke="#C3F84A"
-                            strokeWidth={strokeWidth}
-                            strokeLinecap="round"
-                            fill="none"
-                            strokeDasharray={circumference}
-                            strokeDashoffset={strokeDashoffset}
-                        />
-                    </svg>
-
-                    {/* Centered Timer Inside Circle - Sized cleanly so it never spills out */}
-                    <div className="countdown-inner-content">
-                        <div className={`countdown-time-digits ${isLongTime ? 'long-digits' : 'standard-digits'}`}>
-                            {displayTime}
-                        </div>
-                        <div className="countdown-label-sub">
-                            {labelSub}
-                        </div>
-                        {isUrgent && activePeriod && (
-                            <span className="count-pill orange" style={{ marginTop: '4px', fontSize: '0.65rem' }}>
-                                Ending Soon
-                            </span>
-                        )}
-                        {isCurrentMarked && (
-                            <span className="count-pill green" style={{ marginTop: '4px', fontSize: '0.68rem' }}>
-                                Marked Present
-                            </span>
-                        )}
-                    </div>
+        <div className="ring-wrap">
+            <div className="ring" role="timer" aria-label={`${caption} ${sub} ${display}`}>
+                <svg viewBox="0 0 240 240" className="ring-svg" aria-hidden="true">
+                    <circle cx="120" cy="120" r={radius} fill="none" stroke="var(--frost-300)" strokeWidth="12" opacity=".7" />
+                    <circle
+                        cx="120" cy="120" r={radius} fill="none"
+                        stroke={stroke} strokeWidth="12" strokeLinecap="round"
+                        strokeDasharray={circumference} strokeDashoffset={offset}
+                        style={{ transition: 'stroke-dashoffset .9s linear, stroke .3s ease' }}
+                    />
+                </svg>
+                <div className="ring-center">
+                    <div className="ring-caption">{caption}</div>
+                    <div className={`ring-digits ${display.length >= 7 ? 'is-long' : ''}`}>{display}</div>
+                    <div className="ring-sub">{sub}</div>
+                    {markedPeriod && <span className="ui-chip ui-chip--present" style={{ marginTop: 10 }}>Marked present</span>}
+                    {!markedPeriod && urgent && <span className="ui-chip ui-chip--warn" style={{ marginTop: 10 }}>Ending soon</span>}
                 </div>
             </div>
 
-            {/* Morning 9:00 - 9:05 Window Notification */}
-            {isMorningWindow && (
-                <div className="alert-box-warning" style={{ marginTop: '8px', maxWidth: '360px', margin: '8px auto 0' }}>
-                    <AlertCircle size={16} />
-                    <span><strong>9:00 – 9:05 AM Day-Start Window:</strong> Submit 1st period OTP now.</span>
+            {currentPeriodInfo?.isMorningWindow && (
+                <div className="ui-alert ui-alert--warn" style={{ marginTop: 18 }}>
+                    <AlertCircle size={18} />
+                    <span><strong>Day-start window, 9:00 to 9:05 AM.</strong> Submit the first period code now.</span>
                 </div>
             )}
-
-            {/* Post-Lunch 1:30 - 1:35 PM Window Notification */}
             {currentPeriodInfo?.isLunchWindow && (
-                <div className="alert-box-warning" style={{ marginTop: '8px', maxWidth: '360px', margin: '8px auto 0' }}>
-                    <AlertCircle size={16} />
-                    <span><strong>1:30 – 1:35 PM Post-Lunch Window:</strong> Submit 5th period OTP now.</span>
+                <div className="ui-alert ui-alert--warn" style={{ marginTop: 18 }}>
+                    <AlertCircle size={18} />
+                    <span><strong>Post-lunch window, 1:30 to 1:35 PM.</strong> Submit the fifth period code now.</span>
                 </div>
             )}
         </div>
     );
 };
+

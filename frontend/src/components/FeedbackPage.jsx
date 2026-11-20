@@ -85,9 +85,9 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                         gap: '8px',
                         padding: '8px 16px',
                         borderRadius: '12px',
-                        background: '#FEFDFB',
-                        border: '1.5px solid #E2D9CE',
-                        color: '#152641',
+                        background: '#E6F1FA',
+                        border: '1.5px solid #CBDCEB',
+                        color: '#1D2B3C',
                         fontSize: '0.84rem',
                         fontWeight: 750,
                         cursor: 'pointer',
@@ -98,7 +98,7 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                     <span>Back to Dashboard</span>
                 </button>
 
-                <div style={{ fontSize: '0.78rem', color: '#5A5249', fontWeight: 600 }}>
+                <div style={{ fontSize: '0.78rem', color: '#526579', fontWeight: 600 }}>
                     FXEC IT Support Desk
                 </div>
             </div>
@@ -106,22 +106,22 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
             {/* Main Feedback Card */}
             <div 
                 style={{
-                    background: '#FEFDFB',
-                    border: '1.5px solid #E2D9CE',
+                    background: '#E6F1FA',
+                    border: '1.5px solid #CBDCEB',
                     borderRadius: '24px',
                     padding: '24px 28px',
-                    boxShadow: '0 4px 24px -4px rgba(15, 23, 43, 0.08), 0 1px 3px rgba(15, 23, 43, 0.04)'
+                    boxShadow: '0 4px 24px -4px rgba(60, 100, 140, 0.08), 0 1px 3px rgba(60, 100, 140, 0.04)'
                 }}
             >
                 {/* Card Title & Institutional Context */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingBottom: '18px', borderBottom: '1px solid #E2D9CE' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingBottom: '18px', borderBottom: '1px solid #CBDCEB' }}>
                     <div 
                         style={{
                             width: '44px',
                             height: '44px',
                             borderRadius: '14px',
-                            background: '#EBF1FA',
-                            color: '#1E3A8A',
+                            background: '#D3E5F5',
+                            color: '#2E5F93',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -131,10 +131,10 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                         <MessageSquarePlus size={22} strokeWidth={2.2} />
                     </div>
                     <div>
-                        <h1 style={{ fontSize: '1.25rem', fontWeight: 850, color: '#152641', margin: 0, letterSpacing: '-0.02em' }}>
+                        <h1 style={{ fontSize: '1.25rem', fontWeight: 850, color: '#1D2B3C', margin: 0, letterSpacing: '-0.02em' }}>
                             Submit Feedback & Issue Report
                         </h1>
-                        <div style={{ fontSize: '0.78rem', color: '#5A5249', marginTop: '2px', fontWeight: 600 }}>
+                        <div style={{ fontSize: '0.78rem', color: '#526579', marginTop: '2px', fontWeight: 600 }}>
                             Direct ticket dispatch to Francis Xavier Engineering College IT Operations.
                         </div>
                     </div>
@@ -148,9 +148,9 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                                 width: '56px', 
                                 height: '56px', 
                                 borderRadius: '50%', 
-                                background: '#ECFDF5', 
-                                border: '2px solid #A7F3D0',
-                                color: '#059669', 
+                                background: '#EEF1CF', 
+                                border: '2px solid #DDE4A0',
+                                color: '#6E7A20', 
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 justifyContent: 'center', 
@@ -159,10 +159,10 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                         >
                             <CheckCircle2 size={28} strokeWidth={2.5} />
                         </div>
-                        <h2 style={{ fontSize: '1.15rem', fontWeight: 850, color: '#152641', margin: '0 0 8px' }}>
+                        <h2 style={{ fontSize: '1.15rem', fontWeight: 850, color: '#1D2B3C', margin: '0 0 8px' }}>
                             Ticket Dispatched Successfully
                         </h2>
-                        <p style={{ fontSize: '0.86rem', color: '#5A5249', maxWidth: '480px', margin: '0 auto 24px', lineHeight: 1.5 }}>
+                        <p style={{ fontSize: '0.86rem', color: '#526579', maxWidth: '480px', margin: '0 auto 24px', lineHeight: 1.5 }}>
                             {successNotice}
                         </p>
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
@@ -172,9 +172,9 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                                 style={{
                                     padding: '10px 20px',
                                     borderRadius: '12px',
-                                    background: '#F6F3EF',
-                                    border: '1.5px solid #E2D9CE',
-                                    color: '#152641',
+                                    background: '#E6F1FA',
+                                    border: '1.5px solid #CBDCEB',
+                                    color: '#1D2B3C',
                                     fontWeight: 750,
                                     fontSize: '0.84rem',
                                     cursor: 'pointer'
@@ -188,9 +188,9 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                                 style={{
                                     padding: '10px 24px',
                                     borderRadius: '12px',
-                                    background: '#152641',
-                                    border: '1.5px solid #152641',
-                                    color: '#FEFDFB',
+                                    background: '#1D2B3C',
+                                    border: '1.5px solid #1D2B3C',
+                                    color: '#FFFFFF',
                                     fontWeight: 750,
                                     fontSize: '0.84rem',
                                     cursor: 'pointer'
@@ -206,14 +206,14 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                         {errorNotice && (
                             <div 
                                 style={{
-                                    background: '#FEF2F2',
-                                    border: '1.5px solid #FECACA',
+                                    background: '#F6DEDC',
+                                    border: '1.5px solid #E8C3C0',
                                     borderRadius: '14px',
                                     padding: '12px 16px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '10px',
-                                    color: '#DC2626',
+                                    color: '#C25B56',
                                     fontSize: '0.84rem',
                                     fontWeight: 700
                                 }}
@@ -226,7 +226,7 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                         {/* Category & Priority Row */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 800, color: '#152641', marginBottom: '6px' }}>
+                                <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 800, color: '#1D2B3C', marginBottom: '6px' }}>
                                     Feedback Category *
                                 </label>
                                 <select
@@ -237,11 +237,11 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                                         height: '44px',
                                         padding: '0 14px',
                                         borderRadius: '12px',
-                                        border: '1.5px solid #E2D9CE',
-                                        background: '#FEFDFB',
+                                        border: '1.5px solid #CBDCEB',
+                                        background: '#E6F1FA',
                                         fontSize: '0.86rem',
                                         fontWeight: 650,
-                                        color: '#152641',
+                                        color: '#1D2B3C',
                                         outline: 'none',
                                         fontFamily: 'inherit'
                                     }}
@@ -256,7 +256,7 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 800, color: '#152641', marginBottom: '6px' }}>
+                                <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 800, color: '#1D2B3C', marginBottom: '6px' }}>
                                     Severity / Impact Level *
                                 </label>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
@@ -269,10 +269,10 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                                                 height: '44px',
                                                 borderRadius: '12px',
                                                 border: priority === lvl 
-                                                    ? '2px solid #1E3A8A' 
-                                                    : '1.5px solid #E2D9CE',
-                                                background: priority === lvl ? '#EBF1FA' : '#F6F3EF',
-                                                color: priority === lvl ? '#1E3A8A' : '#5A5249',
+                                                    ? '2px solid #2E5F93' 
+                                                    : '1.5px solid #CBDCEB',
+                                                background: priority === lvl ? '#D3E5F5' : '#E6F1FA',
+                                                color: priority === lvl ? '#2E5F93' : '#526579',
                                                 fontWeight: 800,
                                                 fontSize: '0.82rem',
                                                 cursor: 'pointer',
@@ -288,7 +288,7 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
 
                         {/* Subject */}
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 800, color: '#152641', marginBottom: '6px' }}>
+                            <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 800, color: '#1D2B3C', marginBottom: '6px' }}>
                                 Issue Summary / Subject *
                             </label>
                             <input
@@ -301,11 +301,11 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                                     height: '44px',
                                     padding: '0 14px',
                                     borderRadius: '12px',
-                                    border: '1.5px solid #E2D9CE',
-                                    background: '#FEFDFB',
+                                    border: '1.5px solid #CBDCEB',
+                                    background: '#E6F1FA',
                                     fontSize: '0.86rem',
                                     fontWeight: 650,
-                                    color: '#152641',
+                                    color: '#1D2B3C',
                                     outline: 'none',
                                     fontFamily: 'inherit'
                                 }}
@@ -315,7 +315,7 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
 
                         {/* Detailed Description */}
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 800, color: '#152641', marginBottom: '6px' }}>
+                            <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 800, color: '#1D2B3C', marginBottom: '6px' }}>
                                 Detailed Description *
                             </label>
                             <textarea
@@ -327,11 +327,11 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                                     width: '100%',
                                     padding: '12px 14px',
                                     borderRadius: '14px',
-                                    border: '1.5px solid #E2D9CE',
-                                    background: '#FEFDFB',
+                                    border: '1.5px solid #CBDCEB',
+                                    background: '#E6F1FA',
                                     fontSize: '0.86rem',
                                     lineHeight: 1.5,
-                                    color: '#152641',
+                                    color: '#1D2B3C',
                                     outline: 'none',
                                     fontFamily: 'inherit',
                                     resize: 'vertical'
@@ -343,8 +343,8 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                         {/* Automated Hardware Telemetry Box */}
                         <div 
                             style={{
-                                background: '#F6F3EF',
-                                border: '1px solid #E2D9CE',
+                                background: '#E6F1FA',
+                                border: '1px solid #CBDCEB',
                                 borderRadius: '16px',
                                 padding: '12px 16px',
                                 display: 'flex',
@@ -355,12 +355,12 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                             }}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <ShieldCheck size={18} color="#059669" />
+                                <ShieldCheck size={18} color="#6E7A20" />
                                 <div>
-                                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#152641' }}>
+                                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1D2B3C' }}>
                                         Automated Hardware Diagnostic Included
                                     </div>
-                                    <div style={{ fontSize: '0.72rem', color: '#5A5249', fontFamily: 'var(--font-mono)' }}>
+                                    <div style={{ fontSize: '0.72rem', color: '#526579', fontFamily: 'var(--font-mono)' }}>
                                         {devName}
                                     </div>
                                 </div>
@@ -369,9 +369,9 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                                 style={{
                                     fontSize: '0.70rem',
                                     fontWeight: 750,
-                                    background: '#ECFDF5',
-                                    color: '#059669',
-                                    border: '1px solid #A7F3D0',
+                                    background: '#EEF1CF',
+                                    color: '#6E7A20',
+                                    border: '1px solid #DDE4A0',
                                     padding: '3px 8px',
                                     borderRadius: '8px'
                                 }}
@@ -388,9 +388,9 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                                 style={{
                                     padding: '12px 20px',
                                     borderRadius: '12px',
-                                    background: '#F6F3EF',
-                                    border: '1.5px solid #E2D9CE',
-                                    color: '#5A5249',
+                                    background: '#E6F1FA',
+                                    border: '1.5px solid #CBDCEB',
+                                    color: '#526579',
                                     fontWeight: 750,
                                     fontSize: '0.86rem',
                                     cursor: 'pointer'
@@ -407,9 +407,10 @@ export const FeedbackPage = ({ currentUser, deviceInfo, onBackToHome }) => {
                                     gap: '8px',
                                     padding: '12px 28px',
                                     borderRadius: '12px',
-                                    background: '#152641',
-                                    border: '1.5px solid #152641',
-                                    color: '#FEFDFB',
+                                    background: 'linear-gradient(160deg, #6AA6E0 0%, #3F7FC4 100%)',
+                                    border: 0,
+                                    boxShadow: '5px 5px 13px rgba(63, 127, 196, .38), -4px -4px 10px rgba(255,255,255,.95)',
+                                    color: '#FFFFFF',
                                     fontWeight: 800,
                                     fontSize: '0.86rem',
                                     cursor: isSubmitting ? 'not-allowed' : 'pointer',

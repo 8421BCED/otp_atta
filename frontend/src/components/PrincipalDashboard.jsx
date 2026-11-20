@@ -1,863 +1,325 @@
-import React, { useState, useEffect } from 'react';
-import { Building, Users, PlusCircle, Calendar, CheckCircle2, Clock, Trash2, Layers, DoorOpen, ShieldAlert, Search, Eye, MapPin, UserCheck } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import {
+    Users, GraduationCap, DoorOpen, UserCheck, Building2, Layers, Plus, Trash2, Search, CalendarPlus, ChevronRight, MapPin, Clock
+} from 'lucide-react';
 import { StaffMovementModal } from './StaffMovementModal';
+import { Confirm, Notice, Empty, Stat, SectionHead, Segmented, IconTile, Spinner } from './kit';
+import { usePolling, useNotice } from '../hooks';
 
-export const PrincipalDashboard = ({ currentUser, hierarchy = [], simulatedTime, setSimulatedTime }) => {
-    const [overviewData, setOverviewData] = useState(null);
-    const [campusHierarchy, setCampusHierarchy] = useState(hierarchy || []);
+const CLOCK_PRESETS = [
+    ['', 'Live clock'], ['09:02:00', '09:02, Period 1 on time'], ['09:15:00', '09:15, Period 1 late'], ['10:00:00', '10:00, Period 2'],
+    ['11:15:00', '11:15, Period 3'], ['12:00:00', '12:00, Period 4'], ['13:45:00', '13:45, Period 5'], ['14:30:00', '14:30, Period 6'], ['15:45:00', '15:45, Period 7']
+];
 
-    // Infrastructure forms state
-    const [infraTab, setInfraTab] = useState('staffs'); // 'staffs', 'room', 'floor', 'building', 'manage'
+const post = async (url, body) => {
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return { ok: res.ok, data: await res.json().catch(() => ({})) };
+};
 
-    // Staff Directory & Movement Search state (Principal View Staffs)
-    const [staffList, setStaffList] = useState([]);
-    const [staffSearchQuery, setStaffSearchQuery] = useState('');
-    const [selectedStaffDept, setSelectedStaffDept] = useState('all');
-    const [selectedStaffRole, setSelectedStaffRole] = useState('all');
-    const [isLoadingStaffs, setIsLoadingStaffs] = useState(false);
+export const PrincipalDashboard = ({ hierarchy = [], simulatedTime, setSimulatedTime, simulationEnabled, section = 'home' }) => {
+    const [overview, setOverview] = useState(null);
+    const [campus, setCampus] = useState(hierarchy);
+    const [notice, showNotice] = useNotice();
+    const [confirm, setConfirm] = useState(null);
+    const [busy, setBusy] = useState(false);
+
+    // Staff directory
+    const [staff, setStaff] = useState([]);
+    const [staffLoading, setStaffLoading] = useState(false);
+    const [sq, setSq] = useState('');
+    const [sDept, setSDept] = useState('all');
+    const [sRole, setSRole] = useState('all');
     const [inspectedStaffId, setInspectedStaffId] = useState(null);
+    const deptNames = useRef(new Set());
 
-    // Add Building state
-    const [bName, setBName] = useState('');
-    const [bCode, setBCode] = useState('');
-    const [bDesc, setBDesc] = useState('');
-    const [bNotice, setBNotice] = useState(null);
+    // Campus forms
+    const [campusTab, setCampusTab] = useState('rooms');
+    const [bForm, setBForm] = useState({ name: '', code: '', description: '' });
+    const [fForm, setFForm] = useState({ building: '', number: '', name: '' });
+    const [rForm, setRForm] = useState({ building: '', floor: '', number: '', name: '', department: 'IT', capacity: 60 });
 
-    // Add Floor state
-    const [fBuildingId, setFBuildingId] = useState(1);
-    const [fNumber, setFNumber] = useState('');
-    const [fName, setFName] = useState('');
-    const [fNotice, setFNotice] = useState(null);
+    // Holiday
+    const [hol, setHol] = useState({ title: '', date: '', timed: false, start: '09:00', end: '12:30' });
 
-    // Add Room state
-    const [rBuildingId, setRBuildingId] = useState(1);
-    const [rFloorId, setRFloorId] = useState(1);
-    const [rNumber, setRNumber] = useState('');
-    const [rName, setRName] = useState('');
-    const [rDept, setRDept] = useState('IT');
-    const [rCapacity, setRCapacity] = useState(60);
-    const [rNotice, setRNotice] = useState(null);
-
-    // Holiday & Timed Event Exemption state
-    const [cHolTitle, setCHolTitle] = useState('');
-    const [cHolDate, setCHolDate] = useState('');
-    const [isTimed, setIsTimed] = useState(false);
-    const [startTime, setStartTime] = useState('09:00');
-    const [endTime, setEndTime] = useState('12:30');
-    const [cHolNotice, setCHolNotice] = useState(null);
-
-    // Load Staffs
-    const loadStaffList = async () => {
-        setIsLoadingStaffs(true);
+    const loadOverview = useCallback(async () => {
         try {
-            const token = localStorage.getItem('fxec_token');
-            const res = await fetch(`/api/principal/staffs?q=${encodeURIComponent(staffSearchQuery)}&department=${selectedStaffDept}&role=${selectedStaffRole}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const [o, h] = await Promise.all([
+                fetch('/api/principal/overview').then((r) => r.json()),
+                fetch('/api/locations/hierarchy').then((r) => r.json())
+            ]);
+            setOverview(o);
+            if (h.hierarchy) setCampus(h.hierarchy);
+        } catch (e) { console.error('Failed to load overview:', e); }
+    }, []);
+    usePolling(loadOverview, 20000, section === 'home' || section === 'campus');
+
+    const loadStaff = useCallback(async () => {
+        setStaffLoading(true);
+        try {
+            const res = await fetch(`/api/principal/staffs?q=${encodeURIComponent(sq)}&department=${encodeURIComponent(sDept)}&role=${sRole}`);
             if (res.ok) {
                 const data = await res.json();
-                setStaffList(data.staffs || []);
+                const list = data.staffs || [];
+                setStaff(list);
+                if (sDept === 'all') list.forEach((s) => s.department && deptNames.current.add(s.department));
             }
-        } catch (e) {
-            console.error('Failed to load staff list for Principal:', e);
-        } finally {
-            setIsLoadingStaffs(false);
-        }
-    };
+        } catch (e) { console.error('Failed to load staff:', e); } finally { setStaffLoading(false); }
+    }, [sq, sDept, sRole]);
 
     useEffect(() => {
-        loadStaffList();
-    }, [staffSearchQuery, selectedStaffDept, selectedStaffRole]);
+        if (section !== 'staff') return undefined;
+        const t = setTimeout(loadStaff, 250);
+        return () => clearTimeout(t);
+    }, [section, loadStaff]);
 
-    const loadData = async () => {
-        try {
-            const token = localStorage.getItem('fxec_token');
-            const [resOverview, resHierarchy] = await Promise.all([
-                fetch('/api/principal/overview', { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch('/api/locations/hierarchy')
-            ]);
-            const dataO = await resOverview.json();
-            const dataH = await resHierarchy.json();
-            setOverviewData(dataO);
-            if (dataH.hierarchy) setCampusHierarchy(dataH.hierarchy);
-        } catch (e) {
-            console.error('Failed to load Principal data:', e);
-        }
+    const floorsFor = (buildingId) => campus.find((b) => b.id === Number(buildingId))?.floors || [];
+
+    const submit = async (url, body, okText, reset) => {
+        const { ok, data } = await post(url, body);
+        showNotice({ type: ok ? 'success' : 'error', text: ok ? okText : (data.error || 'Could not save') });
+        if (ok) { reset && reset(); loadOverview(); }
     };
 
-    useEffect(() => {
-        loadData();
-    }, []);
+    const del = (title, bodyText, url) => setConfirm({
+        title, body: bodyText, label: 'Delete', tone: 'danger',
+        run: async () => {
+            setBusy(true);
+            try {
+                const res = await fetch(url, { method: 'DELETE' });
+                const data = await res.json().catch(() => ({}));
+                showNotice({ type: res.ok ? 'success' : 'error', text: res.ok ? 'Removed' : (data.error || 'Could not delete') });
+                loadOverview();
+            } catch (e) { showNotice({ type: 'error', text: 'Server connection error' }); } finally { setBusy(false); setConfirm(null); }
+        }
+    });
 
-    // Update available floors when selected building changes in room form
-    const currentB = campusHierarchy.find(b => b.id === Number(rBuildingId));
-    const availableFloorsForRoom = currentB?.floors || [];
-
-    const handleAddBuilding = async (e) => {
+    const declareHoliday = async (e) => {
         e.preventDefault();
-        if (!bName || !bCode) return;
-        try {
-            const token = localStorage.getItem('fxec_token');
-            const res = await fetch('/api/locations/buildings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ name: bName, code: bCode, description: bDesc })
-            });
-            if (res.ok) {
-                setBNotice(`Building "${bName}" (${bCode}) created successfully.`);
-                setBName('');
-                setBCode('');
-                setBDesc('');
-                loadData();
-                setTimeout(() => setBNotice(null), 5000);
-            }
-        } catch (err) {
-            console.error('Error adding building:', err);
-        }
+        if (!hol.title || !hol.date) return;
+        const { ok, data } = await post('/api/holidays/declare', {
+            title: hol.title, holiday_date: hol.date, scope: 'college', is_timed: hol.timed ? 1 : 0,
+            start_time: hol.timed ? `${hol.start}:00` : null, end_time: hol.timed ? `${hol.end}:00` : null
+        });
+        showNotice({ type: ok ? 'success' : 'error', text: data.message || data.error || 'Could not save' });
+        if (ok) setHol((h) => ({ ...h, title: '', date: '' }));
     };
 
-    const handleAddFloor = async (e) => {
-        e.preventDefault();
-        if (!fNumber || !fName) return;
-        try {
-            const token = localStorage.getItem('fxec_token');
-            const res = await fetch('/api/locations/floors', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ building_id: fBuildingId, floor_number: Number(fNumber), name: fName })
-            });
-            if (res.ok) {
-                setFNotice(`Floor "${fName}" added successfully.`);
-                setFNumber('');
-                setFName('');
-                loadData();
-                setTimeout(() => setFNotice(null), 5000);
-            }
-        } catch (err) {
-            console.error('Error adding floor:', err);
-        }
-    };
+    const s = overview?.summary;
+    const depts = useMemo(() => [...deptNames.current].sort(), [staff]);
 
-    const handleAddRoom = async (e) => {
-        e.preventDefault();
-        if (!rNumber || !rName) return;
-        try {
-            const token = localStorage.getItem('fxec_token');
-            const res = await fetch('/api/locations/rooms', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({
-                    building_id: rBuildingId,
-                    floor_id: rFloorId,
-                    room_number: rNumber,
-                    name: rName,
-                    department: rDept,
-                    capacity: rCapacity
-                })
-            });
-            if (res.ok) {
-                setRNotice(`Room "${rNumber} – ${rName}" added successfully.`);
-                setRNumber('');
-                setRName('');
-                loadData();
-                setTimeout(() => setRNotice(null), 5000);
-            }
-        } catch (e) {
-            console.error('Error adding room:', e);
-        }
-    };
+    // ---------------------------------------------------------------- views
+    const home = (
+        <div className="stack">
+            <div className="stat-grid">
+                <Stat icon={GraduationCap} label="Students" value={s?.totalStudents ?? '-'} />
+                <Stat icon={UserCheck} tone="pistachio" label="Present today" value={s?.totalPresent ?? '-'} hint={`${s?.overallAttendanceRate ?? 0}% college wide`} />
+                <Stat icon={Users} label="Faculty and HODs" value={s?.totalStaff ?? '-'} />
+                <Stat icon={DoorOpen} label="Rooms" value={s?.totalRooms ?? '-'} />
+            </div>
 
-    const handleDeleteRoom = async (roomId, roomNum) => {
-        if (!window.confirm(`Delete Room ${roomNum}? This will remove it from campus locations.`)) return;
-        try {
-            const token = localStorage.getItem('fxec_token');
-            const res = await fetch(`/api/locations/rooms/${roomId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                loadData();
-            }
-        } catch (err) {
-            console.error('Error deleting room:', err);
-        }
-    };
-
-    const handleDeclareCollegeHoliday = async (e) => {
-        e.preventDefault();
-        if (!cHolTitle || !cHolDate) return;
-        try {
-            const token = localStorage.getItem('fxec_token');
-            const res = await fetch('/api/holidays/declare', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({
-                    title: cHolTitle,
-                    holiday_date: cHolDate,
-                    scope: 'college',
-                    is_timed: isTimed ? 1 : 0,
-                    start_time: isTimed ? `${startTime}:00` : null,
-                    end_time: isTimed ? `${endTime}:00` : null
-                })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                setCHolNotice(data.message || 'College holiday saved successfully.');
-                setCHolTitle('');
-                setCHolDate('');
-                setTimeout(() => setCHolNotice(null), 5000);
-            } else {
-                setCHolNotice(data.message || data.error || 'Failed to declare holiday');
-            }
-        } catch (e) {
-            console.error('Error declaring holiday:', e);
-        }
-    };
-
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
-            
-            {/* Master College Schedule Clock Controller (Principal Exclusive) */}
-            <div className="fx-card">
-                <div className="fx-card-header">
-                    <div className="fx-card-title">
-                        <Clock size={18} color="var(--blue)" />
-                        <span>Master Campus Time Controller</span>
-                    </div>
-                    <span className="count-pill green">
-                        System Clock: {simulatedTime ? `${simulatedTime} (Simulated)` : 'Live Real Time'}
-                    </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-sub)' }}>
-                        Controls global time across all student countdown wheels, period intervals, and attendance windows in real-time.
-                    </p>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        {[
-                            { label: 'Real Live Time', val: null },
-                            { label: '09:02 AM (P1 Day-Start Window)', val: '09:02:00' },
-                            { label: '09:15 AM (P1 Cutoff Passed)', val: '09:15:00' },
-                            { label: '10:00 AM (Period 2)', val: '10:00:00' },
-                            { label: '10:50 AM (Morning Break)', val: '10:50:00' },
-                            { label: '11:15 AM (Period 3)', val: '11:15:00' },
-                            { label: '12:00 PM (Period 4)', val: '12:00:00' },
-                            { label: '01:00 PM (Lunch Break)', val: '13:00:00' },
-                            { label: '01:45 PM (Period 5)', val: '13:45:00' },
-                            { label: '02:30 PM (Period 6)', val: '14:30:00' },
-                            { label: '03:10 PM (Afternoon Break)', val: '15:10:00' },
-                            { label: '03:45 PM (Period 7)', val: '15:45:00' }
-                        ].map((p, idx) => (
-                            <button
-                                key={idx}
-                                type="button"
-                                className={`room-chip-btn ${(!simulatedTime && !p.val) || simulatedTime === p.val ? 'active' : ''}`}
-                                onClick={() => {
-                                    setSimulatedTime(p.val);
-                                    if (p.val) localStorage.setItem('fxec_simulated_time', p.val);
-                                    else localStorage.removeItem('fxec_simulated_time');
-                                }}
-                            >
-                                {p.label}
+            {simulationEnabled && (
+                <section className="ui-card">
+                    <SectionHead icon={Clock} tone="warn" title="Test clock" sub="Testing only. Changes what every screen treats as the current time."
+                        right={<span className={`ui-chip ${simulatedTime ? 'ui-chip--od' : 'ui-chip--present'}`}>{simulatedTime ? `${simulatedTime.slice(0, 5)} simulated` : 'Live time'}</span>} />
+                    <div className="u-row" style={{ flexWrap: 'wrap', gap: 8 }}>
+                        {CLOCK_PRESETS.map(([v, l]) => (
+                            <button key={v} type="button" className={`ui-btn ui-btn--sm ${(simulatedTime || '') === v ? 'ui-btn--primary' : ''}`}
+                                onClick={() => { setSimulatedTime(v || null); try { v ? localStorage.setItem('fxec_simulated_time', v) : localStorage.removeItem('fxec_simulated_time'); } catch (e) { /* ignore */ } }}>
+                                {l}
                             </button>
                         ))}
                     </div>
-                </div>
-            </div>
+                </section>
+            )}
 
-            {/* Department Breakdown & Building Occupancy (Clean overview without huge enrolled cards) */}
-            <div className="dashboard-grid-main">
-                <div className="fx-card">
-                    <div className="fx-card-header">
-                        <div className="fx-card-title">
-                            <Users size={20} color="var(--blue)" />
-                            Department Real-Time Status
-                        </div>
-                    </div>
-
-                    <div className="fx-table-container">
-                        <table className="fx-table">
-                            <thead>
-                                <tr>
-                                    <th>Department</th>
-                                    <th>Enrolled</th>
-                                    <th>Present Today</th>
-                                    <th>Rate</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {overviewData?.deptStats?.map((d, i) => {
-                                    const rate = d.total_students > 0 ? Math.round((d.present_today / d.total_students) * 100) : 0;
-                                    return (
-                                        <tr key={i}>
-                                            <td style={{ fontWeight: 700, color: 'var(--dark-blue)' }}>{d.department}</td>
-                                            <td>{d.total_students}</td>
-                                            <td style={{ color: 'var(--blue)', fontWeight: 700 }}>{d.present_today}</td>
-                                            <td>
-                                                <span className={`aero-status-tag ${rate >= 75 ? 'present' : 'break'}`}>{rate}%</span>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* College Holiday & Event Exemption (With Timings option) */}
-                <div className="fx-card">
-                    <div className="fx-card-header">
-                        <div className="fx-card-title">
-                            <Calendar size={20} color="var(--blue)" />
-                            Declare College Holiday / Event Exemption
-                        </div>
-                    </div>
-
-                    {cHolNotice && <div className="aero-alert-success">{cHolNotice}</div>}
-
-                    <form onSubmit={handleDeclareCollegeHoliday} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {/* Exemption Type Switcher */}
-                        <div style={{ display: 'flex', gap: '8px', background: 'var(--light-blue)', padding: '3px', borderRadius: '8px' }}>
-                            <button
-                                type="button"
-                                className={`role-btn ${!isTimed ? 'active' : ''}`}
-                                style={{ flex: 1, padding: '6px 10px', fontSize: '0.76rem' }}
-                                onClick={() => setIsTimed(false)}
-                            >
-                                Full Day Holiday
-                            </button>
-                            <button
-                                type="button"
-                                className={`role-btn ${isTimed ? 'active' : ''}`}
-                                style={{ flex: 1, padding: '6px 10px', fontSize: '0.76rem' }}
-                                onClick={() => setIsTimed(true)}
-                            >
-                                Timed College Event
-                            </button>
-                        </div>
-
-                        <div>
-                            <label className="picker-label" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--dark-blue)' }}>
-                                {isTimed ? 'Event / Symposium Title' : 'Holiday Title'}
-                            </label>
-                            <input 
-                                type="text"
-                                className="fx-select"
-                                style={{ width: '100%', marginTop: '4px' }}
-                                placeholder={isTimed ? "e.g. National Technical Symposium / Graduation Day" : "e.g. Founder's Day / Regional Holiday"}
-                                value={cHolTitle}
-                                onChange={(e) => setCHolTitle(e.target.value)}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="picker-label" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Date</label>
-                            <input 
-                                type="date"
-                                className="fx-select"
-                                style={{ width: '100%', marginTop: '4px' }}
-                                value={cHolDate}
-                                onChange={(e) => setCHolDate(e.target.value)}
-                            />
-                        </div>
-
-                        {isTimed && (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                <div>
-                                    <label className="picker-label" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Start Time</label>
-                                    <input 
-                                        type="time"
-                                        className="fx-select"
-                                        style={{ width: '100%', marginTop: '4px' }}
-                                        value={startTime}
-                                        onChange={(e) => setStartTime(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="picker-label" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-blue)' }}>End Time</label>
-                                    <input 
-                                        type="time"
-                                        className="fx-select"
-                                        style={{ width: '100%', marginTop: '4px' }}
-                                        value={endTime}
-                                        onChange={(e) => setEndTime(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        <button type="submit" className="fx-btn-primary" style={{ marginTop: '4px' }}>
-                            {isTimed ? 'Declare College-Wide Timed Exemption' : 'Declare College Holiday'}
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            {/* Campus Infrastructure Management (Principal Exclusive Power: Add Building, Floors, Rooms) */}
-            <div className="fx-card">
-                <div className="fx-card-header">
-                    <div>
-                        <div className="fx-card-title">
-                            <Building size={20} color="var(--blue)" />
-                            Campus Infrastructure Control (Buildings, Floors & Rooms)
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-sub)', marginTop: '2px' }}>
-                            Full administrative power to expand campus buildings, assign floor levels, and create classrooms / laboratories
-                        </div>
-                    </div>
-
-                    {/* Infrastructure Navigation Tabs */}
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                        <button
-                            type="button"
-                            className={`login-endpoint-tab ${infraTab === 'staffs' ? 'active' : ''}`}
-                            style={{ 
-                                padding: '6px 14px', 
-                                fontSize: '0.76rem', 
-                                background: infraTab === 'staffs' ? 'linear-gradient(135deg, #136CFC 0%, #0B3064 100%)' : undefined,
-                                color: infraTab === 'staffs' ? '#FFFFFF' : undefined,
-                                fontWeight: 800
-                            }}
-                            onClick={() => setInfraTab('staffs')}
-                        >
-                            <Users size={14} style={{ display: 'inline', marginRight: '5px' }} />
-                            View Staffs & HODs ({staffList.length})
-                        </button>
-                        <button
-                            type="button"
-                            className={`login-endpoint-tab ${infraTab === 'room' ? 'active' : ''}`}
-                            style={{ padding: '6px 12px', fontSize: '0.74rem' }}
-                            onClick={() => setInfraTab('room')}
-                        >
-                            <PlusCircle size={13} style={{ display: 'inline', marginRight: '4px' }} />
-                            Add Room / Lab
-                        </button>
-                        <button
-                            type="button"
-                            className={`login-endpoint-tab ${infraTab === 'floor' ? 'active' : ''}`}
-                            style={{ padding: '6px 12px', fontSize: '0.74rem' }}
-                            onClick={() => setInfraTab('floor')}
-                        >
-                            <Layers size={13} style={{ display: 'inline', marginRight: '4px' }} />
-                            Add Floor
-                        </button>
-                        <button
-                            type="button"
-                            className={`login-endpoint-tab ${infraTab === 'building' ? 'active' : ''}`}
-                            style={{ padding: '6px 12px', fontSize: '0.74rem' }}
-                            onClick={() => setInfraTab('building')}
-                        >
-                            <Building size={13} style={{ display: 'inline', marginRight: '4px' }} />
-                            Add Building
-                        </button>
-                        <button
-                            type="button"
-                            className={`login-endpoint-tab ${infraTab === 'manage' ? 'active' : ''}`}
-                            style={{ padding: '6px 12px', fontSize: '0.74rem' }}
-                            onClick={() => setInfraTab('manage')}
-                        >
-                            <DoorOpen size={13} style={{ display: 'inline', marginRight: '4px' }} />
-                            Campus Directory
-                        </button>
-                    </div>
-                </div>
-
-                {/* Sub-View: View Staffs & HODs (Requested: Search bar, live movement & calendar) */}
-                {infraTab === 'staffs' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        {/* Search and Filters Bar */}
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                            <div style={{ flex: '1 1 260px', position: 'relative' }}>
-                                <Search size={16} color="var(--blue)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                                <input
-                                    type="text"
-                                    className="fx-select"
-                                    style={{ width: '100%', paddingLeft: '36px' }}
-                                    placeholder="Search staff / HOD by name, email, or code (e.g. Caroline, FXITT...)..."
-                                    value={staffSearchQuery}
-                                    onChange={(e) => setStaffSearchQuery(e.target.value)}
-                                />
-                            </div>
-
-                            <div style={{ width: '160px' }}>
-                                <select
-                                    className="fx-select"
-                                    style={{ width: '100%' }}
-                                    value={selectedStaffDept}
-                                    onChange={(e) => setSelectedStaffDept(e.target.value)}
-                                >
-                                    <option value="all">All Departments</option>
-                                    <option value="IT">IT</option>
-                                    <option value="CSE">CSE</option>
-                                    <option value="ECE">ECE</option>
-                                    <option value="EEE">EEE</option>
-                                    <option value="MECH">MECH</option>
-                                    <option value="CIVIL">CIVIL</option>
-                                    <option value="AI-DS">AI-DS</option>
-                                    <option value="CSBS">CSBS</option>
-                                    <option value="S&H">S&H</option>
-                                    <option value="MBA">MBA</option>
-                                    <option value="MCA">MCA</option>
-                                </select>
-                            </div>
-
-                            <div style={{ width: '140px' }}>
-                                <select
-                                    className="fx-select"
-                                    style={{ width: '100%' }}
-                                    value={selectedStaffRole}
-                                    onChange={(e) => setSelectedStaffRole(e.target.value)}
-                                >
-                                    <option value="all">All Roles</option>
-                                    <option value="hod">HODs Only</option>
-                                    <option value="staff">Faculty Only</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Staff Directory Table */}
-                        <div className="fx-table-container" style={{ maxHeight: '420px' }}>
-                            <table className="fx-table">
-                                <thead>
-                                    <tr>
-                                        <th>Staff / HOD Details</th>
-                                        <th>Role & Dept</th>
-                                        <th>Designation</th>
-                                        <th>Live Location / Room</th>
-                                        <th style={{ textAlign: 'center' }}>Movement & Calendar</th>
-                                    </tr>
-                                </thead>
+            <div className="split split--even">
+                <section className="ui-card">
+                    <SectionHead icon={GraduationCap} title="Departments today" sub="Present out of enrolled" />
+                    {overview?.deptStats?.length ? (
+                        <div className="ui-table-wrap">
+                            <table className="ui-table">
+                                <thead><tr><th>Department</th><th>Enrolled</th><th>Present</th><th>Rate</th></tr></thead>
                                 <tbody>
-                                    {isLoadingStaffs ? (
-                                        <tr>
-                                            <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-dim)' }}>
-                                                Loading faculty directory...
-                                            </td>
-                                        </tr>
-                                    ) : staffList.length > 0 ? (
-                                        staffList.map((s) => (
-                                            <tr key={s.id} style={{ cursor: 'pointer' }} onClick={() => setInspectedStaffId(s.id)}>
-                                                <td>
-                                                    <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.90rem' }}>
-                                                        {s.name}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)' }}>
-                                                        {s.email} {s.staff_code ? `• ${s.staff_code}` : ''}
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <span style={{
-                                                            fontSize: '0.66rem',
-                                                            fontWeight: 800,
-                                                            padding: '2px 8px',
-                                                            borderRadius: '4px',
-                                                            textTransform: 'uppercase',
-                                                            background: s.role === 'hod' ? '#EDE9FE' : '#E0F2FE',
-                                                            color: s.role === 'hod' ? '#6D28D9' : '#0369A1'
-                                                        }}>
-                                                            {s.role === 'hod' ? 'HOD' : 'FACULTY'}
-                                                        </span>
-                                                        <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--dark-blue)' }}>
-                                                            {s.department}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <span style={{ fontSize: '0.78rem', color: 'var(--text-sub)' }}>
-                                                        {s.designation || 'Faculty'}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    {s.current_room_number ? (
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                            <span className="aero-status-tag present" style={{ fontSize: '0.74rem' }}>
-                                                                Room {s.current_room_number}
-                                                            </span>
-                                                            <span style={{ fontSize: '0.70rem', color: 'var(--text-sub)' }}>
-                                                                ({s.current_building_name})
-                                                            </span>
-                                                        </div>
-                                                    ) : (
-                                                        <span style={{ color: 'var(--text-dim)', fontSize: '0.74rem' }}>
-                                                            Not in class
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <button
-                                                        type="button"
-                                                        className="fx-btn-outline"
-                                                        style={{ padding: '4px 10px', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setInspectedStaffId(s.id);
-                                                        }}
-                                                    >
-                                                        <Eye size={12} />
-                                                        <span>Movement & Calendar</span>
-                                                    </button>
-                                                </td>
+                                    {overview.deptStats.map((d) => {
+                                        const rate = d.total_students ? Math.round((d.present_today / d.total_students) * 100) : 0;
+                                        return (
+                                            <tr key={d.department}>
+                                                <td className="cell-strong">{d.department}</td>
+                                                <td>{d.total_students}</td>
+                                                <td>{d.present_today}</td>
+                                                <td><span className={`ui-chip ${rate >= 75 ? 'ui-chip--present' : rate >= 40 ? 'ui-chip--od' : 'ui-chip--neutral'}`}>{rate}%</span></td>
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-dim)' }}>
-                                                No staff found matching "{staffSearchQuery}".
-                                            </td>
-                                        </tr>
-                                    )}
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                )}
+                    ) : <Spinner label="Loading departments" />}
+                </section>
 
-                {/* Sub-View: Add Room */}
-                {infraTab === 'room' && (
-                    <div>
-                        {rNotice && <div className="aero-alert-success" style={{ marginBottom: '14px' }}>{rNotice}</div>}
-                        <form onSubmit={handleAddRoom} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', alignItems: 'end' }}>
-                            <div>
-                                <label className="picker-label" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Select Building</label>
-                                <select 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    value={rBuildingId} 
-                                    onChange={(e) => {
-                                        setRBuildingId(Number(e.target.value));
-                                        const b = campusHierarchy.find(x => x.id === Number(e.target.value));
-                                        if (b?.floors?.[0]) setRFloorId(b.floors[0].id);
-                                    }}
-                                >
-                                    {campusHierarchy.map(b => (
-                                        <option key={b.id} value={b.id}>{b.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="picker-label" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Select Floor</label>
-                                <select 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    value={rFloorId} 
-                                    onChange={(e) => setRFloorId(Number(e.target.value))}
-                                >
-                                    {availableFloorsForRoom.map(f => (
-                                        <option key={f.id} value={f.id}>{f.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="picker-label" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Room Number</label>
-                                <input 
-                                    type="text" 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    placeholder="e.g. 308 / AL-05" 
-                                    value={rNumber} 
-                                    onChange={(e) => setRNumber(e.target.value)} 
-                                />
-                            </div>
-
-                            <div>
-                                <label className="picker-label" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Room / Lab Name</label>
-                                <input 
-                                    type="text" 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    placeholder="e.g. Cyber Security Lab" 
-                                    value={rName} 
-                                    onChange={(e) => setRName(e.target.value)} 
-                                />
-                            </div>
-
-                            <div>
-                                <label className="picker-label" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Department</label>
-                                <select 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    value={rDept} 
-                                    onChange={(e) => setRDept(e.target.value)}
-                                >
-                                    <option value="IT">Information Technology (IT)</option>
-                                    <option value="CSE">Computer Science (CSE)</option>
-                                    <option value="ECE">Electronics (ECE)</option>
-                                    <option value="EEE">Electrical (EEE)</option>
-                                    <option value="MECH">Mechanical (MECH)</option>
-                                    <option value="CIVIL">Civil Engineering</option>
-                                    <option value="AI-DS">Artificial Intelligence (AI-DS)</option>
-                                </select>
-                            </div>
-
-                            <button type="submit" className="fx-btn-primary" style={{ height: '38px' }}>
-                                Add Classroom
-                            </button>
-                        </form>
-                    </div>
-                )}
-
-                {/* Sub-View: Add Floor */}
-                {infraTab === 'floor' && (
-                    <div>
-                        {fNotice && <div className="aero-alert-success" style={{ marginBottom: '14px' }}>{fNotice}</div>}
-                        <form onSubmit={handleAddFloor} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', alignItems: 'end' }}>
-                            <div>
-                                <label className="picker-label" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Select Building</label>
-                                <select 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    value={fBuildingId} 
-                                    onChange={(e) => setFBuildingId(Number(e.target.value))}
-                                >
-                                    {campusHierarchy.map(b => (
-                                        <option key={b.id} value={b.id}>{b.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="picker-label" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Floor Number</label>
-                                <input 
-                                    type="number" 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    placeholder="e.g. 3" 
-                                    value={fNumber} 
-                                    onChange={(e) => setFNumber(e.target.value)} 
-                                />
-                            </div>
-
-                            <div>
-                                <label className="picker-label" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Floor Display Name</label>
-                                <input 
-                                    type="text" 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    placeholder="e.g. 3rd Floor / Mezzanine" 
-                                    value={fName} 
-                                    onChange={(e) => setFName(e.target.value)} 
-                                />
-                            </div>
-
-                            <button type="submit" className="fx-btn-primary" style={{ height: '38px' }}>
-                                Add Floor
-                            </button>
-                        </form>
-                    </div>
-                )}
-
-                {/* Sub-View: Add Building */}
-                {infraTab === 'building' && (
-                    <div>
-                        {bNotice && <div className="aero-alert-success" style={{ marginBottom: '14px' }}>{bNotice}</div>}
-                        <form onSubmit={handleAddBuilding} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', alignItems: 'end' }}>
-                            <div>
-                                <label className="picker-label" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Building Name</label>
-                                <input 
-                                    type="text" 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    placeholder="e.g. CV Raman Science Block" 
-                                    value={bName} 
-                                    onChange={(e) => setBName(e.target.value)} 
-                                />
-                            </div>
-
-                            <div>
-                                <label className="picker-label" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Building Code</label>
-                                <input 
-                                    type="text" 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    placeholder="e.g. CVRB" 
-                                    value={bCode} 
-                                    onChange={(e) => setBCode(e.target.value)} 
-                                />
-                            </div>
-
-                            <div>
-                                <label className="picker-label" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-blue)' }}>Description</label>
-                                <input 
-                                    type="text" 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    placeholder="e.g. Research & Development Center" 
-                                    value={bDesc} 
-                                    onChange={(e) => setBDesc(e.target.value)} 
-                                />
-                            </div>
-
-                            <button type="submit" className="fx-btn-primary" style={{ height: '38px' }}>
-                                Create Building
-                            </button>
-                        </form>
-                    </div>
-                )}
-
-                {/* Sub-View: Manage Directory */}
-                {infraTab === 'manage' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        {campusHierarchy.map(b => (
-                            <div key={b.id} style={{ background: 'var(--light-blue)', border: '1px solid var(--border-card)', borderRadius: '10px', padding: '14px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                                    <div>
-                                        <strong style={{ color: 'var(--dark-blue)', fontSize: '0.96rem' }}>{b.name} ({b.code})</strong>
-                                        <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)' }}>{b.description || `${b.floors?.length || 0} Floors`}</div>
-                                    </div>
-                                    <span className="aero-pill cyan">{b.floors?.length || 0} Floors</span>
+                <section className="ui-card">
+                    <SectionHead icon={Building2} title="Buildings now" sub="Students present by building" />
+                    {overview?.buildingOccupancy?.length ? (
+                        <div className="pick-list" style={{ maxHeight: 340 }}>
+                            {overview.buildingOccupancy.map((b) => (
+                                <div key={b.building_id} className="pick-item" style={{ cursor: 'default' }}>
+                                    <IconTile icon={Building2} size={40} />
+                                    <div className="u-grow"><div className="pick-name">{b.building_name}</div><div className="pick-sub">{b.room_count} rooms</div></div>
+                                    <span className="ui-chip ui-chip--present">{b.students_present}</span>
                                 </div>
+                            ))}
+                        </div>
+                    ) : <Spinner label="Loading buildings" />}
+                </section>
+            </div>
+        </div>
+    );
 
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {b.floors?.map(f => (
-                                        <div key={f.id} style={{ background: '#FFFFFF', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '10px' }}>
-                                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--dark-blue)', marginBottom: '6px' }}>
-                                                {f.name} ({f.rooms?.length || 0} Rooms)
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                                {f.rooms?.map(r => (
-                                                    <div 
-                                                        key={r.id} 
-                                                        style={{ 
-                                                            display: 'inline-flex', 
-                                                            alignItems: 'center', 
-                                                            gap: '6px', 
-                                                            background: 'var(--light-blue)', 
-                                                            border: '1px solid var(--border-card)', 
-                                                            padding: '4px 10px', 
-                                                            borderRadius: '6px',
-                                                            fontSize: '0.74rem'
-                                                        }}
-                                                    >
-                                                        <span><strong>Rm {r.room_number}</strong>: {r.name}</span>
-                                                        <button 
-                                                            type="button" 
-                                                            onClick={() => handleDeleteRoom(r.id, r.room_number)}
-                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#DC2626', padding: '2px' }}
-                                                            title="Delete Room"
-                                                        >
-                                                            <Trash2 size={12} />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
+    const staffView = (
+        <section className="ui-card">
+            <SectionHead icon={Users} title="Staff directory" sub="Open a person to see where they have been" />
+            <div className="toolbar">
+                <div className="search-bar"><Search size={18} /><input className="ui-input" placeholder="Search name, email or staff code" value={sq} onChange={(e) => setSq(e.target.value)} /></div>
+                <div className="toolbar-actions">
+                    <select className="ui-select" style={{ width: 'auto' }} value={sDept} onChange={(e) => setSDept(e.target.value)} aria-label="Department">
+                        <option value="all">All departments</option>{depts.map((d) => <option key={d}>{d}</option>)}
+                    </select>
+                    <select className="ui-select" style={{ width: 'auto' }} value={sRole} onChange={(e) => setSRole(e.target.value)} aria-label="Role">
+                        <option value="all">All roles</option><option value="hod">HODs</option><option value="staff">Faculty</option>
+                    </select>
+                </div>
+            </div>
+            {staffLoading && staff.length === 0 ? <Spinner label="Loading staff" /> : staff.length === 0 ? (
+                <Empty icon={Users} title="No staff found">Try a different search.</Empty>
+            ) : (
+                <div className="ui-table-wrap table-scroll" style={{ maxHeight: 640 }}>
+                    <table className="ui-table">
+                        <thead><tr><th>Name</th><th>Role</th><th>Right now</th><th /></tr></thead>
+                        <tbody>
+                            {staff.map((p) => (
+                                <tr key={p.id} className="row-click" onClick={() => setInspectedStaffId(p.id)}>
+                                    <td><div className="cell-strong">{p.name}</div><div className="cell-sub">{p.email}</div></td>
+                                    <td><span className={`ui-chip ${p.role === 'hod' ? 'ui-chip--solid' : ''}`}>{p.role === 'hod' ? 'HOD' : 'Faculty'}</span><div className="cell-sub" style={{ marginTop: 4 }}>{p.department}{p.designation ? `, ${p.designation}` : ''}</div></td>
+                                    <td>{p.current_room_number
+                                        ? <><div className="cell-strong"><MapPin size={13} style={{ verticalAlign: '-2px' }} /> Room {p.current_room_number}</div><div className="cell-sub">{p.current_building_name}</div></>
+                                        : <span className="u-faint">Not in class</span>}</td>
+                                    <td style={{ textAlign: 'right' }}><ChevronRight size={18} color="var(--ink-3)" /></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </section>
+    );
+
+    const campusView = (
+        <div className="stack">
+            <Notice notice={notice} />
+            <Segmented label="Campus" value={campusTab} onChange={setCampusTab}
+                options={[{ value: 'rooms', label: 'Add room' }, { value: 'floor', label: 'Add floor' }, { value: 'building', label: 'Add building' }, { value: 'manage', label: 'Manage' }]} />
+
+            {campusTab === 'building' && (
+                <section className="ui-card">
+                    <SectionHead icon={Building2} title="Add a building" />
+                    <form className="u-col" style={{ gap: 14, maxWidth: 520 }} onSubmit={(e) => { e.preventDefault(); submit('/api/locations/buildings', bForm, `Building ${bForm.name} added`, () => setBForm({ name: '', code: '', description: '' })); }}>
+                        <div className="ui-field"><label className="ui-label" htmlFor="b-name">Name</label><input id="b-name" className="ui-input" value={bForm.name} onChange={(e) => setBForm({ ...bForm, name: e.target.value })} required /></div>
+                        <div className="ui-field"><label className="ui-label" htmlFor="b-code">Short code</label><input id="b-code" className="ui-input" value={bForm.code} onChange={(e) => setBForm({ ...bForm, code: e.target.value })} required /></div>
+                        <div className="ui-field"><label className="ui-label" htmlFor="b-desc">Description</label><input id="b-desc" className="ui-input" value={bForm.description} onChange={(e) => setBForm({ ...bForm, description: e.target.value })} /></div>
+                        <button type="submit" className="ui-btn ui-btn--primary"><Plus size={18} />Add building</button>
+                    </form>
+                </section>
+            )}
+
+            {campusTab === 'floor' && (
+                <section className="ui-card">
+                    <SectionHead icon={Layers} title="Add a floor" />
+                    <form className="u-col" style={{ gap: 14, maxWidth: 520 }} onSubmit={(e) => { e.preventDefault(); submit('/api/locations/floors', { building_id: Number(fForm.building), floor_number: Number(fForm.number), name: fForm.name }, `Floor ${fForm.name} added`, () => setFForm({ ...fForm, number: '', name: '' })); }}>
+                        <div className="ui-field"><label className="ui-label" htmlFor="f-b">Building</label><select id="f-b" className="ui-select" value={fForm.building} onChange={(e) => setFForm({ ...fForm, building: e.target.value })} required><option value="">Choose</option>{campus.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
+                        <div className="ui-field"><label className="ui-label" htmlFor="f-n">Floor number</label><input id="f-n" type="number" className="ui-input" value={fForm.number} onChange={(e) => setFForm({ ...fForm, number: e.target.value })} required /></div>
+                        <div className="ui-field"><label className="ui-label" htmlFor="f-name">Name</label><input id="f-name" className="ui-input" placeholder="e.g. First Floor" value={fForm.name} onChange={(e) => setFForm({ ...fForm, name: e.target.value })} required /></div>
+                        <button type="submit" className="ui-btn ui-btn--primary"><Plus size={18} />Add floor</button>
+                    </form>
+                </section>
+            )}
+
+            {campusTab === 'rooms' && (
+                <section className="ui-card">
+                    <SectionHead icon={DoorOpen} title="Add a room or lab" />
+                    <form className="u-col" style={{ gap: 14, maxWidth: 520 }} onSubmit={(e) => { e.preventDefault(); submit('/api/locations/rooms', { building_id: Number(rForm.building), floor_id: Number(rForm.floor), room_number: rForm.number, name: rForm.name, department: rForm.department, capacity: Number(rForm.capacity) }, `Room ${rForm.number} added`, () => setRForm({ ...rForm, number: '', name: '' })); }}>
+                        <div className="ui-field"><label className="ui-label" htmlFor="r-b">Building</label><select id="r-b" className="ui-select" value={rForm.building} onChange={(e) => setRForm({ ...rForm, building: e.target.value, floor: '' })} required><option value="">Choose</option>{campus.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
+                        <div className="ui-field"><label className="ui-label" htmlFor="r-f">Floor</label><select id="r-f" className="ui-select" value={rForm.floor} onChange={(e) => setRForm({ ...rForm, floor: e.target.value })} required disabled={!rForm.building}><option value="">Choose</option>{floorsFor(rForm.building).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select></div>
+                        <div className="split split--even" style={{ gap: 14 }}>
+                            <div className="ui-field"><label className="ui-label" htmlFor="r-n">Room number</label><input id="r-n" className="ui-input" value={rForm.number} onChange={(e) => setRForm({ ...rForm, number: e.target.value })} required /></div>
+                            <div className="ui-field"><label className="ui-label" htmlFor="r-c">Capacity</label><input id="r-c" type="number" className="ui-input" value={rForm.capacity} onChange={(e) => setRForm({ ...rForm, capacity: e.target.value })} /></div>
+                        </div>
+                        <div className="ui-field"><label className="ui-label" htmlFor="r-name">Name</label><input id="r-name" className="ui-input" placeholder="e.g. Programming Lab 2" value={rForm.name} onChange={(e) => setRForm({ ...rForm, name: e.target.value })} required /></div>
+                        <div className="ui-field"><label className="ui-label" htmlFor="r-d">Department</label><input id="r-d" className="ui-input" value={rForm.department} onChange={(e) => setRForm({ ...rForm, department: e.target.value })} /></div>
+                        <button type="submit" className="ui-btn ui-btn--primary"><Plus size={18} />Add room</button>
+                    </form>
+                </section>
+            )}
+
+            {campusTab === 'manage' && (
+                <section className="ui-card">
+                    <SectionHead icon={Building2} title="Campus structure" sub="Remove rooms or whole buildings. This cannot be undone." />
+                    <div className="u-col" style={{ gap: 18 }}>
+                        {campus.map((b) => (
+                            <div key={b.id} className="ui-card ui-card--flat">
+                                <div className="u-row u-between" style={{ marginBottom: 10 }}>
+                                    <div><div className="cell-strong">{b.name}</div><div className="cell-sub">{b.code}, {(b.floors || []).reduce((n, f) => n + (f.rooms?.length || 0), 0)} rooms</div></div>
+                                    <button type="button" className="ui-btn ui-btn--danger ui-btn--sm" onClick={() => del('Delete building?', `${b.name} and every floor and room inside it are removed.`, `/api/locations/buildings/${b.id}`)}><Trash2 size={15} />Delete building</button>
+                                </div>
+                                {(b.floors || []).map((f) => (
+                                    <div key={f.id} style={{ marginTop: 10 }}>
+                                        <div className="ui-eyebrow" style={{ marginBottom: 6 }}>{f.name}</div>
+                                        <div className="u-row" style={{ flexWrap: 'wrap', gap: 8 }}>
+                                            {(f.rooms || []).map((r) => (
+                                                <button key={r.id} type="button" className="ui-chip" style={{ border: 0, cursor: 'pointer', height: 32 }} title={`Delete room ${r.room_number}`}
+                                                    onClick={() => del('Delete room?', `Room ${r.room_number} (${r.name}) is removed from the campus.`, `/api/locations/rooms/${r.id}`)}>
+                                                    {r.room_number}<Trash2 size={12} />
+                                                </button>
+                                            ))}
+                                            {(f.rooms || []).length === 0 && <span className="u-faint u-small">No rooms</span>}
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                ))}
                             </div>
                         ))}
                     </div>
-                )}
-            </div>
-
-            {/* Modal: Staff Movement Timeline & Monthly Calendar View */}
-            <StaffMovementModal
-                isOpen={!!inspectedStaffId}
-                onClose={() => setInspectedStaffId(null)}
-                staffId={inspectedStaffId}
-            />
-
+                </section>
+            )}
         </div>
+    );
+
+    const holidaysView = (
+        <div className="stack">
+            <Notice notice={notice} />
+            <section className="ui-card" style={{ maxWidth: 640 }}>
+                <SectionHead icon={CalendarPlus} title="College holiday" sub="Applies to every department" />
+                <form onSubmit={declareHoliday} className="u-col" style={{ gap: 14 }}>
+                    <Segmented label="Type" value={hol.timed ? 'timed' : 'full'} onChange={(v) => setHol((h) => ({ ...h, timed: v === 'timed' }))} options={[{ value: 'full', label: 'Full day' }, { value: 'timed', label: 'Timed event' }]} />
+                    <div className="ui-field"><label className="ui-label" htmlFor="h-t">Title</label><input id="h-t" className="ui-input" placeholder="e.g. Founder's Day" value={hol.title} onChange={(e) => setHol({ ...hol, title: e.target.value })} required /></div>
+                    <div className="ui-field"><label className="ui-label" htmlFor="h-d">Date</label><input id="h-d" type="date" className="ui-input" value={hol.date} onChange={(e) => setHol({ ...hol, date: e.target.value })} required /></div>
+                    {hol.timed && (
+                        <div className="split split--even" style={{ gap: 14 }}>
+                            <div className="ui-field"><label className="ui-label" htmlFor="h-s">From</label><input id="h-s" type="time" className="ui-input" value={hol.start} onChange={(e) => setHol({ ...hol, start: e.target.value })} /></div>
+                            <div className="ui-field"><label className="ui-label" htmlFor="h-e">To</label><input id="h-e" type="time" className="ui-input" value={hol.end} onChange={(e) => setHol({ ...hol, end: e.target.value })} /></div>
+                        </div>
+                    )}
+                    <button type="submit" className="ui-btn ui-btn--primary"><CalendarPlus size={18} />Declare holiday</button>
+                </form>
+            </section>
+        </div>
+    );
+
+    return (
+        <>
+            {section === 'staff' ? staffView : section === 'campus' ? campusView : section === 'holidays' ? holidaysView : home}
+            <StaffMovementModal isOpen={!!inspectedStaffId} onClose={() => setInspectedStaffId(null)} staffId={inspectedStaffId} />
+            <Confirm open={!!confirm} title={confirm?.title} confirmLabel={confirm?.label} tone={confirm?.tone} busy={busy} onConfirm={() => confirm?.run()} onCancel={() => setConfirm(null)}>
+                {confirm?.body}
+            </Confirm>
+        </>
     );
 };

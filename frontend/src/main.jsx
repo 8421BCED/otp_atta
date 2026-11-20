@@ -1,7 +1,19 @@
-import React, { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
+import React, { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import './design/theme.css';
+import './design/shell.css';
+import './design/student.css';
+import './design/kit.css';
+import './design/bridge.css';
+import App from './App.jsx';
+import { installApiClient } from './api';
+import { initInstallPrompt } from './installPrompt';
+import { startClock } from './clock';
+
+installApiClient();
+startClock(); // college time from the server, ticking locally from the first moment
+initInstallPrompt(); // must run before the browser fires its install event
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -12,22 +24,23 @@ class ErrorBoundary extends React.Component {
     return { hasError: true, error };
   }
   componentDidCatch(error, errorInfo) {
-    console.error("React ErrorBoundary caught error:", error, errorInfo);
+    console.error('React ErrorBoundary caught error:', error, errorInfo);
   }
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '24px', fontFamily: 'system-ui, sans-serif', maxWidth: '480px', margin: '40px auto', background: '#FFF5F5', border: '1.5px solid #FEB2B2', borderRadius: '14px', color: '#9B2C2C', textAlign: 'center' }}>
-          <h2 style={{ margin: '0 0 10px 0', fontSize: '1.2rem', color: '#C53030' }}>Application Error</h2>
-          <p style={{ fontSize: '0.86rem', margin: '0 0 16px 0', color: '#4A5568' }}>
-            {this.state.error?.message || 'An unexpected error occurred while loading the application.'}
-          </p>
-          <button 
-            onClick={() => { localStorage.clear(); window.location.href = '/'; }}
-            style={{ padding: '10px 20px', background: '#3182CE', color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
-          >
-            Clear Cache & Reload
-          </button>
+        <div className="status-page">
+          <div className="status-card ui-card">
+            <h1>Something went wrong</h1>
+            <p>{this.state.error?.message || 'An unexpected error occurred while loading the app.'}</p>
+            <button
+              type="button"
+              className="ui-btn ui-btn--primary"
+              onClick={() => { try { localStorage.clear(); } catch (e) { /* ignore */ } window.location.href = '/'; }}
+            >
+              Clear data and reload
+            </button>
+          </div>
         </div>
       );
     }
@@ -43,13 +56,11 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 );
 
-// Register Firebase Messaging Background Service Worker for Doorbell Push Notifications (even when app is closed)
+// Offline shell and doorbell notifications
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
-    .then((reg) => {
-      console.log('Doorbell Service Worker active:', reg.scope);
-      reg.update();
-    })
-    .catch((err) => console.log('SW registration notice:', err));
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .then((reg) => reg.update())
+      .catch((err) => console.log('Service worker not registered:', err));
+  });
 }
-

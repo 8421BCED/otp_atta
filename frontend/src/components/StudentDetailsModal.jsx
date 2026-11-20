@@ -44,7 +44,7 @@ export const StudentDetailsModal = ({ isOpen, onClose, studentId }) => {
                 <div className="aero-modal-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div className="aero-icon-bubble">
-                            <User size={20} color="#136CFC" />
+                            <User size={20} color="#5798D7" />
                         </div>
                         <div>
                             <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--dark-blue)' }}>
@@ -84,7 +84,7 @@ export const StudentDetailsModal = ({ isOpen, onClose, studentId }) => {
                             </div>
 
                             {/* Yesterday Location At This Time */}
-                            <div className="list-row-item" style={{ background: '#F8FAFC', border: '1px solid var(--border-card)', borderRadius: '10px', padding: '12px 14px' }}>
+                            <div className="list-row-item" style={{ background: '#E6F1FA', border: '1px solid var(--border-card)', borderRadius: '10px', padding: '12px 14px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: 'var(--dark-blue)', fontWeight: 800 }}>
                                     <Clock size={15} color="var(--blue)" />
                                     <span>YESTERDAY AT THIS TIME</span>
@@ -102,12 +102,12 @@ export const StudentDetailsModal = ({ isOpen, onClose, studentId }) => {
                             </div>
 
                             {/* Overall Attendance */}
-                            <div className="list-row-item" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', padding: '12px 14px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#16A34A', fontWeight: 800 }}>
+                            <div className="list-row-item" style={{ background: '#EEF1CF', border: '1px solid #DDE4A0', borderRadius: '10px', padding: '12px 14px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#7F8B26', fontWeight: 800 }}>
                                     <Award size={15} />
                                     <span>ATTENDANCE RATE</span>
                                 </div>
-                                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#16A34A', marginTop: '2px' }}>
+                                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#7F8B26', marginTop: '2px' }}>
                                     {stats?.percentage || 100}%
                                 </div>
                                 <div style={{ fontSize: '0.72rem', color: 'var(--text-sub)' }}>

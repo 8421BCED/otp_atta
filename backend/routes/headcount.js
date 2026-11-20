@@ -3,14 +3,18 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 let ort = null;
-try {
-    ort = require('onnxruntime-node');
-} catch (e) {
-    console.warn('⚠️ onnxruntime-node optional dependency not loaded:', e.message);
+if (require('../config').headcountEnabled) {
+    try {
+        ort = require('onnxruntime-node');
+    } catch (e) {
+        console.warn('onnxruntime-node not available, headcount detection disabled:', e.message);
+    }
 }
 const sharp = require('sharp');
+const rateLimit = require('express-rate-limit');
 const pool = require('../db');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
+const { headcountEnabled } = require('../config');
 
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'headcounts');
 const FACE_MODEL_PATH = path.join(__dirname, '..', 'models', 'yolov8m-face.onnx');
@@ -51,11 +55,21 @@ const getPersonSession = async () => {
     return personSession;
 };
 
-// Initialize models safely
-if (ort) {
-    getFaceSession().catch(err => console.error('Error loading YOLO Face model:', err.message));
-    getPersonSession().catch(err => console.error('Error loading YOLO Person model:', err.message));
-}
+// Models load lazily on the first detection request. Eager loading would put two
+// ~100MB sessions into every worker process when the app runs in cluster mode.
+const IMAGE_MAGIC = [[0xff, 0xd8, 0xff], [0x89, 0x50, 0x4e, 0x47]]; // JPEG, PNG
+const looksLikeImage = (buf) => IMAGE_MAGIC.some((sig) => sig.every((b, i) => buf[i] === b));
+const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
+
+const detectLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 8,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => `user:${req.user.id}`,
+    validate: { keyGeneratorIpFallback: false },
+    message: { error: 'Too many headcount scans. Wait a minute and try again.' }
+});
 
 // Helper: Extract NMS & Containment filtered boxes from model output
 const extractBoxes = (output, origWidth, origHeight, scale, padX, padY, threshold, isPerson = false) => {
@@ -301,21 +315,25 @@ const cleanupExpiredFiles = async () => {
 // 1. Save new AI Headcount Audit Snapshot
 router.post('/audit', authenticate, authorizeRoles('staff', 'hod', 'principal'), async (req, res) => {
     try {
-        const { roomId, periodId, otpCount, visualCount, imageData, boxes } = req.body;
+        const { periodId, otpCount, visualCount, imageData, boxes } = req.body || {};
+        const roomId = parseInt(req.body.roomId, 10);
         const staffId = req.user.id;
 
-        if (!roomId || !imageData) {
+        if (!roomId || typeof imageData !== 'string') {
             return res.status(400).json({ error: 'Room ID and image data are required' });
+        }
+
+        // Strip data:image/jpeg;base64, header if present, then sanity check the bytes.
+        const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        if (buffer.length === 0 || buffer.length > MAX_IMAGE_BYTES || !looksLikeImage(buffer)) {
+            return res.status(400).json({ error: 'A JPEG or PNG image under 6MB is required' });
         }
 
         // Save image to disk
         fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-        const filename = `audit_room_${roomId}_${Date.now()}.jpg`;
+        const filename = `audit_${roomId}_${require('crypto').randomBytes(16).toString('hex')}.jpg`;
         const filePath = path.join(UPLOADS_DIR, filename);
-
-        // Strip data:image/jpeg;base64, header if present
-        const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Buffer.from(base64Data, 'base64');
         fs.writeFileSync(filePath, buffer);
 
         const imageUrl = `/uploads/headcounts/${filename}`;
@@ -397,7 +415,10 @@ router.get('/latest/:roomId', authenticate, async (req, res) => {
 router.delete('/:id', authenticate, authorizeRoles('staff', 'hod'), async (req, res) => {
     try {
         const { id } = req.params;
-        const [rows] = await pool.query('SELECT image_url FROM classroom_headcounts WHERE id = ?', [id]);
+        const [rows] = await pool.query('SELECT image_url, staff_id FROM classroom_headcounts WHERE id = ?', [id]);
+        if (rows.length > 0 && rows[0].staff_id !== req.user.id && req.user.role !== 'hod') {
+            return res.status(403).json({ error: 'You can only clear your own audits' });
+        }
         if (rows.length > 0 && rows[0].image_url) {
             const fp = path.join(UPLOADS_DIR, path.basename(rows[0].image_url));
             if (fs.existsSync(fp)) fs.unlinkSync(fp);
@@ -410,15 +431,21 @@ router.delete('/:id', authenticate, authorizeRoles('staff', 'hod'), async (req, 
 });
 
 // 4. Run Real AI YOLOv8n Detection on Camera / Uploaded Frame
-router.post('/detect', authenticate, async (req, res) => {
+router.post('/detect', authenticate, authorizeRoles('staff', 'hod', 'principal'), detectLimiter, async (req, res) => {
     try {
-        const { imageData, threshold } = req.body;
-        if (!imageData) {
+        const { imageData, threshold } = req.body || {};
+        if (!headcountEnabled || !ort) {
+            return res.status(503).json({ error: 'AI headcount is not enabled on this server' });
+        }
+        if (typeof imageData !== 'string') {
             return res.status(400).json({ error: 'Image data is required for detection' });
         }
 
         const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
         const buffer = Buffer.from(base64Data, 'base64');
+        if (buffer.length === 0 || buffer.length > MAX_IMAGE_BYTES || !looksLikeImage(buffer)) {
+            return res.status(400).json({ error: 'A JPEG or PNG image under 6MB is required' });
+        }
 
         const result = await detectStudentsYOLO(buffer, {
             threshold: threshold !== undefined && threshold !== null ? Number(threshold) : undefined,

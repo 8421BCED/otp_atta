@@ -2,18 +2,19 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
+const { todayIst, yesterdayIst } = require('../utils/time');
 
 // 1. Principal Campus-Wide Overview
 router.get('/overview', authenticate, authorizeRoles('principal'), async (req, res) => {
     try {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = todayIst();
 
         // Total Students
         const [totalStudents] = await pool.query('SELECT COUNT(*) as count FROM users WHERE role = "student"');
 
         // Total Students Present Today
         const [totalPresent] = await pool.query(
-            'SELECT COUNT(DISTINCT student_id) as count FROM attendance_records WHERE date = ? AND status = "present"',
+            'SELECT COUNT(DISTINCT student_id) as count FROM attendance_records WHERE date = ? AND status IN ("present", "od")',
             [today]
         );
 
@@ -150,10 +151,8 @@ router.get('/staff-details/:staffId', authenticate, authorizeRoles('principal'),
         }
         const staff = users[0];
 
-        const today = new Date().toISOString().slice(0, 10);
-        const yDate = new Date();
-        yDate.setDate(yDate.getDate() - 1);
-        const yesterday = yDate.toISOString().slice(0, 10);
+        const today = todayIst();
+        const yesterday = yesterdayIst();
 
         // Movements history
         const [movements] = await pool.query(
@@ -170,16 +169,10 @@ router.get('/staff-details/:staffId', authenticate, authorizeRoles('principal'),
         );
 
         // Today's locations
-        const todayMovements = movements.filter(m => {
-            const mDate = new Date(m.timestamp).toISOString().slice(0, 10);
-            return mDate === today || m.date === today;
-        });
+        const todayMovements = movements.filter((m) => m.date === today);
 
         // Yesterday's locations
-        const yesterdayMovements = movements.filter(m => {
-            const mDate = new Date(m.timestamp).toISOString().slice(0, 10);
-            return mDate === yesterday || m.date === yesterday;
-        });
+        const yesterdayMovements = movements.filter((m) => m.date === yesterday);
 
         return res.json({
             staff,

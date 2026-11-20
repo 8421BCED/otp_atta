@@ -1,40 +1,31 @@
 {
-  "name": "AttendOTP - FXEC Smart Attendance",
-  "short_name": "AttendOTP",
-  "description": "Real-Time 10s OTP & Anti-Proxy Attendance PWA for Francis Xavier Engineering College.",
-  "start_url": "/",
-  "scope": "/",
   "id": "/",
+  "name": "AttendOTP - FXEC Attendance",
+  "short_name": "AttendOTP",
+  "description": "Classroom attendance with rolling room codes for Francis Xavier Engineering College.",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
-  "orientation": "portrait",
-  "background_color": "#0B3064",
-  "theme_color": "#0B3064",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#E6F1FA",
+  "theme_color": "#E6F1FA",
   "categories": ["education", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-maskable-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "/screenshots/student-narrow.png", "sizes": "540x960", "type": "image/png", "form_factor": "narrow", "label": "Your day, your room and your code" },
+    { "src": "/screenshots/login-narrow.png", "sizes": "540x960", "type": "image/png", "form_factor": "narrow", "label": "Sign in with your college Google account" },
+    { "src": "/screenshots/student-wide.png", "sizes": "1280x720", "type": "image/png", "form_factor": "wide", "label": "AttendOTP on a computer" }
+  ],
+  "shortcuts": [
+    { "name": "Enter attendance code", "short_name": "Attendance", "url": "/students?source=shortcut", "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
   ]
 }

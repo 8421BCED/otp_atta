@@ -238,7 +238,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser,
                 </div>
                 <div className="ribbon-col">
                     <span className="lbl">Conducted</span>
-                    <span className="val" style={{ color: '#1E3A8A' }}>
+                    <span className="val" style={{ color: '#2E5F93' }}>
                         {classesConductedPeriods || 7} <span className="val-sub">Periods</span>
                     </span>
                 </div>
@@ -247,22 +247,22 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser,
             {/* Real-time Status Breakdown Pills (Sleek, Compact, Enterprise-Grade) */}
             <div className="calendar-status-stat-bar">
                 <div className="stat-pill stat-present">
-                    <span className="stat-dot" style={{ background: '#16A34A' }} />
+                    <span className="stat-dot" style={{ background: '#7F8B26' }} />
                     <span className="stat-label">Present</span>
                     <span className="stat-num">{presentDaysCount}</span>
                 </div>
                 <div className="stat-pill stat-absent">
-                    <span className="stat-dot" style={{ background: '#DC2626' }} />
+                    <span className="stat-dot" style={{ background: '#C25B56' }} />
                     <span className="stat-label">Absent</span>
                     <span className="stat-num">{leavesCount}</span>
                 </div>
                 <div className="stat-pill stat-od">
-                    <span className="stat-dot" style={{ background: '#7E22CE' }} />
+                    <span className="stat-dot" style={{ background: '#A9762B' }} />
                     <span className="stat-label">Sports OD</span>
                     <span className="stat-num">{eventExemptionCount}</span>
                 </div>
                 <div className="stat-pill stat-holiday">
-                    <span className="stat-dot" style={{ background: '#1D4ED8' }} />
+                    <span className="stat-dot" style={{ background: '#5798D7' }} />
                     <span className="stat-label">Holidays</span>
                     <span className="stat-num">{collegeHolidaysCount}</span>
                 </div>
@@ -286,7 +286,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser,
                         </button>
 
                         <div className="month-nav-title">
-                            <CalendarIcon size={16} color="#1E3A8A" />
+                            <CalendarIcon size={16} color="#2E5F93" />
                             <span>{monthNames[viewMonth]} {viewYear}</span>
                         </div>
 
@@ -326,31 +326,31 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser,
                                 >
                                     <span className="day-num">{d.day}</span>
                                     {d.status === 'present' && <span className="aero-dot green"></span>}
-                                    {d.status === 'leave' && <span className="aero-dot" style={{ background: '#7E22CE' }}></span>}
+                                    {d.status === 'leave' && <span className="aero-dot" style={{ background: '#A9762B' }}></span>}
                                     {d.status === 'partial' && <span className="aero-dot amber"></span>}
                                     {d.status === 'today' && <span className="aero-dot blue"></span>}
-                                    {d.status === 'absent' && <span className="aero-dot red" style={{ background: '#DC2626' }}></span>}
+                                    {d.status === 'absent' && <span className="aero-dot red" style={{ background: '#C25B56' }}></span>}
                                 </button>
                             );
                         })}
                     </div>
 
                     {/* Quick Legend */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', marginTop: '14px', fontSize: '0.72rem', color: '#5A5249', fontWeight: 650 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', marginTop: '14px', fontSize: '0.72rem', color: '#526579', fontWeight: 650 }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#16A34A' }}></span> Present
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#7F8B26' }}></span> Present
                         </span>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#DC2626' }}></span> Absent
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C25B56' }}></span> Absent
                         </span>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#7E22CE' }}></span> Sports OD
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#A9762B' }}></span> Sports OD
                         </span>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1E3A8A' }}></span> Live Today
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2E5F93' }}></span> Live Today
                         </span>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#CBD5E1' }}></span> Weekend / Holiday
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#BCD0E2' }}></span> Weekend / Holiday
                         </span>
                     </div>
 
@@ -360,11 +360,11 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser,
                 <div className="attendance-grid-right">
                     
                     {/* Selected Day Details Panel */}
-                    <div className="aero-day-detail-panel" style={{ background: '#FEFDFB', border: '1.5px solid #E2D9CE', borderRadius: '18px', padding: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingBottom: '10px', borderBottom: '1px solid #E2D9CE' }}>
+                    <div className="aero-day-detail-panel" style={{ background: '#E6F1FA', border: '1.5px solid #CBDCEB', borderRadius: '18px', padding: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingBottom: '10px', borderBottom: '1px solid #CBDCEB' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <CheckCircle2 size={18} color="#1E3A8A" />
-                                <strong style={{ color: '#152641', fontSize: '0.94rem', fontWeight: 800 }}>
+                                <CheckCircle2 size={18} color="#2E5F93" />
+                                <strong style={{ color: '#1D2B3C', fontSize: '0.94rem', fontWeight: 800 }}>
                                     Details for {activeDayInfo.date} {activeDayInfo.date === todayStr ? '(Today)' : ''}
                                 </strong>
                             </div>
@@ -379,16 +379,16 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser,
                         <div className="aero-timeline-mini" style={{ marginTop: '12px' }}>
                             {selectedDayRecords.length > 0 ? (
                                 selectedDayRecords.map((rec, idx) => (
-                                    <div key={idx} className="mini-trail-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2D9CE', marginBottom: '8px' }}>
+                                    <div key={idx} className="mini-trail-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#E6F1FA', padding: '10px 14px', borderRadius: '12px', border: '1px solid #CBDCEB', marginBottom: '8px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                            <Clock size={15} color="#1E3A8A" />
-                                            <strong style={{ color: '#152641', fontSize: '0.86rem', fontWeight: 800 }}>
+                                            <Clock size={15} color="#2E5F93" />
+                                            <strong style={{ color: '#1D2B3C', fontSize: '0.86rem', fontWeight: 800 }}>
                                                 {rec.period_name || `Period ${rec.period_id}`} ({rec.start_time ? rec.start_time.slice(0, 5) : '09:00'} – {rec.end_time ? rec.end_time.slice(0, 5) : '09:50'}):
                                             </strong>
-                                            <span style={{ fontWeight: 800, color: '#1E3A8A', fontSize: '0.84rem' }}>
+                                            <span style={{ fontWeight: 800, color: '#2E5F93', fontSize: '0.84rem' }}>
                                                 Room {rec.room_number || '101'}
                                             </span>
-                                            <span style={{ color: '#5A5249', fontSize: '0.78rem', fontWeight: 600 }}>
+                                            <span style={{ color: '#526579', fontSize: '0.78rem', fontWeight: 600 }}>
                                                 ({rec.room_name || 'Classroom'} • {rec.building_name || 'FX Engineering Block'})
                                             </span>
                                         </div>
@@ -398,7 +398,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser,
                                     </div>
                                 ))
                             ) : (
-                                <div style={{ padding: '18px 14px', textAlign: 'center', color: '#5A5249', fontSize: '0.84rem', fontWeight: 600 }}>
+                                <div style={{ padding: '18px 14px', textAlign: 'center', color: '#526579', fontSize: '0.84rem', fontWeight: 600 }}>
                                     {activeDayInfo.status === 'upcoming' 
                                         ? 'Upcoming schedule — no attendance records yet.' 
                                         : activeDayInfo.status === 'weekend' 
@@ -412,11 +412,11 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser,
                     </div>
 
                     {/* Physical Movement & Lab Relocation Trail */}
-                    <div style={{ marginTop: '16px', background: '#FEFDFB', border: '1.5px solid #E2D9CE', borderRadius: '18px', padding: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid #E2D9CE' }}>
+                    <div style={{ marginTop: '16px', background: '#E6F1FA', border: '1.5px solid #CBDCEB', borderRadius: '18px', padding: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid #CBDCEB' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Navigation size={17} color="#1E3A8A" />
-                                <span style={{ fontWeight: 850, color: '#152641', fontSize: '0.90rem' }}>
+                                <Navigation size={17} color="#2E5F93" />
+                                <span style={{ fontWeight: 850, color: '#1D2B3C', fontSize: '0.90rem' }}>
                                     Physical Classroom & Lab Movement Trail
                                 </span>
                             </div>
@@ -428,20 +428,20 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser,
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {selectedDayMovements.length > 0 ? (
                                 selectedDayMovements.map((m, idx) => (
-                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2D9CE', fontSize: '0.80rem' }}>
+                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#E6F1FA', padding: '10px 14px', borderRadius: '12px', border: '1px solid #CBDCEB', fontSize: '0.80rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                            <Clock size={14} color="#5A5249" />
-                                            <span style={{ color: '#5A5249', fontWeight: 650 }}>
+                                            <Clock size={14} color="#526579" />
+                                            <span style={{ color: '#526579', fontWeight: 650 }}>
                                                 {m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '09:00 AM'}
                                             </span>
-                                            <span style={{ fontWeight: 800, color: '#152641' }}>
+                                            <span style={{ fontWeight: 800, color: '#1D2B3C' }}>
                                                 {m.from_room ? `Room ${m.from_room}` : 'Classroom Arrival'}
                                             </span>
-                                            <ArrowRight size={13} color="#1E3A8A" />
-                                            <span style={{ fontWeight: 850, color: '#1E3A8A' }}>
+                                            <ArrowRight size={13} color="#2E5F93" />
+                                            <span style={{ fontWeight: 850, color: '#2E5F93' }}>
                                                 Room {m.to_room || m.to_room_id} ({m.to_room_name || 'Classroom'})
                                             </span>
-                                            <span style={{ fontSize: '0.74rem', color: '#5A5249' }}>
+                                            <span style={{ fontSize: '0.74rem', color: '#526579' }}>
                                                 • {m.to_building || 'FX Engineering Block'}
                                             </span>
                                         </div>
@@ -451,7 +451,7 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser,
                                     </div>
                                 ))
                             ) : (
-                                <div style={{ padding: '14px', textAlign: 'center', color: '#5A5249', fontSize: '0.82rem', fontWeight: 600 }}>
+                                <div style={{ padding: '14px', textAlign: 'center', color: '#526579', fontSize: '0.82rem', fontWeight: 600 }}>
                                     No classroom movements recorded on {selectedDate}.
                                 </div>
                             )}
@@ -459,9 +459,9 @@ export const AttendanceCalendarModal = ({ isOpen, onClose, student, currentUser,
                     </div>
 
                     {/* Anti-Proxy Hardware Binding Tag */}
-                    <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', gap: '8px', background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '14px', padding: '10px 14px', fontSize: '0.76rem', color: '#065F46', fontWeight: 700 }}>
-                        <ShieldCheck size={16} color="#059669" />
-                        <span>Autonomous Anti-Proxy Ledger: All dates cryptographically mapped to student hardware.</span>
+                    <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', gap: '8px', background: '#EEF1CF', border: '1px solid #DDE4A0', borderRadius: '14px', padding: '10px 14px', fontSize: '0.76rem', color: '#5F6A1B', fontWeight: 700 }}>
+                        <ShieldCheck size={16} color="#6E7A20" />
+                        <span>Each mark is recorded with the room, the period and the registered device.</span>
                     </div>
 
                 </div>

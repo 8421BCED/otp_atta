@@ -1,1045 +1,309 @@
-import React, { useState, useEffect } from 'react';
-import { 
-    Shield, 
-    Key, 
-    Lock, 
-    Unlock, 
-    Users, 
-    UserPlus, 
-    Search, 
-    Filter, 
-    Edit3, 
-    Trash2, 
-    RotateCcw, 
-    CheckCircle2, 
-    AlertCircle, 
-    Building2, 
-    Briefcase, 
-    Mail, 
-    RefreshCw,
-    X,
-    Eye,
-    EyeOff
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+    ShieldCheck, Lock, Users, UserPlus, Search, Pencil, Trash2, LogOut, MessageSquare,
+    Eye, EyeOff, UserX, UserCheck, ArrowLeft
 } from 'lucide-react';
+import { Modal, Confirm, Notice, Empty, Stat, SectionHead, Segmented, Spinner, IconTile } from './kit';
+import { useNotice } from '../hooks';
 
-const MASTER_PASS = 'ItOperations@12345';
+const TOKEN_KEY = 'fxec_itops_token';
+const ROLES = [
+    ['staff', 'Faculty'], ['hod', 'HOD'], ['principal', 'Principal'], ['pt', 'Sports director'], ['student', 'Student']
+];
+const roleLabel = (r) => (ROLES.find(([v]) => v === r) || [r, r])[1];
+
+const readToken = () => { try { return sessionStorage.getItem(TOKEN_KEY); } catch (e) { return null; } };
+
+const emptyForm = { id: null, name: '', email: '', role: 'staff', department: 'IT', designation: 'ASSISTANT PROFESSOR', phone: '', is_active: 1 };
 
 export const StrangeOpsDashboard = ({ onLogout }) => {
-    // Authentication State
-    const [isAuthenticated, setIsAuthenticated] = useState(() => {
-        return sessionStorage.getItem('fxec_strange_auth') === MASTER_PASS;
-    });
+    const [token, setToken] = useState(readToken);
     const [passInput, setPassInput] = useState('');
-    const [authError, setAuthError] = useState(null);
     const [showPass, setShowPass] = useState(false);
+    const [authError, setAuthError] = useState(null);
+    const [authBusy, setAuthBusy] = useState(false);
 
-    // Data State
+    const [tab, setTab] = useState('users');
     const [stats, setStats] = useState(null);
     const [users, setUsers] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedRole, setSelectedRole] = useState('all');
-    const [selectedDept, setSelectedDept] = useState('all');
-    const [selectedStatus, setSelectedStatus] = useState('active');
+    const [feedbacks, setFeedbacks] = useState([]);
+    const [loading, setLoading] = useState(false);
 
-    // Feedbacks & User Issues State
-    const [activeTab, setActiveTab] = useState('users'); // 'users' | 'feedbacks'
-    const [feedbacksList, setFeedbacksList] = useState([]);
-    const [isLoadingFeedbacks, setIsLoadingFeedbacks] = useState(false);
+    const [q, setQ] = useState('');
+    const [role, setRole] = useState('all');
+    const [dept, setDept] = useState('all');
+    const [status, setStatus] = useState('active');
 
-    // Notification State
-    const [feedback, setFeedback] = useState(null);
+    const [notice, showNotice] = useNotice();
+    const [formOpen, setFormOpen] = useState(false);
+    const [form, setForm] = useState(emptyForm);
+    const [confirm, setConfirm] = useState(null);
+    const [busy, setBusy] = useState(false);
 
-    // Modal State (Add or Edit)
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalMode, setModalMode] = useState('create'); // 'create' or 'edit'
-    const [formData, setFormData] = useState({
-        id: null,
-        name: '',
-        email: '',
-        role: 'staff',
-        department: 'IT',
-        designation: 'ASSISTANT PROFESSOR',
-        phone: '',
-        password: '',
-        is_active: 1
-    });
+    const lock = useCallback(() => {
+        try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) { /* ignore */ }
+        setToken(null);
+        setPassInput('');
+    }, []);
 
-    const handleAuthenticate = async (e) => {
+    const api = useCallback(async (url, options = {}) => {
+        const res = await fetch(url, {
+            ...options,
+            headers: { 'Content-Type': 'application/json', 'x-it-ops-token': token, ...(options.headers || {}) }
+        });
+        if (res.status === 401) { lock(); throw new Error('Session expired'); }
+        const data = await res.json().catch(() => ({}));
+        return { ok: res.ok, data };
+    }, [token, lock]);
+
+    const authenticate = async (e) => {
         e.preventDefault();
         setAuthError(null);
-
-        if (passInput.trim() === MASTER_PASS) {
-            sessionStorage.setItem('fxec_strange_auth', MASTER_PASS);
-            setIsAuthenticated(true);
-            setPassInput('');
-        } else {
-            setAuthError('Access Denied: Invalid IT Operations Master Passphrase.');
-        }
-    };
-
-    const handleLockConsole = () => {
-        sessionStorage.removeItem('fxec_strange_auth');
-        setIsAuthenticated(false);
-        setPassInput('');
-        if (onLogout) {
-            onLogout();
-        }
-    };
-
-    // Load Stats and User Directory
-    const loadDirectory = async () => {
-        if (!isAuthenticated) return;
-        setIsLoading(true);
+        setAuthBusy(true);
         try {
-            const params = new URLSearchParams({
-                key: MASTER_PASS,
-                q: searchQuery,
-                role: selectedRole,
-                department: selectedDept,
-                status: selectedStatus
+            const res = await fetch('/api/it-ops/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pass: passInput })
             });
-
-            const [resUsers, resStats] = await Promise.all([
-                fetch(`/api/it-ops/users?${params.toString()}`, {
-                    headers: { 'x-it-ops-key': MASTER_PASS }
-                }),
-                fetch('/api/it-ops/stats', {
-                    headers: { 'x-it-ops-key': MASTER_PASS }
-                })
-            ]);
-
-            const dataUsers = await resUsers.json();
-            const dataStats = await resStats.json();
-
-            setUsers(dataUsers.users || []);
-            setStats(dataStats.stats || null);
+            const data = await res.json();
+            if (res.ok && data.token) {
+                try { sessionStorage.setItem(TOKEN_KEY, data.token); } catch (err) { /* ignore */ }
+                setToken(data.token);
+                setPassInput('');
+            } else {
+                setAuthError(data.error || 'Incorrect passphrase');
+            }
         } catch (err) {
-            console.error('Failed to load IT Ops directory:', err);
-            setFeedback({ type: 'error', text: 'Failed to connect to IT Operations backend.' });
+            setAuthError('Could not reach the server');
         } finally {
-            setIsLoading(false);
+            setAuthBusy(false);
         }
     };
+
+    const loadDirectory = useCallback(async () => {
+        if (!token) return;
+        setLoading(true);
+        try {
+            const params = new URLSearchParams({ q, role, department: dept, status });
+            const [u, s] = await Promise.all([api(`/api/it-ops/users?${params}`), api('/api/it-ops/stats')]);
+            setUsers(u.data.users || []);
+            setStats(s.data);
+        } catch (e) { /* locked or offline */ } finally { setLoading(false); }
+    }, [token, q, role, dept, status, api]);
+
+    const loadFeedback = useCallback(async () => {
+        if (!token) return;
+        try {
+            const f = await api('/api/feedback/all');
+            setFeedbacks(f.data.feedbacks || []);
+        } catch (e) { /* locked or offline */ }
+    }, [token, api]);
 
     useEffect(() => {
-        loadDirectory();
-        loadFeedbacks();
-    }, [isAuthenticated, searchQuery, selectedRole, selectedDept, selectedStatus]);
+        const t = setTimeout(loadDirectory, 250);
+        return () => clearTimeout(t);
+    }, [loadDirectory]);
+    useEffect(() => { if (tab === 'feedback') loadFeedback(); }, [tab, loadFeedback]);
 
-    const loadFeedbacks = async () => {
-        if (!isAuthenticated) return;
-        setIsLoadingFeedbacks(true);
-        try {
-            const res = await fetch('/api/feedback/all');
-            const data = await res.json();
-            if (data.feedbacks) {
-                setFeedbacksList(data.feedbacks);
-            }
-        } catch (e) {
-            console.error('Failed to load feedbacks:', e);
-        } finally {
-            setIsLoadingFeedbacks(false);
-        }
+    const departments = useMemo(() => (stats?.departments || []).map((d) => d.department).filter(Boolean), [stats]);
+
+    const openCreate = () => { setForm(emptyForm); setFormOpen(true); };
+    const openEdit = (u) => {
+        setForm({ id: u.id, name: u.name, email: u.email, role: u.role, department: u.department || '', designation: u.designation || '', phone: u.phone || '', is_active: u.is_active ? 1 : 0 });
+        setFormOpen(true);
     };
 
-    const handleUpdateFeedbackStatus = async (id, status) => {
-        try {
-            const res = await fetch(`/api/feedback/${id}/status`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status })
-            });
-            if (res.ok) {
-                loadFeedbacks();
-                showMessage('success', `Feedback #${id} marked as ${status}`);
-            }
-        } catch (e) {
-            showMessage('error', 'Failed to update feedback status');
-        }
-    };
-
-    const showMessage = (type, text) => {
-        setFeedback({ type, text });
-        setTimeout(() => setFeedback(null), 4000);
-    };
-
-    // Open Modal for Create
-    const handleOpenCreateModal = () => {
-        setModalMode('create');
-        setFormData({
-            id: null,
-            name: '',
-            email: '',
-            role: 'staff',
-            department: 'IT',
-            designation: 'ASSISTANT PROFESSOR',
-            phone: '',
-            password: 'Fxec@123',
-            is_active: 1
-        });
-        setIsModalOpen(true);
-    };
-
-    // Open Modal for Edit
-    const handleOpenEditModal = (user) => {
-        setModalMode('edit');
-        setFormData({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            department: user.department,
-            designation: user.designation || '',
-            phone: user.phone || '',
-            password: '',
-            is_active: user.is_active ? 1 : 0
-        });
-        setIsModalOpen(true);
-    };
-
-    // Submit Add or Edit Form
-    const handleSaveUser = async (e) => {
+    const save = async (e) => {
         e.preventDefault();
+        setBusy(true);
         try {
-            if (modalMode === 'create') {
-                const res = await fetch('/api/it-ops/users', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-it-ops-key': MASTER_PASS
-                    },
-                    body: JSON.stringify(formData)
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    showMessage('success', data.message || 'Staff created successfully!');
-                    setIsModalOpen(false);
-                    loadDirectory();
-                } else {
-                    showMessage('error', data.error || 'Failed to create staff.');
-                }
-            } else {
-                const res = await fetch(`/api/it-ops/users/${formData.id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-it-ops-key': MASTER_PASS
-                    },
-                    body: JSON.stringify(formData)
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    showMessage('success', `Faculty profile for "${formData.name}" updated successfully!`);
-                    setIsModalOpen(false);
-                    loadDirectory();
-                } else {
-                    showMessage('error', data.error || 'Failed to update user.');
-                }
-            }
-        } catch (err) {
-            console.error('Error saving user:', err);
-            showMessage('error', 'Network error occurred while saving.');
-        }
-    };
-
-    // Reset Password to Default Fxec@123
-    const handleResetPassword = async (user) => {
-        if (!window.confirm(`Reset password to default ("Fxec@123") for ${user.name} (${user.email})?`)) {
-            return;
-        }
-
-        try {
-            const res = await fetch(`/api/it-ops/users/${user.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-it-ops-key': MASTER_PASS
-                },
-                body: JSON.stringify({ resetPassword: true })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                showMessage('success', `Password for ${user.name} reset to default: "Fxec@123"`);
-            } else {
-                showMessage('error', data.error || 'Failed to reset password.');
-            }
-        } catch (err) {
-            showMessage('error', 'Network error during password reset.');
-        }
-    };
-
-    // Delete / Purge User
-    const handleDeleteUser = async (user) => {
-        if (!window.confirm(`PERMANENT ACTION: Delete faculty member "${user.name}" (${user.email})? This removes their account, active OTPs, and device locks.`)) {
-            return;
-        }
-
-        try {
-            const res = await fetch(`/api/it-ops/users/${user.id}`, {
-                method: 'DELETE',
-                headers: { 'x-it-ops-key': MASTER_PASS }
-            });
-            const data = await res.json();
-            if (res.ok) {
-                showMessage('success', data.message || `Deleted ${user.name}`);
+            const creating = !form.id;
+            const body = { ...form };
+            const { ok, data } = await api(creating ? '/api/it-ops/users' : `/api/it-ops/users/${form.id}`, { method: creating ? 'POST' : 'PUT', body: JSON.stringify(body) });
+            if (ok && data.success) {
+                setFormOpen(false);
                 loadDirectory();
+                showNotice({ type: 'success', text: data.message || (creating ? 'User created' : 'User updated') });
             } else {
-                showMessage('error', data.error || 'Failed to delete user.');
+                showNotice({ type: 'error', text: data.error || 'Could not save the user' });
             }
-        } catch (err) {
-            showMessage('error', 'Network error during deletion.');
-        }
+        } catch (err) { /* session handled */ } finally { setBusy(false); }
     };
 
-    // ----------------------------------------------------
-    // Screen 1: Master Passphrase Auth Prompt
-    // ----------------------------------------------------
-    if (!isAuthenticated) {
+    const toggleActive = async (u) => {
+        try {
+            const { ok, data } = await api(`/api/it-ops/users/${u.id}`, { method: 'PUT', body: JSON.stringify({ is_active: u.is_active ? 0 : 1 }) });
+            if (ok) { showNotice({ type: 'success', text: u.is_active ? `${u.name} deactivated` : `${u.name} activated` }); loadDirectory(); }
+            else showNotice({ type: 'error', text: data.error || 'Could not update the user' });
+        } catch (e) { /* session handled */ }
+    };
+
+    const askDelete = (u) => setConfirm({
+        title: 'Delete this user?', body: `${u.name} (${u.email}) and all of their attendance and device records are removed permanently. Deactivating is usually safer.`, label: 'Delete permanently', tone: 'danger',
+        run: async () => {
+            setBusy(true);
+            try {
+                const { ok, data } = await api(`/api/it-ops/users/${u.id}`, { method: 'DELETE' });
+                showNotice({ type: ok ? 'success' : 'error', text: data.message || data.error });
+                loadDirectory();
+            } catch (e) { /* session handled */ } finally { setBusy(false); setConfirm(null); }
+        }
+    });
+
+    const setFeedbackStatus = async (id, value) => {
+        try {
+            const { ok } = await api(`/api/feedback/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: value }) });
+            if (ok) loadFeedback();
+        } catch (e) { /* session handled */ }
+    };
+
+    // ------------------------------------------------------------------ gate
+    if (!token) {
         return (
-            <div style={{
-                minHeight: '80vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '20px'
-            }}>
-                <div className="fa-glass-card" style={{
-                    maxWidth: '460px',
-                    width: '100%',
-                    padding: '36px 30px',
-                    textAlign: 'center',
-                    border: '1px solid rgba(19, 108, 252, 0.25)',
-                    boxShadow: '0 16px 40px rgba(19, 108, 252, 0.12)'
-                }}>
-                    <div style={{
-                        width: '64px',
-                        height: '64px',
-                        borderRadius: '20px',
-                        background: 'linear-gradient(135deg, #136CFC 0%, #152641 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 18px',
-                        boxShadow: '0 8px 20px rgba(19, 108, 252, 0.35)'
-                    }}>
-                        <Shield size={32} color="#C3F84A" />
-                    </div>
-
-                    <h1 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--dark-blue)', marginBottom: '6px' }}>
-                        IT Operations Terminal
-                    </h1>
-                    <p style={{ fontSize: '0.80rem', color: 'var(--text-sub)', marginBottom: '24px' }}>
-                        Restricted Access: Live Faculty, HOD & Principal Directory Management
-                    </p>
-
-                    <form onSubmit={handleAuthenticate} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        <div style={{ position: 'relative', textAlign: 'left' }}>
-                            <label style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--dark-blue)', marginBottom: '4px', display: 'block' }}>
-                                IT Master Passphrase
-                            </label>
-                            <div style={{ position: 'relative' }}>
-                                <input 
-                                    type={showPass ? 'text' : 'password'}
-                                    className="fx-select"
-                                    style={{ width: '100%', paddingRight: '42px', fontSize: '0.92rem', letterSpacing: '0.04em' }}
-                                    placeholder="Enter ItOperations@..."
-                                    value={passInput}
-                                    onChange={(e) => setPassInput(e.target.value)}
-                                    autoFocus
-                                />
-                                <button 
-                                    type="button"
-                                    onClick={() => setShowPass(!showPass)}
-                                    style={{
-                                        position: 'absolute',
-                                        right: '12px',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        color: 'var(--text-sub)'
-                                    }}
-                                >
-                                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+            <div className="status-page">
+                <div className="status-card ui-card" style={{ maxWidth: 420 }}>
+                    <div className="status-icon"><ShieldCheck size={32} strokeWidth={1.8} /></div>
+                    <h1>IT Operations</h1>
+                    <p>Restricted console for managing accounts. Enter the operations passphrase to continue.</p>
+                    {authError && <div className="ui-alert ui-alert--danger" role="alert" style={{ marginBottom: 16, textAlign: 'left' }}><span>{authError}</span></div>}
+                    <form onSubmit={authenticate} className="u-col" style={{ gap: 14, textAlign: 'left' }}>
+                        <div className="ui-field">
+                            <label className="ui-label" htmlFor="ops-pass">Passphrase</label>
+                            <div className="ui-input-wrap">
+                                <Lock size={18} />
+                                <input id="ops-pass" className="ui-input" type={showPass ? 'text' : 'password'} value={passInput} onChange={(e) => setPassInput(e.target.value)} autoFocus autoComplete="off" style={{ paddingRight: 48 }} />
+                                <button type="button" className="input-toggle" onClick={() => setShowPass((s) => !s)} aria-label={showPass ? 'Hide' : 'Show'}>
+                                    {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
                         </div>
-
-                        {authError && (
-                            <div className="aero-alert-error" style={{ fontSize: '0.78rem' }}>
-                                <AlertCircle size={15} />
-                                <span>{authError}</span>
-                            </div>
-                        )}
-
-                        <button 
-                            type="submit" 
-                            className="aero-gloss-btn"
-                            style={{ width: '100%', padding: '12px', marginTop: '6px' }}
-                        >
-                            <Lock size={15} style={{ marginRight: '6px', verticalAlign: '-1px' }} />
-                            <span>Unlock IT Console</span>
-                        </button>
+                        <button type="submit" className="ui-btn ui-btn--primary ui-btn--block" disabled={authBusy || !passInput}>{authBusy ? 'Checking' : 'Unlock console'}</button>
+                        <button type="button" className="ui-btn ui-btn--ghost ui-btn--block" onClick={() => onLogout && onLogout()}><ArrowLeft size={16} />Back to the portal</button>
                     </form>
-
-                    {onLogout && (
-                        <div style={{ marginTop: '16px' }}>
-                            <button
-                                type="button"
-                                onClick={onLogout}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'var(--blue)',
-                                    fontSize: '0.80rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    textDecoration: 'underline'
-                                }}
-                            >
-                                ← Exit to Student Attendance Portal
-                            </button>
-                        </div>
-                    )}
-
-                    <div style={{ marginTop: '20px', fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-                        FXEC Autonomous • Campus IT Infrastructure Operations
-                    </div>
                 </div>
             </div>
         );
     }
 
-    // ----------------------------------------------------
-    // Screen 2: IT Operations Control Console
-    // ----------------------------------------------------
+    // --------------------------------------------------------------- console
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '22px', width: '100%', paddingBottom: '40px' }}>
-            
-            {/* Header Ribbon */}
-            <div className="fa-glass-card" style={{ padding: '18px 24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        <div className="aero-badge-circle" style={{ background: 'var(--dark-blue)', color: '#C3F84A' }}>
-                            <Shield size={20} />
-                        </div>
-                        <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--dark-blue)', margin: 0 }}>
-                                    IT Operations Faculty Directory
-                                </h1>
-                                <span className="aero-pill cyan" style={{ fontSize: '0.70rem', textTransform: 'uppercase' }}>
-                                    Level 1 Root
-                                </span>
-                            </div>
-                            <div style={{ fontSize: '0.76rem', color: 'var(--text-sub)', marginTop: '2px' }}>
-                                Real-time CRUD for Staff, HOD & Principal Accounts • Password Resets & Department Transfers
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <button 
-                            type="button" 
-                            className="aero-glass-btn"
-                            onClick={loadDirectory}
-                            title="Refresh User Data"
-                            style={{ padding: '8px 14px', fontSize: '0.78rem' }}
-                        >
-                            <RefreshCw size={14} className={isLoading ? 'spin-icon' : ''} />
-                            <span>Refresh</span>
-                        </button>
-                        
-                        <button 
-                            type="button" 
-                            className="aero-gloss-btn"
-                            onClick={handleOpenCreateModal}
-                            style={{ padding: '8px 18px', fontSize: '0.80rem' }}
-                        >
-                            <UserPlus size={15} style={{ marginRight: '6px' }} />
-                            <span>+ Add New Faculty / Staff</span>
-                        </button>
-
-                        <button 
-                            type="button" 
-                            className="fx-btn-danger"
-                            onClick={handleLockConsole}
-                            style={{ padding: '8px 14px', fontSize: '0.78rem' }}
-                            title="Lock IT Operations Console"
-                        >
-                            <Lock size={14} style={{ marginRight: '4px' }} />
-                            <span>Lock Terminal</span>
-                        </button>
-                    </div>
+        <div className="ops-shell">
+            <header className="ops-top">
+                <div className="u-row" style={{ gap: 12 }}>
+                    <IconTile icon={ShieldCheck} size={42} />
+                    <div><div className="sb-name">IT Operations</div><div className="sb-sub">Accounts and support</div></div>
                 </div>
-            </div>
+                <button type="button" className="ui-btn ui-btn--sm" onClick={() => { lock(); onLogout && onLogout(); }}><LogOut size={16} />Lock console</button>
+            </header>
 
-            {/* Navigation Switcher: Users Directory vs User Feedbacks */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                    type="button"
-                    onClick={() => setActiveTab('users')}
-                    className="aero-gloss-btn"
-                    style={{
-                        padding: '10px 20px',
-                        fontSize: '0.86rem',
-                        background: activeTab === 'users' ? 'var(--blue)' : '#FFFFFF',
-                        color: activeTab === 'users' ? '#FFFFFF' : 'var(--dark-blue)',
-                        border: activeTab === 'users' ? 'none' : '1px solid var(--border-subtle)',
-                        boxShadow: activeTab === 'users' ? '0 4px 12px rgba(19, 108, 252, 0.25)' : 'none'
-                    }}
-                >
-                    <Users size={16} style={{ marginRight: '6px', display: 'inline', verticalAlign: '-2px' }} />
-                    <span>Faculty & Student Accounts ({users.length})</span>
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setActiveTab('feedbacks')}
-                    className="aero-gloss-btn"
-                    style={{
-                        padding: '10px 20px',
-                        fontSize: '0.86rem',
-                        background: activeTab === 'feedbacks' ? 'var(--blue)' : '#FFFFFF',
-                        color: activeTab === 'feedbacks' ? '#FFFFFF' : 'var(--dark-blue)',
-                        border: activeTab === 'feedbacks' ? 'none' : '1px solid var(--border-subtle)',
-                        boxShadow: activeTab === 'feedbacks' ? '0 4px 12px rgba(19, 108, 252, 0.25)' : 'none',
-                        position: 'relative'
-                    }}
-                >
-                    <span>User Feedback & Issue Reports ({feedbacksList.length})</span>
-                    {feedbacksList.filter(f => f.status === 'open').length > 0 && (
-                        <span style={{ marginLeft: '8px', background: '#EF4444', color: '#FFF', fontSize: '0.70rem', fontWeight: 800, padding: '2px 6px', borderRadius: '999px' }}>
-                            {feedbacksList.filter(f => f.status === 'open').length} NEW
-                        </span>
-                    )}
-                </button>
-            </div>
-
-            {/* Notification Banner */}
-            {feedback && (
-                <div className={feedback.type === 'success' ? 'aero-alert-success' : 'aero-alert-error'} style={{ margin: '0' }}>
-                    {feedback.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                    <span>{feedback.text}</span>
+            <main className="ops-main">
+                <div className="stat-grid">
+                    <Stat icon={Users} label="Faculty" value={stats?.stats?.staffCount ?? '-'} />
+                    <Stat icon={UserCheck} tone="pistachio" label="HODs" value={stats?.stats?.hodCount ?? '-'} />
+                    <Stat icon={Users} label="Students" value={stats?.stats?.studentCount ?? '-'} />
+                    <Stat icon={UserX} tone={stats?.stats?.inactiveCount > 0 ? 'warn' : 'neutral'} label="Inactive accounts" value={stats?.stats?.inactiveCount ?? '-'} />
                 </div>
-            )}
 
-            {/* Stat Counters Ribbon */}
-            {activeTab === 'users' && (
-                <div className="grid-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-                    <div className="fx-card" style={{ padding: '16px 20px' }}>
-                        <div style={{ fontSize: '0.76rem', color: 'var(--text-sub)', textTransform: 'uppercase' }}>Teaching Staff</div>
-                        <div style={{ fontSize: '1.9rem', fontWeight: 800, color: 'var(--blue)' }}>
-                            {stats?.staffCount || 0}
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Active Professors & Instructors</div>
-                    </div>
+                <Notice notice={notice} />
 
-                    <div className="fx-card" style={{ padding: '16px 20px' }}>
-                        <div style={{ fontSize: '0.76rem', color: 'var(--text-sub)', textTransform: 'uppercase' }}>Department HODs</div>
-                        <div style={{ fontSize: '1.9rem', fontWeight: 800, color: 'var(--dark-blue)' }}>
-                            {stats?.hodCount || 0}
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Heads of Departments</div>
-                    </div>
-
-                    <div className="fx-card" style={{ padding: '16px 20px' }}>
-                        <div style={{ fontSize: '0.76rem', color: 'var(--text-sub)', textTransform: 'uppercase' }}>Principal & Admin</div>
-                        <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#9333EA' }}>
-                            {stats?.principalCount || 1}
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Chief Executive Authority</div>
-                    </div>
-
-                    <div className="fx-card" style={{ padding: '16px 20px' }}>
-                        <div style={{ fontSize: '0.76rem', color: 'var(--text-sub)', textTransform: 'uppercase' }}>Sports & PT Staff</div>
-                        <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#F59E0B' }}>
-                            {stats?.ptCount || 1}
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Physical Education Directors</div>
-                    </div>
-
-                    <div className="fx-card" style={{ padding: '16px 20px' }}>
-                        <div style={{ fontSize: '0.76rem', color: 'var(--text-sub)', textTransform: 'uppercase' }}>Left College / Inactive</div>
-                        <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#DC2626' }}>
-                            {stats?.inactiveCount || 0}
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Deactivated Accounts</div>
-                    </div>
+                <div className="u-row u-between" style={{ flexWrap: 'wrap', gap: 14 }}>
+                    <Segmented label="Console" value={tab} onChange={setTab} options={[{ value: 'users', label: 'Accounts' }, { value: 'feedback', label: 'Feedback' }]} />
+                    {tab === 'users' && <button type="button" className="ui-btn ui-btn--primary" onClick={openCreate}><UserPlus size={18} />Add user</button>}
                 </div>
-            )}
 
-            {/* Filter and Search Bar */}
-            {activeTab === 'users' && (
-                <div className="fx-card" style={{ padding: '16px 20px' }}>
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        
-                        {/* Search Input */}
-                        <div style={{ flex: '1 1 260px', position: 'relative' }}>
-                            <Search size={16} color="var(--blue)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                            <input 
-                                type="text"
-                                className="fx-select"
-                                style={{ width: '100%', paddingLeft: '36px' }}
-                                placeholder="Search by name, email, or designation (e.g. Aruna Devi, PT)..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
+                {tab === 'users' ? (
+                    <section className="ui-card">
+                        <SectionHead icon={Users} title="Accounts" sub={`${users.length} shown`} />
+                        <div className="toolbar">
+                            <div className="search-bar"><Search size={18} /><input className="ui-input" placeholder="Search name, email or designation" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+                            <div className="toolbar-actions">
+                                <select className="ui-select" value={role} onChange={(e) => setRole(e.target.value)} aria-label="Role" style={{ width: 'auto' }}>
+                                    <option value="all">All roles</option>{ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                                </select>
+                                <select className="ui-select" value={dept} onChange={(e) => setDept(e.target.value)} aria-label="Department" style={{ width: 'auto' }}>
+                                    <option value="all">All departments</option>{departments.map((d) => <option key={d}>{d}</option>)}
+                                </select>
+                                <select className="ui-select" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status" style={{ width: 'auto' }}>
+                                    <option value="active">Active</option><option value="inactive">Inactive</option><option value="all">Any status</option>
+                                </select>
+                            </div>
                         </div>
 
-                        {/* Role Filter */}
-                        <div style={{ minWidth: '140px' }}>
-                            <select 
-                                className="fx-select" 
-                                style={{ width: '100%' }}
-                                value={selectedRole}
-                                onChange={(e) => setSelectedRole(e.target.value)}
-                            >
-                                <option value="all">All Roles</option>
-                                <option value="staff">Staff Only</option>
-                                <option value="hod">HODs Only</option>
-                                <option value="principal">Principal Only</option>
-                                <option value="pt">PT / Sports Staff</option>
-                                <option value="student">Students</option>
-                            </select>
-                        </div>
+                        {loading && users.length === 0 ? <Spinner label="Loading accounts" /> : users.length === 0 ? (
+                            <Empty icon={Users} title="No accounts match">Change the filters or add a user.</Empty>
+                        ) : (
+                            <div className="ui-table-wrap table-scroll" style={{ maxHeight: 640 }}>
+                                <table className="ui-table">
+                                    <thead><tr><th>Name</th><th>Role</th><th>Department</th><th>Status</th><th /></tr></thead>
+                                    <tbody>
+                                        {users.map((u) => (
+                                            <tr key={u.id}>
+                                                <td><div className="cell-strong">{u.name}</div><div className="cell-sub">{u.email}</div></td>
+                                                <td><span className="ui-chip">{roleLabel(u.role)}</span>{u.designation ? <div className="cell-sub" style={{ marginTop: 4 }}>{u.designation}</div> : null}</td>
+                                                <td>{u.department}</td>
+                                                <td>{u.is_active ? <span className="ui-chip ui-chip--present">Active</span> : <span className="ui-chip ui-chip--neutral">Inactive</span>}</td>
+                                                <td>
+                                                    <div className="u-row" style={{ gap: 6, justifyContent: 'flex-end' }}>
+                                                        <button type="button" className="ui-icon-btn" style={{ width: 36, height: 36, borderRadius: 11 }} title="Edit" aria-label={`Edit ${u.name}`} onClick={() => openEdit(u)}><Pencil size={16} /></button>
+                                                        <button type="button" className="ui-icon-btn" style={{ width: 36, height: 36, borderRadius: 11 }} title={u.is_active ? 'Deactivate' : 'Activate'} aria-label={u.is_active ? `Deactivate ${u.name}` : `Activate ${u.name}`} onClick={() => toggleActive(u)}>{u.is_active ? <UserX size={16} /> : <UserCheck size={16} />}</button>
+                                                        <button type="button" className="ui-icon-btn" style={{ width: 36, height: 36, borderRadius: 11, color: 'var(--danger)' }} title="Delete" aria-label={`Delete ${u.name}`} onClick={() => askDelete(u)}><Trash2 size={16} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </section>
+                ) : (
+                    <section className="ui-card">
+                        <SectionHead icon={MessageSquare} title="Feedback and issue reports" sub="Latest 200 submissions" />
+                        {feedbacks.length === 0 ? <Empty icon={MessageSquare} title="No feedback yet">Reports from users appear here.</Empty> : (
+                            <div className="ui-list">
+                                {feedbacks.map((f) => (
+                                    <div key={f.id} className="ui-card ui-card--sm" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                        <div className="u-row u-between" style={{ flexWrap: 'wrap', gap: 10 }}>
+                                            <div>
+                                                <span className="cell-strong">{f.user_name || 'Unknown'}</span>
+                                                <span className="cell-sub">  {f.user_role}, {f.category}, {f.rating}/5</span>
+                                            </div>
+                                            <select className="ui-select" style={{ width: 'auto', minHeight: 38 }} value={f.status} onChange={(e) => setFeedbackStatus(f.id, e.target.value)} aria-label="Status">
+                                                <option value="open">Open</option><option value="investigating">Investigating</option><option value="resolved">Resolved</option>
+                                            </select>
+                                        </div>
+                                        <div style={{ lineHeight: 1.55 }}>{f.message}</div>
+                                        <div className="cell-sub">{f.user_email}, {f.device_info}, {new Date(f.created_at).toLocaleString('en-IN')}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                )}
+            </main>
 
-                        {/* Department Filter */}
-                        <div style={{ minWidth: '150px' }}>
-                            <select 
-                                className="fx-select" 
-                                style={{ width: '100%' }}
-                                value={selectedDept}
-                                onChange={(e) => setSelectedDept(e.target.value)}
-                            >
-                                <option value="all">All Departments</option>
-                                <option value="IT">IT (Information Tech)</option>
-                                <option value="CSE">CSE (Computer Science)</option>
-                                <option value="AI-DS">AI-DS (Artificial Intel)</option>
-                                <option value="ECE">ECE (Electronics & Comm)</option>
-                                <option value="EEE">EEE (Electrical & Electronics)</option>
-                                <option value="MECH">MECH (Mechanical)</option>
-                                <option value="CIVIL">CIVIL Engineering</option>
-                                <option value="CSBS">CSBS (Business Systems)</option>
-                                <option value="MBA">MBA</option>
-                                <option value="MCA">MCA</option>
-                                <option value="Sports & Physical Education">Sports & Physical Education</option>
-                                <option value="ADMIN">ADMIN / Executive</option>
-                            </select>
-                        </div>
-
-                        {/* Status Filter */}
-                        <div style={{ minWidth: '130px' }}>
-                            <select 
-                                className="fx-select" 
-                                style={{ width: '100%' }}
-                                value={selectedStatus}
-                                onChange={(e) => setSelectedStatus(e.target.value)}
-                            >
-                                <option value="active">Active Faculty</option>
-                                <option value="inactive">Left College / Inactive</option>
-                                <option value="all">All Records</option>
-                            </select>
-                        </div>
-
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-sub)', marginLeft: 'auto' }}>
-                            Showing <strong>{users.length}</strong> accounts
-                        </span>
+            <Modal open={formOpen} onClose={() => setFormOpen(false)} title={form.id ? 'Edit user' : 'Add user'} icon={form.id ? Pencil : UserPlus}
+                footer={(<><button type="button" className="ui-btn" onClick={() => setFormOpen(false)}>Cancel</button><button type="submit" form="user-form" className="ui-btn ui-btn--primary" disabled={busy}>{busy ? 'Saving' : 'Save'}</button></>)}>
+                <form id="user-form" onSubmit={save} className="u-col" style={{ gap: 14 }}>
+                    <div className="ui-field"><label className="ui-label" htmlFor="u-name">Full name</label><input id="u-name" className="ui-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
+                    <div className="ui-field"><label className="ui-label" htmlFor="u-email">College email</label><input id="u-email" type="email" className="ui-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
+                    <div className="split split--even" style={{ gap: 14 }}>
+                        <div className="ui-field"><label className="ui-label" htmlFor="u-role">Role</label><select id="u-role" className="ui-select" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>{ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+                        <div className="ui-field"><label className="ui-label" htmlFor="u-dept">Department</label><input id="u-dept" className="ui-input" list="dept-list" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /><datalist id="dept-list">{departments.map((d) => <option key={d} value={d} />)}</datalist></div>
                     </div>
-                </div>
-            )}
-
-            {/* Master User Table */}
-            {activeTab === 'users' && (
-            <div className="fx-card" style={{ padding: '0', overflow: 'hidden' }}>
-                <div className="fx-table-container">
-                    <table className="fx-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Faculty Name & Designation</th>
-                                <th>College Email</th>
-                                <th>Role</th>
-                                <th>Department</th>
-                                <th>Status</th>
-                                <th style={{ textAlign: 'center' }}>IT Operations Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {users.length > 0 ? (
-                                users.map((u) => {
-                                    const isPrincipal = u.role === 'principal';
-                                    const isHOD = u.role === 'hod';
-                                    const isPT = u.role === 'pt';
-                                    const isActive = !!u.is_active;
-
-                                    return (
-                                        <tr key={u.id} style={{ opacity: isActive ? 1 : 0.65 }}>
-                                            <td style={{ fontFamily: 'monospace', color: 'var(--text-dim)', fontSize: '0.75rem' }}>
-                                                #{u.id}
-                                            </td>
-                                            <td>
-                                                <div style={{ fontWeight: 800, color: 'var(--dark-blue)', fontSize: '0.88rem' }}>
-                                                    {u.name}
-                                                </div>
-                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-sub)' }}>
-                                                    {u.designation || (isHOD ? 'Head of Department' : isPrincipal ? 'Principal' : isPT ? 'Director of Physical Education' : 'Faculty Member')}
-                                                </div>
-                                            </td>
-                                            <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--blue)' }}>
-                                                {u.email}
-                                            </td>
-                                            <td>
-                                                <span className={`aero-pill ${isPrincipal ? 'cyan' : isHOD ? 'green' : isPT ? 'yellow' : ''}`} style={{
-                                                    fontSize: '0.70rem',
-                                                    textTransform: 'uppercase',
-                                                    fontWeight: 700,
-                                                    background: isPrincipal ? '#F3E8FF' : isHOD ? 'var(--light-blue)' : isPT ? '#FEF3C7' : '#F1F5F9',
-                                                    color: isPrincipal ? '#9333EA' : isHOD ? 'var(--blue)' : isPT ? '#D97706' : 'var(--dark-blue)'
-                                                }}>
-                                                    {isPT ? 'PT / SPORTS' : u.role}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span className="aero-status-tag" style={{
-                                                    background: 'rgba(19, 108, 252, 0.08)',
-                                                    color: 'var(--blue)',
-                                                    border: '1px solid rgba(19, 108, 252, 0.2)',
-                                                    fontWeight: 700
-                                                }}>
-                                                    {u.department || 'IT'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                {isActive ? (
-                                                    <span style={{ fontSize: '0.74rem', color: '#16A34A', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                                                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#16A34A' }}></span>
-                                                        Active
-                                                    </span>
-                                                ) : (
-                                                    <span style={{ fontSize: '0.74rem', color: '#DC2626', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                                                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#DC2626' }}></span>
-                                                        Left College
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <div style={{ display: 'inline-flex', gap: '6px' }}>
-                                                    
-                                                    {/* Edit Button */}
-                                                    <button 
-                                                        type="button"
-                                                        className="fx-btn-outline"
-                                                        style={{ padding: '4px 8px', fontSize: '0.72rem' }}
-                                                        onClick={() => handleOpenEditModal(u)}
-                                                        title="Edit faculty details, change department or role"
-                                                    >
-                                                        <Edit3 size={13} style={{ marginRight: '3px', verticalAlign: '-1px' }} />
-                                                        Edit
-                                                    </button>
-
-                                                    {/* Reset Password Button */}
-                                                    <button 
-                                                        type="button"
-                                                        className="aero-glass-btn"
-                                                        style={{ padding: '4px 8px', fontSize: '0.72rem' }}
-                                                        onClick={() => handleResetPassword(u)}
-                                                        title="Reset password to default Fxec@123"
-                                                    >
-                                                        <RotateCcw size={13} style={{ marginRight: '3px', verticalAlign: '-1px' }} />
-                                                        Reset Pass
-                                                    </button>
-
-                                                    {/* Delete / Left College Button */}
-                                                    <button 
-                                                        type="button"
-                                                        className="fx-btn-danger"
-                                                        style={{ padding: '4px 8px', fontSize: '0.72rem' }}
-                                                        onClick={() => handleDeleteUser(u)}
-                                                        title="Delete or remove faculty member who left college"
-                                                    >
-                                                        <Trash2 size={13} />
-                                                    </button>
-
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            ) : (
-                                <tr>
-                                    <td colSpan="7" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-dim)' }}>
-                                        No faculty or staff found matching the selected filters.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            )}
-
-            {/* User Feedbacks & Issues Table (When Feedbacks Tab Active) */}
-            {activeTab === 'feedbacks' && (
-                <div className="fx-card" style={{ padding: '0', overflow: 'hidden' }}>
-                    <div className="fx-table-container">
-                        <table className="fx-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>User & Role</th>
-                                    <th>Category</th>
-                                    <th>Feedback / Issue Description</th>
-                                    <th>Device Info</th>
-                                    <th>Status</th>
-                                    <th style={{ textAlign: 'right' }}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {feedbacksList.length > 0 ? (
-                                    feedbacksList.map(f => (
-                                        <tr key={f.id}>
-                                            <td style={{ fontWeight: 700, color: 'var(--text-dim)' }}>#{f.id}</td>
-                                            <td>
-                                                <div style={{ fontWeight: 700, color: 'var(--dark-blue)' }}>{f.user_name}</div>
-                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-sub)' }}>{f.user_email}</div>
-                                                <span className="aero-pill cyan" style={{ fontSize: '0.65rem', marginTop: '2px' }}>
-                                                    {f.user_role?.toUpperCase()}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span style={{ fontSize: '0.80rem', fontWeight: 600, color: 'var(--blue)' }}>
-                                                    {f.category}
-                                                </span>
-                                                <div style={{ fontSize: '0.70rem', color: '#D97706', marginTop: '2px' }}>
-                                                    {f.rating ? `${f.rating}/5` : '5/5'}
-                                                </div>
-                                            </td>
-                                            <td style={{ maxWidth: '320px' }}>
-                                                <div style={{ fontSize: '0.82rem', color: 'var(--dark-blue)', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>
-                                                    {f.message}
-                                                </div>
-                                                <div style={{ fontSize: '0.70rem', color: 'var(--text-dim)', marginTop: '4px' }}>
-                                                    Submitted: {new Date(f.created_at).toLocaleString()}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div style={{ fontSize: '0.74rem', color: 'var(--text-sub)', maxWidth: '140px', wordBreak: 'break-word' }}>
-                                                    {f.device_info || 'Unknown Device'}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span className={`aero-pill ${f.status === 'resolved' ? 'green' : f.status === 'investigating' ? 'orange' : 'red'}`} style={{ fontSize: '0.70rem', textTransform: 'uppercase' }}>
-                                                    {f.status}
-                                                </span>
-                                            </td>
-                                            <td style={{ textAlign: 'right' }}>
-                                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                                    {f.status !== 'resolved' && (
-                                                        <button
-                                                            type="button"
-                                                            className="aero-glass-btn"
-                                                            style={{ padding: '4px 8px', fontSize: '0.72rem', color: '#16A34A', borderColor: '#BBF7D0' }}
-                                                            onClick={() => handleUpdateFeedbackStatus(f.id, 'resolved')}
-                                                        >
-                                                            Mark Resolved
-                                                        </button>
-                                                    )}
-                                                    {f.status === 'open' && (
-                                                        <button
-                                                            type="button"
-                                                            className="aero-glass-btn"
-                                                            style={{ padding: '4px 8px', fontSize: '0.72rem', color: '#D97706', borderColor: '#FED7AA' }}
-                                                            onClick={() => handleUpdateFeedbackStatus(f.id, 'investigating')}
-                                                        >
-                                                            Investigating
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="7" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-dim)' }}>
-                                            No user feedbacks or issue reports yet.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                    <div className="split split--even" style={{ gap: 14 }}>
+                        <div className="ui-field"><label className="ui-label" htmlFor="u-des">Designation</label><input id="u-des" className="ui-input" value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} /></div>
+                        <div className="ui-field"><label className="ui-label" htmlFor="u-phone">Phone</label><input id="u-phone" className="ui-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
                     </div>
-                </div>
-            )}
+                </form>
+            </Modal>
 
-            {/* ---------------------------------------------------- */}
-            {/* Modal: Create / Edit Faculty Account */}
-            {/* ---------------------------------------------------- */}
-            {isModalOpen && (
-                <div className="aero-modal-backdrop" onClick={() => setIsModalOpen(false)}>
-                    <div className="aero-modal-card fa-glass-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px', width: '92%' }}>
-                        
-                        <div className="aero-modal-header">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <div className="aero-icon-bubble">
-                                    <Briefcase size={20} color="#136CFC" />
-                                </div>
-                                <div>
-                                    <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--dark-blue)', margin: 0 }}>
-                                        {modalMode === 'create' ? 'Register New Faculty / Staff' : `Edit Faculty: ${formData.name}`}
-                                    </h2>
-                                    <p style={{ fontSize: '0.74rem', color: 'var(--text-sub)', margin: 0 }}>
-                                        {modalMode === 'create' ? 'Add new professor or instructor to college roster' : 'Update department transfer, role promotion, or active status'}
-                                    </p>
-                                </div>
-                            </div>
-                            <button type="button" className="aero-close-btn" onClick={() => setIsModalOpen(false)}>
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSaveUser} style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '10px' }}>
-                            
-                            <div>
-                                <label className="picker-label">Full Name</label>
-                                <input 
-                                    type="text" 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    placeholder="e.g. Dr. Aruna Devi M"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="picker-label">College Email Address</label>
-                                <input 
-                                    type="email" 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    placeholder="e.g. arunadevim@francisxavier.ac.in"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                    required
-                                />
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                <div>
-                                    <label className="picker-label">Institutional Role</label>
-                                    <select 
-                                        className="fx-select"
-                                        style={{ width: '100%', marginTop: '4px' }}
-                                        value={formData.role}
-                                        onChange={(e) => {
-                                            const role = e.target.value;
-                                            const dept = role === 'pt' ? 'Sports & Physical Education' : formData.department;
-                                            const desig = role === 'pt' ? 'DIRECTOR OF PHYSICAL EDUCATION' : formData.designation;
-                                            setFormData({ ...formData, role, department: dept, designation: desig });
-                                        }}
-                                    >
-                                        <option value="staff">Staff / Faculty</option>
-                                        <option value="hod">HOD (Head of Department)</option>
-                                        <option value="principal">Principal</option>
-                                        <option value="pt">PT (Physical Training / Sports Director)</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="picker-label">Department</label>
-                                    <select 
-                                        className="fx-select"
-                                        style={{ width: '100%', marginTop: '4px' }}
-                                        value={formData.department}
-                                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                                    >
-                                        <option value="IT">IT</option>
-                                        <option value="CSE">CSE</option>
-                                        <option value="AI-DS">AI-DS</option>
-                                        <option value="ECE">ECE</option>
-                                        <option value="EEE">EEE</option>
-                                        <option value="MECH">MECH</option>
-                                        <option value="CIVIL">CIVIL</option>
-                                        <option value="CSBS">CSBS</option>
-                                        <option value="MBA">MBA</option>
-                                        <option value="MCA">MCA</option>
-                                        <option value="Sports & Physical Education">Sports & Physical Education</option>
-                                        <option value="ADMIN">ADMIN</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="picker-label">Academic Designation</label>
-                                <input 
-                                    type="text" 
-                                    className="fx-select" 
-                                    style={{ width: '100%', marginTop: '4px' }}
-                                    placeholder="e.g. ASSISTANT PROFESSOR / ASSOCIATE PROFESSOR / HOD"
-                                    value={formData.designation}
-                                    onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                                />
-                            </div>
-
-                            {modalMode === 'create' && (
-                                <div>
-                                    <label className="picker-label">Account Initial Password</label>
-                                    <input 
-                                        type="text" 
-                                        className="fx-select" 
-                                        style={{ width: '100%', marginTop: '4px' }}
-                                        placeholder="Defaults to Fxec@123"
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    />
-                                    <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-                                        Default password if left blank is "Fxec@123"
-                                    </span>
-                                </div>
-                            )}
-
-                            {modalMode === 'edit' && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'var(--light-blue)', borderRadius: '8px' }}>
-                                    <input 
-                                        type="checkbox"
-                                        id="activeCheck"
-                                        checked={!!formData.is_active}
-                                        onChange={(e) => setFormData({ ...formData, is_active: e.target.checked ? 1 : 0 })}
-                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                                    />
-                                    <label htmlFor="activeCheck" style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--dark-blue)', cursor: 'pointer' }}>
-                                        Active College Faculty (Uncheck if staff left the college)
-                                    </label>
-                                </div>
-                            )}
-
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                                <button 
-                                    type="button" 
-                                    className="fx-btn-outline"
-                                    style={{ flex: 1, padding: '10px' }}
-                                    onClick={() => setIsModalOpen(false)}
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    type="submit" 
-                                    className="aero-gloss-btn"
-                                    style={{ flex: 2, padding: '10px' }}
-                                >
-                                    {modalMode === 'create' ? 'Register Faculty' : 'Save Changes'}
-                                </button>
-                            </div>
-
-                        </form>
-
-                    </div>
-                </div>
-            )}
-
+            <Confirm open={!!confirm} title={confirm?.title} confirmLabel={confirm?.label} tone={confirm?.tone} busy={busy} onConfirm={() => confirm?.run()} onCancel={() => setConfirm(null)}>
+                {confirm?.body}
+            </Confirm>
         </div>
     );
 };
+
+
